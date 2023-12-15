@@ -514,7 +514,7 @@ class Map implements ArrayAccess, Countable, IteratorAggregate
     /**
      * Removes the value with the specified key from the map.
      *
-     * @param mixed $key The key of the value to remove.
+     * @param TKey $key The key of the value to remove.
      *
      * @return bool true if the value is successfully removed; otherwise, false.
      */
