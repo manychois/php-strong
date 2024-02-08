@@ -50,12 +50,44 @@ class ArrayWrapper
     }
 
     /**
+     * Returns the value of the specified key as an ArrayWrapper object.
+     *
+     * @param int|string $key The key of the value to be returned.
+     *
+     * @return self The value of the specified key as an ArrayWrapper object.
+     */
+    public function get(int|string $key): self
+    {
+        $value = $this->array[$key] ?? null;
+        if ($value instanceof self) {
+            return $value;
+        }
+
+        if (!\is_array($value)) {
+            throw new RuntimeException("The value of key '$key' is not an array.");
+        }
+
+        $this->array[$key] = new self($value);
+
+        return $this->array[$key];
+    }
+
+    /**
      * Returns the array representation of this object.
      *
      * @return array<mixed> The array representation of this object.
      */
     public function toArray(): array
     {
-        return $this->array;
+        $array = [];
+        foreach ($this->array as $key => $value) {
+            if ($value instanceof self) {
+                $array[$key] = $value->toArray();
+            } else {
+                $array[$key] = $value;
+            }
+        }
+
+        return $array;
     }
 }
