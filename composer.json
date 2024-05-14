@@ -25,7 +25,8 @@
     }
   },
   "require": {
-    "php": ">=8.2"
+    "php": ">=8.2",
+    "psr/log": "^3.0"
   },
   "require-dev": {
     "escapestudios/symfony2-coding-standard": "^3.13",
