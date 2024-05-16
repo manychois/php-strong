@@ -240,6 +240,24 @@ class IntMap extends AbstractObject implements Countable, IteratorAggregate
     }
 
     /**
+     * Returns the value in the map by the specified key, or a default value if the key does not exist in the map.
+     *
+     * @param int         $key     The key of the value to get.
+     * @param TValue|null $default The default value to return if the key does not exist in the map.
+     *
+     * @return TValue|null The value in the map by the specified key, or the default value if the key does not exist in
+     * the map.
+     */
+    public function tryGet(int $key, mixed $default = null): mixed
+    {
+        if (\array_key_exists($key, $this->map)) {
+            return $this->map[$key];
+        }
+
+        return $default;
+    }
+
+    /**
      * Returns all the values in the map.
      *
      * @return ArrayList<TValue> The values in the map.
