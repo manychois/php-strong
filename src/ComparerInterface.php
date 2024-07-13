@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\Collections;
+namespace Manychois\PhpStrong;
 
 /**
  * Exposes a method that compares two objects.

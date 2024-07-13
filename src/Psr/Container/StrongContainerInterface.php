@@ -16,15 +16,6 @@ interface StrongContainerInterface extends ContainerInterface
      *
      * @param string $id Identifier of the entry to look for.
      *
-     * @return array<mixed> The entry.
-     */
-    public function getArray(string $id): array;
-
-    /**
-     * Finds an entry of the container by its identifier and returns it.
-     *
-     * @param string $id Identifier of the entry to look for.
-     *
      * @return bool The entry.
      */
     public function getBool(string $id): bool;

@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Text\RegularExpressions;
 
-use Manychois\PhpStrong\AbstractObject;
-
 /**
  * Represents the results from a single successful subexpression capture.
  */
-class Capture extends AbstractObject
+class Capture
 {
     public readonly int $index;
     public readonly string $value;

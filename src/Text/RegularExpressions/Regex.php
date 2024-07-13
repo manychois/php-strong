@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Text\RegularExpressions;
 
-use Manychois\PhpStrong\AbstractObject;
-use Manychois\PhpStrong\Collections\ArrayList;
+use Manychois\PhpStrong\Collections\ReadonlySequence;
 use RuntimeException;
 
 /**
  * Represents a regular expression.
  */
-class Regex extends AbstractObject
+class Regex
 {
     public readonly string $pattern;
 
@@ -52,9 +51,9 @@ class Regex extends AbstractObject
      * @param int    $offset     The offset in the subject at which to start the search.
      * @param bool   $getOffsets Whether to return the offsets of the matches.
      *
-     * @return ArrayList<MatchResult> The list of match results.
+     * @return ReadonlySequence<MatchResult> The list of match results.
      */
-    public function matchAll(string $subject, int $offset = 0, bool $getOffsets = false): ArrayList
+    public function matchAll(string $subject, int $offset = 0, bool $getOffsets = false): ReadonlySequence
     {
         $flags = $getOffsets ? \PREG_OFFSET_CAPTURE : 0;
         $result = \preg_match_all($this->pattern, $subject, $matches, $flags, $offset);
@@ -74,6 +73,6 @@ class Regex extends AbstractObject
             }
         }
 
-        return new ArrayList($matchResults);
+        return new ReadonlySequence($matchResults);
     }
 }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Text\RegularExpressions;
 
-use Manychois\PhpStrong\Collections\ReadonlyArrayList;
-use Manychois\PhpStrong\Collections\ReadonlyStringMap;
+use Manychois\PhpStrong\Collections\ReadonlyMap;
+use Manychois\PhpStrong\Collections\ReadonlySequence;
 
 /**
  * Represents the result from a regular expression match.
@@ -14,13 +14,13 @@ class MatchResult extends Capture
 {
     public readonly bool $success;
     /**
-     * @var ReadonlyArrayList<Capture>
+     * @var ReadonlySequence<Capture>
      */
-    public readonly ReadonlyArrayList $captures;
+    public readonly ReadonlySequence $captures;
     /**
-     * @var ReadonlyStringMap<Capture>
+     * @var ReadonlyMap<string,Capture>
      */
-    public readonly ReadonlyStringMap $namedCaptures;
+    public readonly ReadonlyMap $namedCaptures;
 
     /**
      * @param array<mixed> $matches The `$matches` result from the PHP function `preg_match()`.
@@ -30,8 +30,8 @@ class MatchResult extends Capture
         if (\count($matches) === 0) {
             parent::__construct('', -1);
             $this->success = false;
-            $this->captures = ReadonlyArrayList::ofType(Capture::class);
-            $this->namedCaptures = ReadonlyStringMap::ofType(Capture::class);
+            $this->captures = new ReadonlySequence();
+            $this->namedCaptures = new ReadonlyMap();
 
             return;
         }
@@ -67,7 +67,7 @@ class MatchResult extends Capture
         }
         parent::__construct($matchValue, $matchIndex);
         $this->success = true;
-        $this->captures = ReadonlyArrayList::ofType(Capture::class, $captures);
-        $this->namedCaptures = ReadonlyStringMap::ofType(Capture::class, $namedCaptures);
+        $this->captures = new ReadonlySequence($captures);
+        $this->namedCaptures = new ReadonlyMap($namedCaptures);
     }
 }

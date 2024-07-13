@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\Collections;
+namespace Manychois\PhpStrong;
 
 /**
  * Exposes a method that compares the current object with another object.
  */
-interface ComparableInterface
+interface ComparableInterface extends EqualInterface
 {
     /**
      * Compares the current object with another object.

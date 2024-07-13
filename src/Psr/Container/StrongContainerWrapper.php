@@ -22,16 +22,6 @@ class StrongContainerWrapper implements StrongContainerInterface
 
     #region implements StrongContainerInterface
 
-    public function getArray(string $id): array
-    {
-        $value = $this->container->get($id);
-        if (!\is_array($value)) {
-            throw new InvalidEntryTypeError(\sprintf('The entry "%s" is not an array.', $id));
-        }
-
-        return $value;
-    }
-
     public function getBool(string $id): bool
     {
         $value = $this->container->get($id);
