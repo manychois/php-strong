@@ -14,33 +14,6 @@ interface StrongContainerInterface extends ContainerInterface
     /**
      * Finds an entry of the container by its identifier and returns it.
      *
-     * @param string $id Identifier of the entry to look for.
-     *
-     * @return bool The entry.
-     */
-    public function getBool(string $id): bool;
-
-    /**
-     * Finds an entry of the container by its identifier and returns it.
-     *
-     * @param string $id Identifier of the entry to look for.
-     *
-     * @return float The entry.
-     */
-    public function getFloat(string $id): float;
-
-    /**
-     * Finds an entry of the container by its identifier and returns it.
-     *
-     * @param string $id Identifier of the entry to look for.
-     *
-     * @return int The entry.
-     */
-    public function getInt(string $id): int;
-
-    /**
-     * Finds an entry of the container by its identifier and returns it.
-     *
      * @param string $className The identifier of the entry to look for, which is the class name.
      *
      * @return T The entry.
@@ -52,13 +25,4 @@ interface StrongContainerInterface extends ContainerInterface
      * @phpstan-return T
      */
     public function getObject(string $className): mixed;
-
-    /**
-     * Finds an entry of the container by its identifier and returns it.
-     *
-     * @param string $id Identifier of the entry to look for.
-     *
-     * @return string The entry.
-     */
-    public function getString(string $id): string;
 }

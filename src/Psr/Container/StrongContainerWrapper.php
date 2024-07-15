@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Psr\Container;
 
-use Manychois\PhpStrong\Psr\Container\InvalidEntryTypeError;
+use Manychois\PhpStrong\Psr\Container\MismatchEntryTypeException;
 use Manychois\PhpStrong\Psr\Container\StrongContainerInterface;
 use Psr\Container\ContainerInterface;
 
@@ -22,54 +22,22 @@ class StrongContainerWrapper implements StrongContainerInterface
 
     #region implements StrongContainerInterface
 
-    public function getBool(string $id): bool
-    {
-        $value = $this->container->get($id);
-        if (!\is_bool($value)) {
-            throw new InvalidEntryTypeError(\sprintf('The entry "%s" is not a boolean.', $id));
-        }
-
-        return $value;
-    }
-
-    public function getFloat(string $id): float
-    {
-        $value = $this->container->get($id);
-        if (!\is_float($value)) {
-            throw new InvalidEntryTypeError(\sprintf('The entry "%s" is not a float.', $id));
-        }
-
-        return $value;
-    }
-
-    public function getInt(string $id): int
-    {
-        $value = $this->container->get($id);
-        if (!\is_int($value)) {
-            throw new InvalidEntryTypeError(\sprintf('The entry "%s" is not an integer.', $id));
-        }
-
-        return $value;
-    }
-
     public function getObject(string $className): mixed
     {
         $value = $this->container->get($className);
         if (!\is_object($value)) {
-            throw new InvalidEntryTypeError(\sprintf('The entry "%s" is not an object.', $className));
+            throw new MismatchEntryTypeException(\sprintf(
+                'The entry "%s" is not an object. Type %s found.',
+                $className,
+                \get_debug_type($value),
+            ));
         }
         if (!($value instanceof $className)) {
-            throw new InvalidEntryTypeError(\sprintf('The entry "%1$s" is not an instance of "%1$s".', $className));
-        }
-
-        return $value;
-    }
-
-    public function getString(string $id): string
-    {
-        $value = $this->container->get($id);
-        if (!\is_string($value)) {
-            throw new InvalidEntryTypeError(\sprintf('The entry "%s" is not a string.', $id));
+            throw new MismatchEntryTypeException(\sprintf(
+                'The entry "%1$s" is not an instance of "%1$s". Type %2$s found.',
+                $className,
+                \get_debug_type($value),
+            ));
         }
 
         return $value;
