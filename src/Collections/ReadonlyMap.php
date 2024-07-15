@@ -8,7 +8,6 @@ use Iterator;
 use LogicException;
 use Manychois\PhpStrong\Collections\Internal\AbstractCollection;
 use Manychois\PhpStrong\Collections\Internal\KeyItem;
-use Manychois\PhpStrong\DefaultEqualityComparer;
 use Manychois\PhpStrong\EqualityComparerInterface;
 use OutOfBoundsException;
 
@@ -47,7 +46,7 @@ class ReadonlyMap extends AbstractCollection
         EqualityComparerInterface $comparer = null
     ) {
         $this->duplicateKeyPolicy = $policy;
-        $this->equalityComparer = $comparer ?? new DefaultEqualityComparer();
+        $this->equalityComparer = $this->getEqualityComparer($comparer);
         foreach ($collection as $key => $item) {
             $this->internalSet($key, $item);
         }

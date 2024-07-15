@@ -28,7 +28,7 @@ use OutOfBoundsException;
  */
 abstract class AbstractCollection implements CollectionInterface
 {
-    #region implements CollectionInterface
+    private static EqualityComparerInterface $staticDefaultComparer;
 
     public function count(): int
     {
@@ -100,7 +100,7 @@ abstract class AbstractCollection implements CollectionInterface
 
     public function contains(mixed $needle, ?EqualityComparerInterface $comparer = null): bool
     {
-        $comparer ??= new DefaultEqualityComparer();
+        $comparer = $this->getEqualityComparer($comparer);
         foreach ($this->getIterator() as $item) {
             if ($comparer->equals($item, $needle)) {
                 return true;
@@ -112,7 +112,7 @@ abstract class AbstractCollection implements CollectionInterface
 
     public function diff(iterable $other, ?EqualityComparerInterface $comparer = null): CollectionInterface
     {
-        $comparer ??= new DefaultEqualityComparer();
+        $comparer = $this->getEqualityComparer($comparer);
         $generator = function () use ($other, $comparer) {
             foreach ($this->getIterator() as $key => $item) {
                 foreach ($other as $otherItem) {
@@ -129,7 +129,7 @@ abstract class AbstractCollection implements CollectionInterface
 
     public function distinct(?EqualityComparerInterface $comparer = null): CollectionInterface
     {
-        $comparer ??= new DefaultEqualityComparer();
+        $comparer = $this->getEqualityComparer($comparer);
         $generator = function () use ($comparer) {
             $set = [];
             foreach ($this->getIterator() as $key => $item) {
@@ -200,7 +200,7 @@ abstract class AbstractCollection implements CollectionInterface
 
     public function groupBy(callable $keySelector, ?EqualityComparerInterface $comparer = null): ReadonlyMap
     {
-        $comparer ??= new DefaultEqualityComparer();
+        $comparer = $this->getEqualityComparer($comparer);
         /** @var Map<TKey,KeyItemCollection<TKey,TItem>> $map */
         $map = new Map([], DuplicateKeyPolicy::ThrowException, $comparer);
         foreach ($this->getIterator() as $key => $item) {
@@ -225,7 +225,7 @@ abstract class AbstractCollection implements CollectionInterface
 
     public function indexOf(mixed $needle, ?EqualityComparerInterface $comparer = null): int
     {
-        $comparer ??= new DefaultEqualityComparer();
+        $comparer = $this->getEqualityComparer($comparer);
         $i = 0;
         foreach ($this->getIterator() as $item) {
             if ($comparer->equals($item, $needle)) {
@@ -239,7 +239,7 @@ abstract class AbstractCollection implements CollectionInterface
 
     public function intersect(iterable $other, ?EqualityComparerInterface $comparer = null): CollectionInterface
     {
-        $comparer ??= new DefaultEqualityComparer();
+        $comparer = $this->getEqualityComparer($comparer);
         /** @var KeyItemCollection<TKey,TItem> $distinct */
         $distinct = new KeyItemCollection($this->distinct($comparer));
         $other = new KeyItemCollection($other);
@@ -412,7 +412,7 @@ abstract class AbstractCollection implements CollectionInterface
 
     public function union(iterable $other, ?EqualityComparerInterface $comparer = null): CollectionInterface
     {
-        $comparer ??= new DefaultEqualityComparer();
+        $comparer = $this->getEqualityComparer($comparer);
         /** @var KeyItemCollection<TKey,TItem> $distinct */
         $distinct = new KeyItemCollection($this->distinct($comparer));
         $generator = static function () use ($distinct, $other) {
@@ -444,4 +444,24 @@ abstract class AbstractCollection implements CollectionInterface
     }
 
     #endregion implements CollectionInterface
+
+    /**
+     * Returns the user specified or default equality comparer as a fallback.
+     *
+     * @param EqualityComparerInterface|null $custom The user specified equality comparer.
+     *
+     * @return EqualityComparerInterface The equality comparer.
+     */
+    protected function getEqualityComparer(?EqualityComparerInterface $custom): EqualityComparerInterface
+    {
+        if ($custom !== null) {
+            return $custom;
+        }
+
+        if (!isset(self::$staticDefaultComparer)) {
+            self::$staticDefaultComparer = new DefaultEqualityComparer();
+        }
+
+        return self::$staticDefaultComparer;
+    }
 }

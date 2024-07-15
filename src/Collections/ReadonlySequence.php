@@ -7,7 +7,6 @@ namespace Manychois\PhpStrong\Collections;
 use ArrayIterator;
 use Iterator;
 use Manychois\PhpStrong\Collections\Internal\AbstractCollection;
-use Manychois\PhpStrong\DefaultEqualityComparer;
 use Manychois\PhpStrong\EqualityComparerInterface;
 use OutOfBoundsException;
 
@@ -91,7 +90,7 @@ class ReadonlySequence extends AbstractCollection
      */
     public function lastIndexOf(mixed $needle, ?EqualityComparerInterface $comparer = null): int
     {
-        $comparer ??= new DefaultEqualityComparer();
+        $comparer = $this->getEqualityComparer($comparer);
         $count = \count($this->items);
         for ($i = $count - 1; $i >= 0; --$i) {
             if ($comparer->equals($needle, $this->items[$i])) {

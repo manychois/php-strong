@@ -41,7 +41,15 @@ class DefaultEqualityComparer implements EqualityComparerInterface
 
     public function hash(mixed $x): int|string
     {
-        if (\is_int($x) || \is_string($x)) {
+        if (\is_int($x)) {
+            return $x;
+        }
+
+        if (\is_string($x)) {
+            if (\preg_match('/^[+-]?\d+(\.0+)?$/', $x) === 1) {
+                return \intval($x);
+            }
+
             return $x;
         }
 
