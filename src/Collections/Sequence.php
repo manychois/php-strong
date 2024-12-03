@@ -4,25 +4,55 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Collections;
 
+use Manychois\PhpStrong\Collections\Internal\AbstractSequence;
+use OutOfRangeException;
+
 /**
- * Represents a mutable sequence of items.
+ * Represents a sequence of items.
  *
  * @template T
  *
- * @extends ReadonlySequence<T>
+ * @template-extends AbstractSequence<T>
  */
-class Sequence extends ReadonlySequence
+class Sequence extends AbstractSequence
 {
-    /**
-     * Appends the given items to the end of the sequence.
+        /**
+     * Initializes a new instance of the Sequence class.
      *
-     * @param T ...$items The items to append.
+     * @template TObject of object
+     *
+     * @param class-string<TObject> $class   The class of the items in the sequence.
+     * @param iterable<TObject>     $initial The initial items of the sequence.
+     *
+     * @return self<TObject> The new instance.
+     */
+    public static function ofObject(string $class, iterable $initial = []): self
+    {
+        // @phpstan-ignore return.type
+        return new self($initial);
+    }
+
+    /**
+     * Initializes a new instance of the Sequence class.
+     *
+     * @param iterable<string> $initial The initial items of the sequence.
+     *
+     * @return self<string> The new instance.
+     */
+    public static function ofString(iterable $initial = []): self
+    {
+        // @phpstan-ignore return.type
+        return new self($initial);
+    }
+
+    /**
+     * Appends one or more items to the end of the sequence.
+     *
+     * @param T ...$items The items to append to the sequence.
      */
     public function append(mixed ...$items): void
     {
-        /** @var array<int,T> $result */
-        $result = \array_merge($this->items, $items);
-        $this->items = $result;
+        \array_splice($this->items, \count($this->items), 0, $items);
     }
 
     /**
@@ -34,20 +64,52 @@ class Sequence extends ReadonlySequence
     }
 
     /**
-     * Removes a range of items from the sequence and inserts new items at the same position.
+     * Inserts one or more items at the specified index into the sequence.
      *
-     * @param int         $index       The index at which to start removing items.
-     * @param int|null    $length      The number of items to remove, or null to remove all items from $index to the end
-     *                                 of the sequence.
-     * @param iterable<T> $replacement The items to insert at the same position.
-     *
-     * @return ReadonlySequence<T> The removed items.
+     * @param int $index    The zero-based index at which the new items should be inserted.
+     *                      If the index is negative, it is counted from the end of the sequence.
+     *                      If the index is out of range, an `OutOfRangeException` is thrown.
+     * @param T   ...$items The items to insert.
      */
-    public function splice(int $index, ?int $length = null, iterable $replacement = []): ReadonlySequence
+    public function insertAt(int $index, mixed ...$items): void
     {
-        $toReplace = \is_array($replacement) ? $replacement : \iterator_to_array($replacement, false);
-        $removed = \array_splice($this->items, $index, $length, $toReplace);
+        if ($index < 0) {
+            $index += \count($this->items);
+        }
+        if ($index < 0 || $index > \count($this->items)) {
+            throw new OutOfRangeException('The index is out of range.');
+        }
 
+        \array_splice($this->items, $index, 0, $items);
+    }
+
+    /**
+     * Removes one or more items at the specified index from the sequence.
+     *
+     * @param int      $index The zero-based index of the item to remove.
+     *                        If the index is negative, it is counted
+     *                        from the end of the sequence. If the index
+     *                        is out of range, an `OutOfRangeException`
+     *                        is thrown.
+     * @param int|null $count The number of items to remove.
+     *                        If `null`, items are removed until the end of the sequence.
+     *
+     * @return ReadonlySequence<T> The items that were removed.
+     */
+    public function removeAt(int $index, ?int $count = 1): ReadonlySequence
+    {
+        if ($index < 0) {
+            $index += \count($this->items);
+        }
+        if ($index < 0 || $index > \count($this->items)) {
+            throw new OutOfRangeException('The index is out of range.');
+        }
+        if ($count !== null && $count < 0) {
+            throw new \InvalidArgumentException('The count cannot be negative.');
+        }
+
+        $removed = \array_splice($this->items, $index, $count);
+        // @phpstan-ignore return.type
         return new ReadonlySequence($removed);
     }
 }

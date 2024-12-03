@@ -21,6 +21,7 @@ interface EqualityComparerInterface
 
     /**
      * Returns a hash code for the specified object which can be used for native PHP array key.
+     * The hash code should be the same for objects that are considered equal.
      *
      * @param mixed $x The object for which to get a hash code.
      *

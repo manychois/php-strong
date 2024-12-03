@@ -4,48 +4,36 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Collections;
 
-use Manychois\PhpStrong\EqualityComparerInterface;
+use Manychois\PhpStrong\Collections\Internal\AbstractMap;
 
 /**
- * Represents a mapping of keys to items.
+ * Represents a collection of key-value pairs.
  *
- * @template TKey
- * @template TItem
+ * @template TKey of bool|int|string|object
+ * @template TValue
  *
- * @template-extends ReadonlyMap<TKey,TItem>
+ * @template-extends AbstractMap<TKey,TValue>
  */
-class Map extends ReadonlyMap
+class Map extends AbstractMap
 {
     /**
-     * Initializes a map from an iterable object.
+     * Initializes a new instance of the Map class.
      *
-     * @param iterable<TKey,TItem>           $collection The iterable object.
-     * @param DuplicateKeyPolicy             $policy     What to do when a duplicate key is found.
-     * @param EqualityComparerInterface|null $comparer   The equality comparer to use for comparing keys.
-     */
-    public function __construct(
-        iterable $collection = [],
-        DuplicateKeyPolicy $policy = DuplicateKeyPolicy::ThrowException,
-        EqualityComparerInterface $comparer = null
-    ) {
-        parent::__construct($collection, $policy, $comparer);
-        $this->freezed = false;
-    }
-
-    /**
-     * Returns a readonly map that wraps this map.
+     * @template TObject of object
      *
-     * @return ReadonlyMap<TKey,TItem> The readonly version of the map.
+     * @param class-string<TObject>    $class              The class of the values in the map.
+     * @param iterable<string,TObject> $initial            The initial items of the map.
+     * @param DuplicateKeyPolicy       $duplicateKeyPolicy Action to take when a duplicate key is found.
+     *
+     * @return self<string,TObject> The new instance.
      */
-    public function asReadonly(): ReadonlyMap
-    {
-        /** @var ReadonlyMap<TKey,TItem> $readonlyMap */
-        $readonlyMap = new ReadonlyMap();
-        // bypassing the one-by-one setting steps
-        $readonlyMap->keyItems = $this->keyItems;
-        $readonlyMap->lookup = $this->lookup;
-
-        return $readonlyMap;
+    public static function ofStringToObject(
+        string $class,
+        iterable $initial = [],
+        $duplicateKeyPolicy = DuplicateKeyPolicy::ThrowException
+    ): self {
+        // @phpstan-ignore return.type
+        return new self($initial, $duplicateKeyPolicy);
     }
 
     /**
@@ -53,76 +41,36 @@ class Map extends ReadonlyMap
      */
     public function clear(): void
     {
-        $this->keyItems = [];
-        $this->lookup = [];
+        if ($this->keys !== null) {
+            $this->keys = [];
+        }
+        $this->values = [];
     }
 
     /**
-     * Sets the item associated with the specified key.
+     * Removes the value associated with the specified key.
      *
-     * @param TKey  $key
-     * @param TItem $item
-     *
-     * @return TItem|null The replaced item, if any.
+     * @param TKey $key The key of the value to remove.
      */
-    public function set(mixed $key, mixed $item): mixed
+    public function remove(mixed $key): void
     {
-        $previous = $this->internalSet($key, $item);
-
-        return $previous?->item;
+        if ($this->keys === null) {
+            \assert(\is_int($key) || \is_string($key));
+            unset($this->values[$key]);
+        } else {
+            $validKey = $this->getArrayKey($key);
+            unset($this->keys[$validKey], $this->values[$validKey]);
+        }
     }
 
     /**
-     * Removes the item associated with the specified key.
+     * Sets the value associated with the specified key.
      *
-     * @param TKey $key The key of the item to remove.
-     *
-     * @return TItem|null The removed item, if any.
+     * @param TKey   $key   The key of the value.
+     * @param TValue $value The value to set.
      */
-    public function remove(mixed $key): mixed
+    public function set(mixed $key, mixed $value): void
     {
-        $hash = $this->equalityComparer->hash($key);
-        $indices = $this->lookup[$hash] ?? [];
-        $count = \count($indices);
-
-        if ($count === 0) {
-            return null;
-        }
-
-        $found = null;
-        $foundIndex = -1;
-        foreach ($indices as $index) {
-            $keyItem = $this->keyItems[$index];
-            if ($this->equalityComparer->equals($keyItem->key, $key)) {
-                $found = $keyItem->item;
-                $foundIndex = $index;
-                break;
-            }
-        }
-
-        if ($found === null) {
-            return null;
-        }
-
-        \array_splice($this->keyItems, $foundIndex, 1);
-        $lookupKeys = \array_keys($this->lookup);
-        foreach ($lookupKeys as $lookupKey) {
-            $indices = $this->lookup[$lookupKey];
-            $refreshedIndices = [];
-            foreach ($indices as $index) {
-                if ($index > $foundIndex) {
-                    $refreshedIndices[] = $index - 1;
-                } elseif ($index < $foundIndex) {
-                    $refreshedIndices[] = $index;
-                }
-            }
-            if (\count($refreshedIndices) > 0) {
-                $this->lookup[$lookupKey] = $refreshedIndices;
-            } else {
-                unset($this->lookup[$lookupKey]);
-            }
-        }
-
-        return $found;
+        $this->internalSet($key, $value);
     }
 }

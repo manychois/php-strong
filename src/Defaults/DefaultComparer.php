@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong;
+namespace Manychois\PhpStrong\Defaults;
 
 use DateTimeInterface;
+use Manychois\PhpStrong\ComparableInterface;
+use Manychois\PhpStrong\ComparerInterface;
+use Manychois\PhpStrong\EqualityComparerInterface;
 use TypeError;
 
 /**
@@ -26,11 +29,6 @@ class DefaultComparer implements ComparerInterface
 
     #region implements ComparerInterface
 
-    /**
-     * @inheritDoc
-     *
-     * @throws TypeError if the arguments $x and $y cannot be compared.
-     */
     public function compare(mixed $x, mixed $y): int
     {
         if ($this->equalityComparer->equals($x, $y)) {

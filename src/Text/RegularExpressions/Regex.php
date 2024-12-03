@@ -83,7 +83,7 @@ class Regex
             }
         }
 
-        return new ReadonlySequence($matchResults);
+        return ReadonlySequence::ofObject(MatchResult::class, $matchResults);
     }
 
     /**
@@ -152,7 +152,7 @@ class Regex
         $this->postNativeRegexCall($result, false);
         \assert($result !== false);
 
-        return new ReadonlySequence($result);
+        return ReadonlySequence::ofString($result);
     }
 
     private function handleWarning(int $errno, string $errstr): void
