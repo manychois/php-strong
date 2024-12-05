@@ -48,6 +48,23 @@ class ReadonlySequence extends AbstractArraySequence
         }
     }
 
+    /**
+     * If the sequence is based on a traversable, stores its items such that
+     * further operations will not iterate the traversable again.
+     *
+     * @return self<T> This instance.
+     */
+    public function freeze(): self
+    {
+        if ($this->traversable !== null) {
+            $this->items = \iterator_to_array($this->traversable, false);
+            $this->traversable = null;
+        }
+
+        return $this;
+    }
+
+
     #region overrides ArraySequence
 
     /**

@@ -201,13 +201,17 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
      * Performs the specified action on each item in the sequence.
      *
      * @param callable $action The action to perform on each item.
+     *                         If the action returns `false`, the iteration stops.
      *
-     * @phpstan-param callable(T,int):void $action
+     * @phpstan-param callable(T,int):mixed $action
      */
     final public function each(callable $action): void
     {
         foreach ($this->getIterator() as $index => $value) {
-            $action($value, $index);
+            $result = $action($value, $index);
+            if ($result === false) {
+                break;
+            }
         }
     }
 
@@ -648,7 +652,9 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
     #region implemented Countable
 
     /**
-     * @inheritDoc
+     * Returns the number of items in the collection.
+     *
+     * @return non-negative-int The number of items in the collection.
      */
     public function count(): int
     {

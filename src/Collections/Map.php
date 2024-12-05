@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Collections;
 
-use Manychois\PhpStrong\Collections\Internal\AbstractMap;
+use Manychois\PhpStrong\Collections\Internal\AbstractArrayMap;
+use Manychois\PhpStrong\Collections\Internal\MapFactoryTrait;
 
 /**
  * Represents a collection of key-value pairs.
@@ -12,39 +13,23 @@ use Manychois\PhpStrong\Collections\Internal\AbstractMap;
  * @template TKey
  * @template TValue
  *
- * @template-extends AbstractMap<TKey,TValue>
+ * @template-extends AbstractArrayMap<TKey,TValue>
  */
-class Map extends AbstractMap
+class Map extends AbstractArrayMap
 {
-    /**
-     * Initializes a new instance of the Map class.
-     *
-     * @template TObject of object
-     *
-     * @param class-string<TObject>    $class              The class of the values in the map.
-     * @param iterable<string,TObject> $initial            The initial items of the map.
-     * @param DuplicateKeyPolicy       $duplicateKeyPolicy Action to take when a duplicate key is found.
-     *
-     * @return self<string,TObject> The new instance.
-     */
-    public static function ofStringToObject(
-        string $class,
-        iterable $initial = [],
-        DuplicateKeyPolicy $duplicateKeyPolicy = DuplicateKeyPolicy::ThrowException
-    ): self {
-        // @phpstan-ignore return.type
-        return new self($initial, $duplicateKeyPolicy);
-    }
+    use MapFactoryTrait;
 
     /**
-     * Removes all items from the map.
+     * Sets the value associated with the specified key.
+     * If the policy does not allow duplicate keys, and the key already exists,
+     * an `OutOfBoundsException` is thrown.
+     *
+     * @param TKey   $key   The key of the value to set.
+     * @param TValue $value The value to set.
      */
-    public function clear(): void
+    public function set(mixed $key, mixed $value): void
     {
-        if ($this->keys !== null) {
-            $this->keys = [];
-        }
-        $this->values = [];
+        $this->internalSet($key, $value);
     }
 
     /**
@@ -55,22 +40,11 @@ class Map extends AbstractMap
     public function remove(mixed $key): void
     {
         if ($this->keys === null) {
-            \assert(\is_int($key) || \is_string($key));
             unset($this->values[$key]);
         } else {
             $validKey = $this->getArrayKey($key);
-            unset($this->keys[$validKey], $this->values[$validKey]);
+            unset($this->keys[$validKey]);
+            unset($this->values[$validKey]);
         }
-    }
-
-    /**
-     * Sets the value associated with the specified key.
-     *
-     * @param TKey   $key   The key of the value.
-     * @param TValue $value The value to set.
-     */
-    public function set(mixed $key, mixed $value): void
-    {
-        $this->internalSet($key, $value);
     }
 }
