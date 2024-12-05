@@ -29,6 +29,7 @@ class MatchResult extends Capture
     {
         if (\count($matches) === 0) {
             parent::__construct('', -1);
+
             $this->success = false;
             $this->captures = ReadonlySequence::ofObject(Capture::class);
             $this->namedCaptures = ReadonlyMap::ofStringToObject(Capture::class);
@@ -65,7 +66,9 @@ class MatchResult extends Capture
                 }
             }
         }
+
         parent::__construct($matchValue, $matchIndex);
+
         $this->success = true;
         $this->captures = ReadonlySequence::ofObject(Capture::class, $captures);
         $this->namedCaptures = ReadonlyMap::ofStringToObject(Capture::class, $namedCaptures);

@@ -16,6 +16,9 @@ class DefaultEqualityComparer implements EqualityComparerInterface
 {
     #region implements EqualityComparerInterface
 
+    /**
+     * @inheritDoc
+     */
     public function equals(mixed $x, mixed $y): bool
     {
         if ($x === $y) {
@@ -41,6 +44,9 @@ class DefaultEqualityComparer implements EqualityComparerInterface
         return false;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function hash(mixed $x): int|string
     {
         if (\is_int($x)) {

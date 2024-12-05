@@ -10,6 +10,7 @@ use IteratorAggregate;
 use Manychois\PhpStrong\Collections\DuplicateKeyPolicy;
 use Manychois\PhpStrong\Collections\ReadonlyMap;
 use Manychois\PhpStrong\Defaults\DefaultEqualityComparer;
+use Manychois\PhpStrong\EqualityComparerInterface;
 use OutOfBoundsException;
 use Stringable;
 use TypeError;
@@ -17,7 +18,7 @@ use TypeError;
 /**
  * Represents the vase class for a collection of key-value pairs.
  *
- * @template TKey of bool|int|string|object
+ * @template TKey
  * @template TValue
  *
  * @template-implements IteratorAggregate<TKey,TValue>
@@ -40,14 +41,15 @@ abstract class AbstractMap implements Countable, IteratorAggregate
      * @param iterable<TKey,TValue> $initial            The initial items of the map.
      * @param DuplicateKeyPolicy    $duplicateKeyPolicy Action to take when a duplicate key is found.
      */
-    public function __construct(iterable $initial = [], $duplicateKeyPolicy = DuplicateKeyPolicy::ThrowException)
-    {
+    public function __construct(
+        iterable $initial = [],
+        DuplicateKeyPolicy $duplicateKeyPolicy = DuplicateKeyPolicy::ThrowException
+    ) {
         $this->duplicateKeyPolicy = $duplicateKeyPolicy;
         if (\is_array($initial) && \count($initial) > 0) {
             $this->keys = null;
             $this->values = $initial;
         } elseif ($initial instanceof self && $duplicateKeyPolicy === $initial->duplicateKeyPolicy) {
-            // @phpstan-ignore assign.propertyType
             $this->keys = $initial->keys;
             $this->values = $initial->values;
         } else {
@@ -56,6 +58,59 @@ abstract class AbstractMap implements Countable, IteratorAggregate
             foreach ($initial as $key => $value) {
                 $this->internalSet($key, $value);
             }
+        }
+    }
+
+    /**
+     * Converts the map key into a key compatible with the native array.
+     *
+     * @param mixed $key The key to convert.
+     *
+     * @return int|string The key compatible with the native array.
+     */
+    final protected function getArrayKey(mixed $key): int|string
+    {
+        $eq = new DefaultEqualityComparer();
+
+        return $eq->hash($key);
+    }
+
+    /**
+     * Sets the value associated with the specified key.
+     * This method should only be called in the constructor if the map is read-only.
+     *
+     * @param TKey   $key   The key of the value.
+     * @param TValue $value The value to set.
+     */
+    final protected function internalSet(mixed $key, mixed $value): void
+    {
+        if ($this->keys === null) {
+            \assert(\is_int($key) || \is_string($key));
+            if ($this->duplicateKeyPolicy === DuplicateKeyPolicy::ThrowException) {
+                $exists = \array_key_exists($key, $this->values);
+                if ($exists) {
+                    throw new \InvalidArgumentException('The key already exists.');
+                }
+            } elseif ($this->duplicateKeyPolicy === DuplicateKeyPolicy::Ignore) {
+                if (\array_key_exists($key, $this->values)) {
+                    return;
+                }
+            }
+            $this->values[$key] = $value;
+        } else {
+            $validKey = $this->getArrayKey($key);
+            if ($this->duplicateKeyPolicy === DuplicateKeyPolicy::ThrowException) {
+                $exists = \in_array($validKey, $this->keys, true);
+                if ($exists) {
+                    throw new \InvalidArgumentException('The key already exists.');
+                }
+            } elseif ($this->duplicateKeyPolicy === DuplicateKeyPolicy::Ignore) {
+                if (\in_array($validKey, $this->keys, true)) {
+                    return;
+                }
+            }
+            $this->keys[$validKey] = $key;
+            $this->values[$validKey] = $value;
         }
     }
 
@@ -81,18 +136,22 @@ abstract class AbstractMap implements Countable, IteratorAggregate
     /**
      * Determines whether the map contains a specific value.
      *
-     * @param TValue $target The value to locate in the map.
+     * @param TValue                         $target The value to locate in the map.
+     * @param EqualityComparerInterface|null $eq     The equality comparer to use.
+     *                                               If null, the default equality
+     *                                               comparer is used.
      *
      * @return bool true if the map contains the value; otherwise, false.
      */
-    final public function contains(mixed $target): bool
+    final public function contains(mixed $target, ?EqualityComparerInterface $eq = null): bool
     {
         $found = \in_array($target, $this->values, true);
         if (!$found) {
-            $eq = new DefaultEqualityComparer();
+            $eq ??= new DefaultEqualityComparer();
             foreach ($this->values as $value) {
                 if ($eq->equals($value, $target)) {
                     $found = true;
+
                     break;
                 }
             }
@@ -219,6 +278,17 @@ abstract class AbstractMap implements Countable, IteratorAggregate
         return \array_key_exists($validKey, $this->values);
     }
 
+    /**
+     * Returns the map as an array.
+     * The original keys are not preserved if they are not integers or strings.
+     *
+     * @return array<TValue> The map as an array.
+     */
+    final public function toArray(): array
+    {
+        return $this->values;
+    }
+
     #region implements Countable
 
     /**
@@ -253,70 +323,5 @@ abstract class AbstractMap implements Countable, IteratorAggregate
             }
         }
     }
-
     #endregion implements IteratorAggregate
-
-    /**
-     * Converts the map key into a key compatible with the native array.
-     *
-     * @param mixed $key The key to convert.
-     *
-     * @return int|string The key compatible with the native array.
-     */
-    final protected function getArrayKey(mixed $key): int|string
-    {
-        if (\is_int($key) || \is_string($key)) {
-            return $key;
-        }
-        if (\is_object($key)) {
-            return \spl_object_id($key);
-        }
-        if (\is_bool($key)) {
-            return $key ? 1 : 0;
-        }
-
-        throw new \InvalidArgumentException(\sprintf(
-            'The type of the key is not supported. Found type %s.',
-            \get_debug_type($key),
-        ));
-    }
-
-    /**
-     * Sets the value associated with the specified key.
-     * This method should only be called in the constructor if the map is read-only.
-     *
-     * @param TKey   $key   The key of the value.
-     * @param TValue $value The value to set.
-     */
-    final protected function internalSet(mixed $key, mixed $value): void
-    {
-        if ($this->keys === null) {
-            \assert(\is_int($key) || \is_string($key));
-            if ($this->duplicateKeyPolicy === DuplicateKeyPolicy::ThrowException) {
-                $exists = \array_key_exists($key, $this->values);
-                if ($exists) {
-                    throw new \InvalidArgumentException('The key already exists.');
-                }
-            } elseif ($this->duplicateKeyPolicy === DuplicateKeyPolicy::Ignore) {
-                if (\array_key_exists($key, $this->values)) {
-                    return;
-                }
-            }
-            $this->values[$key] = $value;
-        } else {
-            $validKey = $this->getArrayKey($key);
-            if ($this->duplicateKeyPolicy === DuplicateKeyPolicy::ThrowException) {
-                $exists = \in_array($validKey, $this->keys, true);
-                if ($exists) {
-                    throw new \InvalidArgumentException('The key already exists.');
-                }
-            } elseif ($this->duplicateKeyPolicy === DuplicateKeyPolicy::Ignore) {
-                if (\in_array($validKey, $this->keys, true)) {
-                    return;
-                }
-            }
-            $this->keys[$validKey] = $key;
-            $this->values[$validKey] = $value;
-        }
-    }
 }

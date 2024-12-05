@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Psr\Container;
 
-use Manychois\PhpStrong\Psr\Container\MismatchEntryTypeException;
-use Manychois\PhpStrong\Psr\Container\StrongContainerInterface;
 use Psr\Container\ContainerInterface;
 
 /**
@@ -15,6 +13,11 @@ class StrongContainerWrapper implements StrongContainerInterface
 {
     private readonly ContainerInterface $container;
 
+    /**
+     * Initializes a new instance of the StrongContainerWrapper class.
+     *
+     * @param ContainerInterface $container The container to wrap.
+     */
     public function __construct(ContainerInterface $container)
     {
         $this->container = $container;
@@ -22,6 +25,9 @@ class StrongContainerWrapper implements StrongContainerInterface
 
     #region implements StrongContainerInterface
 
+    /**
+     * @inheritDoc
+     */
     public function getObject(string $className): mixed
     {
         $value = $this->container->get($className);
@@ -29,25 +35,31 @@ class StrongContainerWrapper implements StrongContainerInterface
             throw new MismatchEntryTypeException(\sprintf(
                 'The entry "%s" is not an object. Type %s found.',
                 $className,
-                \get_debug_type($value),
+                \get_debug_type($value)
             ));
         }
         if (!($value instanceof $className)) {
             throw new MismatchEntryTypeException(\sprintf(
                 'The entry "%1$s" is not an instance of "%1$s". Type %2$s found.',
                 $className,
-                \get_debug_type($value),
+                \get_debug_type($value)
             ));
         }
 
         return $value;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function get(string $id)
     {
         return $this->container->get($id);
     }
 
+    /**
+     * @inheritDoc
+     */
     public function has(string $id): bool
     {
         return $this->container->has($id);

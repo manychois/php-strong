@@ -12,7 +12,7 @@ use Manychois\PhpStrong\Defaults\DefaultEqualityComparer;
  * @template TKey
  * @template TValue
  */
-final class KeyValue implements EqualInterface
+final class KeyValuePair implements EqualInterface
 {
     /**
      * @var TKey
@@ -23,23 +23,32 @@ final class KeyValue implements EqualInterface
      */
     public readonly mixed $item;
 
-    public function __construct(mixed $key, mixed $item)
+    /**
+     * Initializes a new instance of the KeyValue class.
+     *
+     * @param TKey   $key   The key of the key-value pair.
+     * @param TValue $value The value of the key-value pair.
+     */
+    public function __construct(mixed $key, mixed $value)
     {
         $this->key = $key;
-        $this->item = $item;
+        $this->item = $value;
     }
 
     #region implements EqualInterface
 
+    /**
+     * @inheritDoc
+     */
     public function equals(mixed $other): bool
     {
         if (!($other instanceof self)) {
             return false;
         }
 
-        $c = new DefaultEqualityComparer();
+        $eq = new DefaultEqualityComparer();
 
-        return $c->equals($this->key, $other->key) && $c->equals($this->item, $other->item);
+        return $eq->equals($this->key, $other->key) && $eq->equals($this->item, $other->item);
     }
 
     #endregion implements EqualInterface

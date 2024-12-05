@@ -12,8 +12,6 @@ use TypeError;
 
 /**
  * Represents a default comparer that can compare scalar values and ComparableInterface.
- *
- * @implements ComparerInterface<mixed>
  */
 class DefaultComparer implements ComparerInterface
 {

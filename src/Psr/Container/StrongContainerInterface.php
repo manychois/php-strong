@@ -14,15 +14,11 @@ interface StrongContainerInterface extends ContainerInterface
     /**
      * Finds an entry of the container by its identifier and returns it.
      *
-     * @param string $className The identifier of the entry to look for, which is the class name.
+     * @param class-string<T> $className The identifier of the entry to look for, which is the class name.
      *
      * @return T The entry.
      *
      * @template T of object The type of the object.
-     *
-     * @phpstan-param class-string<T> $className
-     *
-     * @phpstan-return T
      */
     public function getObject(string $className): mixed;
 }

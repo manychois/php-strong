@@ -26,9 +26,9 @@
   },
   "require": {
     "php": ">=8.3",
-    "psr/log": "^3.0",
-    "psr/container": "^2.0.2",
-    "psr/clock": "^1.0"
+    "psr/log": "^3",
+    "psr/container": "^2",
+    "psr/clock": "^1"
   },
   "require-dev": {
     "escapestudios/symfony2-coding-standard": "^3",
@@ -54,7 +54,6 @@
     "phpcs": "phpcs --standard=phpcs.xml -s",
     "phpcbf": "phpcbf --standard=phpcs.xml || true",
     "phpstan": "phpstan analyse -c phpstan.dist.neon || true",
-    "phpstan-watch": "phpstan analyse -c phpstan.dist.neon --watch",
     "code": [
       "@phpcbf",
       "@phpcs",

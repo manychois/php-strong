@@ -9,7 +9,7 @@ use Manychois\PhpStrong\Collections\Internal\AbstractMap;
 /**
  * Represents a read-only collection of key-value pairs.
  *
- * @template TKey of bool|int|string|object
+ * @template TKey
  * @template TValue
  *
  * @template-extends AbstractMap<TKey,TValue>
@@ -30,7 +30,7 @@ class ReadonlyMap extends AbstractMap
     public static function ofStringToObject(
         string $class,
         iterable $initial = [],
-        $duplicateKeyPolicy = DuplicateKeyPolicy::ThrowException
+        DuplicateKeyPolicy $duplicateKeyPolicy = DuplicateKeyPolicy::ThrowException
     ): self {
         // @phpstan-ignore return.type
         return new self($initial, $duplicateKeyPolicy);
