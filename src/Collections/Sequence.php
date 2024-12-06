@@ -28,9 +28,9 @@ class Sequence extends AbstractArraySequence
      *
      * @param T ...$items The items to append to the sequence.
      */
-    public function append(mixed ...$items): void
+    final public function append(mixed ...$items): void
     {
-        \array_splice($this->items, \count($this->items), 0, $items);
+        $this->appendRange($items);
     }
 
     /**
@@ -66,17 +66,9 @@ class Sequence extends AbstractArraySequence
      *                      If the index is out of range, an `OutOfRangeException` is thrown.
      * @param T   ...$items The items to insert.
      */
-    public function insertAt(int $index, mixed ...$items): void
+    final public function insertAt(int $index, mixed ...$items): void
     {
-        $count = \count($this->items);
-        if ($index < 0) {
-            $index += $count;
-        }
-        if ($index < 0 || $index > $count) {
-            throw new OutOfRangeException('The index is out of range.');
-        }
-
-        \array_splice($this->items, $index, 0, $items);
+        $this->insertRange($index, $items);
     }
 
     /**

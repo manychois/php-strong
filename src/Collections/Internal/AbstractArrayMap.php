@@ -14,6 +14,7 @@ use Manychois\PhpStrong\Collections\Sequence;
 use Manychois\PhpStrong\Defaults\DefaultEqualityComparer;
 use Manychois\PhpStrong\EqualityComparerInterface;
 use Manychois\PhpStrong\KeyValuePair;
+use Manychois\PhpStrong\ValueObject;
 use OutOfBoundsException;
 use Traversable;
 
@@ -163,6 +164,20 @@ abstract class AbstractArrayMap implements Countable, IteratorAggregate
         }
 
         throw new OutOfBoundsException('The key does not exist.');
+    }
+
+    /**
+     * Returns a new value object that wraps the value associated with the specified key.
+     *
+     * If the key does not exist, an `OutOfBoundsException` is thrown.
+     *
+     * @param TKey $key The key of the value to get.
+     *
+     * @return ValueObject The value object that wraps the value associated with the specified key.
+     */
+    final public function getValueObject(mixed $key): ValueObject
+    {
+        return new ValueObject($this->get($key));
     }
 
     /**

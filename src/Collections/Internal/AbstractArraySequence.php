@@ -9,7 +9,10 @@ use Countable;
 use Generator;
 use IteratorAggregate;
 use IteratorIterator;
+use Manychois\PhpStrong\Collections\Map;
 use Manychois\PhpStrong\Collections\ReadonlySequence;
+use Manychois\PhpStrong\Collections\Sequence;
+use Manychois\PhpStrong\Collections\Set;
 use Manychois\PhpStrong\ComparerInterface;
 use Manychois\PhpStrong\Defaults\DefaultComparer;
 use Manychois\PhpStrong\Defaults\DefaultEqualityComparer;
@@ -187,7 +190,7 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
      */
     final public function contains(mixed $target, ?EqualityComparerInterface $eq = null): bool
     {
-        $eq ??= new DefaultEqualityComparer();
+        $eq ??= $this->getDefaultEqualityComparer();
         foreach ($this->getIterator() as $value) {
             if ($eq->equals($value, $target)) {
                 return true;
@@ -195,6 +198,31 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
         }
 
         return false;
+    }
+
+    /**
+     * Returns a new sequence that contains the distinct items.
+     *
+     * @param EqualityComparerInterface|null $eq The equality comparer to use.
+     *                                           If null, the default equality comparer is used.
+     *
+     * @return ReadonlySequence<T> The distinct items.
+     */
+    final public function distinct(?EqualityComparerInterface $eq = null): ReadonlySequence
+    {
+        $eq ??= $this->getDefaultEqualityComparer();
+        $generator = function () use ($eq) {
+            $set = new Set([], $eq);
+            foreach ($this->getIterator() as $value) {
+                if (!$set->add($value)) {
+                    continue;
+                }
+
+                yield $value;
+            }
+        };
+
+        return new ReadonlySequence($generator());
     }
 
     /**
@@ -216,23 +244,25 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
     }
 
     /**
-     * Returns a new sequence that contains the items that do not match the specified predicate.
+     * Returns a new sequence that contains the items that are not present in the other sequence.
      *
-     * @param callable $predicate The predicate to use.
+     * @param array<T>|Traversable<T>        $other The other sequence to compare.
+     * @param EqualityComparerInterface|null $eq    The equality comparer to use.
      *
-     * @return ReadonlySequence<T> The items that do not match the predicate.
-     *
-     * @phpstan-param callable(T,int):bool $predicate
+     * @return ReadonlySequence<T> Items that are not present in the second sequence.
      */
-    final public function except(callable $predicate): ReadonlySequence
+    final public function except(array|Traversable $other, ?EqualityComparerInterface $eq = null): ReadonlySequence
     {
-        $generator = function () use ($predicate) {
-            foreach ($this->getIterator() as $index => $value) {
-                if ($predicate($value, $index)) {
-                    continue;
+        $eq ??= $this->getDefaultEqualityComparer();
+        $generator = function () use ($other, $eq) {
+            foreach ($this->getIterator() as $itemA) {
+                foreach ($other as $itemB) {
+                    if ($eq->equals($itemA, $itemB)) {
+                        continue 2;
+                    }
                 }
 
-                yield $value;
+                yield $itemA;
             }
         };
 
@@ -410,17 +440,53 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
     }
 
     /**
-     * Returns a new value object which represents the item at the specified index.
+     * Returns a new value object that wraps the item at the specified index.
      * If the index is negative, it is counted from the end of the sequence.
      * If the index is out of range, an `OutOfRangeException` is thrown.
      *
      * @param int $index The zero-based index of the item to get.
      *
-     * @return ValueObject The item at the specified index.
+     * @return ValueObject The value object that wraps the item at the specified index.
      */
     final public function getValueObject(int $index): ValueObject
     {
         return new ValueObject($this->get($index));
+    }
+
+    /**
+     * Groups the items of a sequence according to a specified key selector function.
+     *
+     * @param callable                       $keySelector The key selector function.
+     * @param EqualityComparerInterface|null $eq          The equality comparer to compare keys.
+     *
+     * @return Map<TKey,Sequence<T>> The grouped items.
+     *
+     * @template TKey
+     *
+     * @phpstan-param callable(T,int):TKey $keySelector
+     */
+    final public function groupBy(callable $keySelector, ?EqualityComparerInterface $eq = null): Map
+    {
+        /**
+         * @var Map<TKey,Sequence<T>> $map
+         */
+        $map = new Map();
+        $eq ??= $this->getDefaultEqualityComparer();
+        foreach ($this->getIterator() as $index => $item) {
+            $key = $keySelector($item, $index);
+            if ($map->hasKey($key)) {
+                $seq = $map->get($key);
+                $seq->append($item);
+            } else {
+                /**
+                 * @var Sequence<T> $seq
+                 */
+                $seq = new Sequence([$item]);
+                $map->set($key, $seq);
+            }
+        }
+
+        return $map;
     }
 
     /**
@@ -455,7 +521,7 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
             return -1;
         }
 
-        $eq ??= new DefaultEqualityComparer();
+        $eq ??= $this->getDefaultEqualityComparer();
         for ($i = $from; $i < $count; $i++) {
             if ($eq->equals($this->items[$i], $target)) {
                 return $i;
@@ -463,6 +529,37 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
         }
 
         return -1;
+    }
+
+    /**
+     * Produces the set intersection of two sequences.
+     *
+     * @param array<T>|Traversable<T>        $other Another sequence to compare.
+     * @param EqualityComparerInterface|null $eq    The equality comparer to use.
+     *
+     * @return ReadonlySequence<T> The items that are present in both sequences.
+     */
+    public function intersect(array|Traversable $other, ?EqualityComparerInterface $eq = null): ReadonlySequence
+    {
+        $eq ??= $this->getDefaultEqualityComparer();
+        $generator = function () use ($other, $eq) {
+            $set = new Set([], $eq);
+            foreach ($this->getIterator() as $itemA) {
+                foreach ($other as $itemB) {
+                    if (!$eq->equals($itemA, $itemB)) {
+                        continue;
+                    }
+
+                    if (!$set->add($itemA)) {
+                        continue;
+                    }
+
+                    yield $itemA;
+                }
+            }
+        };
+
+        return new ReadonlySequence($generator());
     }
 
     /**
@@ -488,7 +585,7 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
             return -1;
         }
 
-        $eq ??= new DefaultEqualityComparer();
+        $eq ??= $this->getDefaultEqualityComparer();
         for ($i = $from; $i >= 0; $i--) {
             if ($eq->equals($this->items[$i], $target)) {
                 return $i;
@@ -626,6 +723,39 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
     }
 
     /**
+     * Produces the set union of two sequences.
+     *
+     * @param array<T>|Traversable<T>        $other Another sequence to compare.
+     * @param EqualityComparerInterface|null $eq    The equality comparer to use.
+     *
+     * @return ReadonlySequence<T> The items that are present in either sequence.
+     */
+    final public function union(array|Traversable $other, ?EqualityComparerInterface $eq = null): ReadonlySequence
+    {
+        $eq ??= $this->getDefaultEqualityComparer();
+        $generator = function () use ($other, $eq) {
+            $set = new Set([], $eq);
+            foreach ($this->getIterator() as $itemA) {
+                if (!$set->add($itemA)) {
+                    continue;
+                }
+
+                yield $itemA;
+            }
+
+            foreach ($other as $itemB) {
+                if (!$set->add($itemB)) {
+                    continue;
+                }
+
+                yield $itemB;
+            }
+        };
+
+        return new ReadonlySequence($generator());
+    }
+
+    /**
      * Filters the sequence based on a predicate.
      *
      * @param callable $predicate The predicate to use.
@@ -722,4 +852,14 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
     }
 
     #endregion implemented IteratorAggregate
+
+    /**
+     * Returns the default equality comparer.
+     *
+     * @return EqualityComparerInterface The default equality comparer.
+     */
+    protected function getDefaultEqualityComparer(): EqualityComparerInterface
+    {
+        return new DefaultEqualityComparer();
+    }
 }
