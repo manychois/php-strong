@@ -98,6 +98,10 @@ abstract class AbstractArrayMap implements Countable, IteratorAggregate
      */
     final public function asReadonly(): ReadonlyMap
     {
+        if ($this instanceof ReadonlyMap) {
+            return $this;
+        }
+
         return new ReadonlyMap($this, $this->duplicateKeyPolicy);
     }
 
@@ -215,6 +219,24 @@ abstract class AbstractArrayMap implements Countable, IteratorAggregate
 
         // @phpstan-ignore return.type
         return new ReadonlySequence($keys);
+    }
+
+    /**
+     * Returns a new map that uses the values of the current map as keys and the keys of the current map as values.
+     *
+     * @param DuplicateKeyPolicy $policy The action to take when a duplicate key is found.
+     *
+     * @return ReadonlyMap<TValue,TKey> A new map that has the keys and values swapped.
+     */
+    public function swap(DuplicateKeyPolicy $policy = DuplicateKeyPolicy::ThrowException): ReadonlyMap
+    {
+        $generator = function () {
+            foreach ($this->getIterator() as $key => $value) {
+                yield $value => $key;
+            }
+        };
+
+        return new ReadonlyMap($generator(), $policy);
     }
 
     /**

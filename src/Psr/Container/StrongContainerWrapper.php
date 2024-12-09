@@ -31,13 +31,6 @@ class StrongContainerWrapper implements StrongContainerInterface
     public function getObject(string $className): mixed
     {
         $value = $this->container->get($className);
-        if (!\is_object($value)) {
-            throw new MismatchEntryTypeException(\sprintf(
-                'The entry "%s" is not an object. Type %s found.',
-                $className,
-                \get_debug_type($value)
-            ));
-        }
         if (!($value instanceof $className)) {
             throw new MismatchEntryTypeException(\sprintf(
                 'The entry "%1$s" is not an instance of "%1$s". Type %2$s found.',

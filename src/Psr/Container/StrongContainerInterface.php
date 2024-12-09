@@ -12,7 +12,7 @@ use Psr\Container\ContainerInterface;
 interface StrongContainerInterface extends ContainerInterface
 {
     /**
-     * Finds an entry of the container by its identifier and returns it.
+     * Finds an entry of the container by its identifier and confirms that it is an object of the specified class.
      *
      * @param class-string<T> $className The identifier of the entry to look for, which is the class name.
      *
