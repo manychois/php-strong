@@ -87,7 +87,6 @@ abstract class AbstractArrayMap implements Countable, IteratorAggregate
             $pairs[] = new KeyValuePair($key, $value);
         }
 
-        // @phpstan-ignore return.type
         return new Sequence($pairs);
     }
 

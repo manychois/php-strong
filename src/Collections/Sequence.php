@@ -9,7 +9,6 @@ use Manychois\PhpStrong\Collections\Internal\SequenceFactoryTrait;
 use Manychois\PhpStrong\ComparerInterface;
 use Manychois\PhpStrong\Defaults\DefaultComparer;
 use Manychois\PhpStrong\EqualityComparerInterface;
-use OutOfRangeException;
 use Traversable;
 
 /**
@@ -86,7 +85,7 @@ class Sequence extends AbstractArraySequence
             $index += $count;
         }
         if ($index < 0 || $index > $count) {
-            throw new OutOfRangeException('The index is out of range.');
+            throw new \OutOfRangeException('The index is out of range.');
         }
 
         if (!\is_array($items)) {
@@ -139,7 +138,7 @@ class Sequence extends AbstractArraySequence
             $index += \count($this->items);
         }
         if ($index < 0 || $index > \count($this->items)) {
-            throw new OutOfRangeException('The index is out of range.');
+            throw new \OutOfRangeException('The index is out of range.');
         }
         if ($count !== null && $count < 0) {
             throw new \InvalidArgumentException('The count cannot be negative.');
@@ -147,7 +146,6 @@ class Sequence extends AbstractArraySequence
 
         $removed = \array_splice($this->items, $index, $count);
 
-        // @phpstan-ignore return.type
         return new self($removed);
     }
 
