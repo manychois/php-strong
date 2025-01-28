@@ -41,7 +41,7 @@ abstract class AbstractArraySequence implements Countable, EqualInterface, Itera
      *
      * @param array<T>|Traversable<T> $initial The initial items of the sequence.
      */
-    public function __construct(array|Traversable $initial)
+    public function __construct(array|Traversable $initial = [])
     {
         if ($initial instanceof self) {
             $this->items = $initial->items;
