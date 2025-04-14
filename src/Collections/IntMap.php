@@ -48,6 +48,24 @@ final class IntMap extends AbstractNativeMap
     }
 
     /**
+     * Removes the specified key and its associated value from the map.
+     *
+     * @param int $key The key to remove.
+     *
+     * @return bool `true` if the key was found and removed, `false` otherwise.
+     */
+    public function remove(int $key): bool
+    {
+        if (isset($this->source[$key])) {
+            unset($this->source[$key]);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Sets the value associated with the specified key in the map.
      *
      * @param int $key   The key to set the value for.

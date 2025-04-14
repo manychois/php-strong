@@ -49,8 +49,6 @@ final class Sequence extends AbstractArray
      * @param TValue $value  The value to fill the sequence with.
      *
      * @return static<TValue> A new sequence filled with the specified value.
-     *
-     * @phpstan-ignore return.phpDocType
      */
     public static function fill(int $length, mixed $value): static
     {
@@ -70,8 +68,6 @@ final class Sequence extends AbstractArray
      * @param array<TObject>|Traversable<TObject> $initial The initial items of the sequence.
      *
      * @return static<TObject> The new instance.
-     *
-     * @phpstan-ignore return.phpDocType
      */
     public static function ofObject(string $class, array|Traversable $initial = []): static
     {
@@ -84,8 +80,6 @@ final class Sequence extends AbstractArray
      * @param array<string>|Traversable<string> $initial The initial items of the sequence.
      *
      * @return static<string> The new instance.
-     *
-     * @phpstan-ignore return.phpDocType
      */
     public static function ofString(array|Traversable $initial = []): static
     {
@@ -98,8 +92,6 @@ final class Sequence extends AbstractArray
      * @param array<int>|Traversable<int> $initial The initial items of the sequence.
      *
      * @return static<int> The new instance.
-     *
-     * @phpstan-ignore return.phpDocType
      */
     public static function ofInt(array|Traversable $initial = []): static
     {
@@ -112,8 +104,6 @@ final class Sequence extends AbstractArray
      * @param array<float>|Traversable<float> $initial The initial items of the sequence.
      *
      * @return static<float> The new instance.
-     *
-     * @phpstan-ignore return.phpDocType
      */
     public static function ofFloat(array|Traversable $initial = []): static
     {
@@ -126,8 +116,6 @@ final class Sequence extends AbstractArray
      * @param array<bool>|Traversable<bool> $initial The initial items of the sequence.
      *
      * @return static<bool> The new instance.
-     *
-     * @phpstan-ignore return.phpDocType
      */
     public static function ofBool(array|Traversable $initial = []): static
     {
@@ -160,8 +148,6 @@ final class Sequence extends AbstractArray
      * @param int $length The length of each chunk.
      *
      * @return static<static<T>> A new sequence containing the chunks.
-     *
-     * @phpstan-ignore return.phpDocType
      */
     public function chunk(int $length): static
     {
@@ -184,7 +170,7 @@ final class Sequence extends AbstractArray
      *
      * @return static<T> A new sequence with distinct values.
      */
-    public function distinct(?EqualityComparerInterface $eq = null): static
+    public function distinct(EqualityComparerInterface|null $eq = null): static
     {
         $distinct = [];
         $eq ??= $this->getDefaultEqualityComparer();
@@ -278,7 +264,7 @@ final class Sequence extends AbstractArray
      *
      * @return int The index of the first occurrence of the value, or -1 if not found.
      */
-    public function indexOf(mixed $value, ?EqualityComparerInterface $eq = null): int
+    public function indexOf(mixed $value, EqualityComparerInterface|null $eq = null): int
     {
         $eq ??= $this->getDefaultEqualityComparer();
         $predicate = static fn ($v) => $eq->equals($v, $value);
@@ -294,7 +280,7 @@ final class Sequence extends AbstractArray
      *
      * @return int The index of the last occurrence of the value, or -1 if not found.
      */
-    public function lastIndexOf(mixed $value, ?EqualityComparerInterface $eq = null): int
+    public function lastIndexOf(mixed $value, EqualityComparerInterface|null $eq = null): int
     {
         $eq ??= $this->getDefaultEqualityComparer();
 
@@ -313,8 +299,6 @@ final class Sequence extends AbstractArray
      * @return static<TNewValue> A new sequence containing the transformed values.
      *
      * @phpstan-param callable(T,int):TNewValue $callback
-     *
-     * @phpstan-ignore return.phpDocType
      */
     public function map(callable $callback): static
     {
@@ -446,7 +430,7 @@ final class Sequence extends AbstractArray
      *
      * @return bool `true` if the value was removed; otherwise, `false`.
      */
-    public function remove(mixed $value, ?EqualityComparerInterface $eq = null): bool
+    public function remove(mixed $value, EqualityComparerInterface|null $eq = null): bool
     {
         $index = $this->indexOf($value, $eq);
         if ($index !== -1) {
@@ -521,7 +505,7 @@ final class Sequence extends AbstractArray
      *
      * @return static<T> A new sequence containing the sliced values.
      */
-    public function slice(int $offset, ?int $length = null): static
+    public function slice(int $offset, int|null $length = null): static
     {
         return new static(\array_slice($this->source, $offset, $length));
     }
@@ -543,7 +527,7 @@ final class Sequence extends AbstractArray
      *
      * @return static<T> A sequence containing the removed values.
      */
-    public function splice(int $offset, ?int $length = null, array|AbstractArray $replacement = []): static
+    public function splice(int $offset, int|null $length = null, array|AbstractArray $replacement = []): static
     {
         if ($replacement instanceof AbstractArray) {
             $replacement = $replacement->source;

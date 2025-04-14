@@ -164,7 +164,7 @@ class Collection implements Iterator, JsonSerializable
      *
      * @return bool `true` if the value is found, `false` otherwise.
      */
-    public function contains(mixed $value, ?EqualityComparerInterface $eq = null): bool
+    public function contains(mixed $value, EqualityComparerInterface|null $eq = null): bool
     {
         $eq ??= $this->getDefaultEqualityComparer();
         foreach ($this->source as $v) {
@@ -183,7 +183,7 @@ class Collection implements Iterator, JsonSerializable
      *
      * @return self<TKey,TValue> A new collection with distinct values.
      */
-    public function distinct(?EqualityComparerInterface $eq = null): self
+    public function distinct(EqualityComparerInterface|null $eq = null): self
     {
         $eq ??= $this->getDefaultEqualityComparer();
         $generator = function () use ($eq) {

@@ -75,7 +75,7 @@ abstract class AbstractArray implements ArrayAccess, Countable, EqualInterface, 
      *
      * @return bool `true` if the value is found, `false` otherwise.
      */
-    public function contains(mixed $value, ?EqualityComparerInterface $eq = null): bool
+    public function contains(mixed $value, EqualityComparerInterface|null $eq = null): bool
     {
         $eq ??= $this->getDefaultEqualityComparer();
         foreach ($this->source as $v) {

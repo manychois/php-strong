@@ -13,7 +13,7 @@ use RuntimeException;
 class Regex
 {
     public readonly string $pattern;
-    private ?\Throwable $lastWarning = null;
+    private \Throwable|null $lastWarning = null;
 
     /**
      * Initializes a new instance of the Regex class.
@@ -34,7 +34,7 @@ class Regex
      *
      * @return string The escaped text.
      */
-    public static function escape(string $text, ?string $delimiter = null): string
+    public static function escape(string $text, string|null $delimiter = null): string
     {
         return \preg_quote($text, $delimiter);
     }

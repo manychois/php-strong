@@ -41,6 +41,7 @@
     <exclude name="SlevomatCodingStandard.Operators.DisallowIncrementAndDecrementOperators" />
     <exclude name="SlevomatCodingStandard.PHP.DisallowReference" />
     <exclude name="SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint" />
+    <exclude name="SlevomatCodingStandard.TypeHints.UnionTypeHintFormat" />
   </rule>
   <rule ref="SlevomatCodingStandard.Attributes.AttributesOrder">
     <properties>
@@ -192,15 +193,17 @@
       <property name="spacesCountAroundEqualsSign" type="int" value="0" />
     </properties>
   </rule>
+  <rule ref="SlevomatCodingStandard.TypeHints.DNFTypeHintFormat">
+    <properties>
+      <property name="withSpacesAroundOperators" type="string" value="no" />
+      <property name="withSpacesInsideParentheses" type="string" value="no" />
+      <property name="shortNullable" type="string" value="no" />
+      <property name="nullPosition" type="string" value="last" />
+    </properties>
+  </rule>
   <rule ref="SlevomatCodingStandard.TypeHints.ReturnTypeHintSpacing">
     <properties>
       <property name="spacesCountBeforeColon" type="int" value="0" />
-    </properties>
-  </rule>
-  <rule ref="SlevomatCodingStandard.TypeHints.UnionTypeHintFormat">
-    <properties>
-      <property name="withSpaces" type="string" value="no" />
-      <property name="nullPosition" type="string" value="last" />
     </properties>
   </rule>
   <rule ref="SlevomatCodingStandard.Variables.UnusedVariable">

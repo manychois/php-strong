@@ -69,6 +69,24 @@ final class StringMap extends AbstractNativeMap
     }
 
     /**
+     * Removes the specified key and its associated value from the map.
+     *
+     * @param string $key The key to remove.
+     *
+     * @return bool `true` if the key was found and removed, `false` otherwise.
+     */
+    public function remove(string $key): bool
+    {
+        if (isset($this->source[$key])) {
+            unset($this->source[$key]);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Sets the value associated with the specified key in the map.
      *
      * @param string $key   The key to set the value for.
@@ -146,6 +164,22 @@ final class StringMap extends AbstractNativeMap
             throw new TypeError('Key must be a string.');
         }
         unset($this->source[$offset]);
+    }
+
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public function getIterator(): Traversable
+    {
+        foreach ($this->source as $key => $value) {
+            if (!\is_string($key)) {
+                $key = \strval($key);
+            }
+
+            yield $key => $value;
+        }
     }
 
     /**

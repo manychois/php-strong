@@ -37,7 +37,7 @@ final class ValueObject implements EqualInterface, ComparableInterface
      *
      * @return ?bool The boolean value, or `null` if the conversion fails.
      */
-    public function asBool(): ?bool
+    public function asBool(): bool|null
     {
         return \filter_var($this->raw, \FILTER_VALIDATE_BOOLEAN, \FILTER_NULL_ON_FAILURE);
     }
@@ -48,7 +48,7 @@ final class ValueObject implements EqualInterface, ComparableInterface
      *
      * @return ?int The integer value, or `null` if the conversion fails.
      */
-    public function asInt(): ?int
+    public function asInt(): int|null
     {
         return \filter_var($this->raw, \FILTER_VALIDATE_INT, \FILTER_NULL_ON_FAILURE);
     }
@@ -59,7 +59,7 @@ final class ValueObject implements EqualInterface, ComparableInterface
      *
      * @return ?float The float value, or `null` if the conversion fails.
      */
-    public function asFloat(): ?float
+    public function asFloat(): float|null
     {
         return \filter_var($this->raw, \FILTER_VALIDATE_FLOAT, \FILTER_NULL_ON_FAILURE);
     }
@@ -157,7 +157,7 @@ final class ValueObject implements EqualInterface, ComparableInterface
      *
      * @return string|null The raw value as a string value, or `null` if the conversion fails.
      */
-    public function asString(): ?string
+    public function asString(): string|null
     {
         if (\is_string($this->raw) || $this->raw === null) {
             return $this->raw;
