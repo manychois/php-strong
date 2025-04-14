@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong;
 
-use Manychois\PhpStrong\Defaults\DefaultEqualityComparer;
-
 /**
  * Represents a key-value pair.
  *
@@ -21,7 +19,7 @@ final class KeyValuePair implements EqualInterface
     /**
      * @var TValue
      */
-    public readonly mixed $item;
+    public readonly mixed $value;
 
     /**
      * Initializes a new instance of the KeyValue class.
@@ -32,7 +30,7 @@ final class KeyValuePair implements EqualInterface
     public function __construct(mixed $key, mixed $value)
     {
         $this->key = $key;
-        $this->item = $value;
+        $this->value = $value;
     }
 
     #region implements EqualInterface
@@ -46,9 +44,9 @@ final class KeyValuePair implements EqualInterface
             return false;
         }
 
-        $eq = new DefaultEqualityComparer();
+        $eq = Registry::getEqualityComparer();
 
-        return $eq->equals($this->key, $other->key) && $eq->equals($this->item, $other->item);
+        return $eq->equals($this->key, $other->key) && $eq->equals($this->value, $other->value);
     }
 
     #endregion implements EqualInterface

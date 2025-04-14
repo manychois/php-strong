@@ -10,15 +10,15 @@ namespace Manychois\PhpStrong\Collections;
 enum DuplicateKeyPolicy: int
 {
     /**
+     * Overwrite the existing item with the new item when a duplicate key is found.
+     */
+    case Overwrite = 0;
+    /**
      * Throw an exception when a duplicate key is found.
      */
-    case ThrowException = 0;
+    case ThrowException = 1;
     /**
      * Ignore the new item when a duplicate key is found.
      */
-    case Ignore = 1;
-    /**
-     * Overwrite the existing item with the new item when a duplicate key is found.
-     */
-    case Overwrite = 2;
+    case Ignore = 2;
 }

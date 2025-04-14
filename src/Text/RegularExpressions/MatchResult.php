@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Text\RegularExpressions;
 
-use Manychois\PhpStrong\Collections\ReadonlyMap;
-use Manychois\PhpStrong\Collections\ReadonlySequence;
+use Manychois\PhpStrong\Collections\Sequence;
+use Manychois\PhpStrong\Collections\StringMap;
 
 /**
  * Represents the result from a regular expression match.
@@ -14,13 +14,13 @@ class MatchResult extends Capture
 {
     public readonly bool $success;
     /**
-     * @var ReadonlySequence<Capture>
+     * @var Sequence<Capture>
      */
-    public readonly ReadonlySequence $captures;
+    public readonly Sequence $captures;
     /**
-     * @var ReadonlyMap<string,Capture>
+     * @var StringMap<Capture>
      */
-    public readonly ReadonlyMap $namedCaptures;
+    public readonly StringMap $namedCaptures;
 
     /**
      * @param array<mixed> $matches The `$matches` result from the PHP function `preg_match()`.
@@ -31,8 +31,8 @@ class MatchResult extends Capture
             parent::__construct('', -1);
 
             $this->success = false;
-            $this->captures = ReadonlySequence::ofObject(Capture::class);
-            $this->namedCaptures = ReadonlyMap::ofStringToObject(Capture::class);
+            $this->captures = Sequence::ofObject(Capture::class);
+            $this->namedCaptures = StringMap::ofObject(Capture::class);
 
             return;
         }
@@ -70,7 +70,7 @@ class MatchResult extends Capture
         parent::__construct($matchValue, $matchIndex);
 
         $this->success = true;
-        $this->captures = ReadonlySequence::ofObject(Capture::class, $captures);
-        $this->namedCaptures = ReadonlyMap::ofStringToObject(Capture::class, $namedCaptures);
+        $this->captures = Sequence::ofObject(Capture::class, $captures);
+        $this->namedCaptures = StringMap::ofObject(Capture::class, $namedCaptures);
     }
 }

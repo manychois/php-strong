@@ -203,6 +203,11 @@
       <property name="nullPosition" type="string" value="last" />
     </properties>
   </rule>
+  <rule ref="SlevomatCodingStandard.Variables.UnusedVariable">
+    <properties>
+      <property name="ignoreUnusedValuesWhenOnlyKeysAreUsedInForeach" type="boolean" value="true" />
+    </properties>
+  </rule>
   <rule ref="SlevomatCodingStandard.Whitespaces.DuplicateSpaces">
     <properties>
       <property name="ignoreSpacesBeforeAssignment" type="boolean" value="true" />
