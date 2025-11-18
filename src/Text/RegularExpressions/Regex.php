@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Text\RegularExpressions;
 
-use Manychois\PhpStrong\Collections\Sequence;
 use RuntimeException;
 
 /**
@@ -62,9 +61,9 @@ class Regex
      * @param string $subject The subject string to search.
      * @param int    $offset  The offset in the subject at which to start the search.
      *
-     * @return Sequence<MatchResult> The match results.
+     * @return list<MatchResult> The match results.
      */
-    public function matchAll(string $subject, int $offset = 0): Sequence
+    public function matchAll(string $subject, int $offset = 0): array
     {
         $this->preNativeRegexCall();
         $result = \preg_match_all($this->pattern, $subject, $matches, \PREG_OFFSET_CAPTURE, $offset);
@@ -82,7 +81,7 @@ class Regex
             }
         }
 
-        return Sequence::ofObject(MatchResult::class, $matchResults);
+        return $matchResults;
     }
 
     /**
@@ -141,9 +140,9 @@ class Regex
      *                         last substring. A limit of -1 or 0 means "no limit".
      * @param bool   $nonEmpty If true, only non-empty substrings are returned.
      *
-     * @return Sequence<string> A sequence of substrings.
+     * @return list<string> A sequence of substrings.
      */
-    public function split(string $subject, int $limit = -1, bool $nonEmpty = false): Sequence
+    public function split(string $subject, int $limit = -1, bool $nonEmpty = false): array
     {
         $flags = $nonEmpty ? \PREG_SPLIT_NO_EMPTY : 0;
         $this->preNativeRegexCall();
@@ -151,7 +150,7 @@ class Regex
         $this->postNativeRegexCall($result, false);
         \assert($result !== false);
 
-        return Sequence::ofString($result);
+        return $result;
     }
 
     /**

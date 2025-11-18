@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Text\RegularExpressions;
 
-use Manychois\PhpStrong\Collections\Sequence;
-use Manychois\PhpStrong\Collections\StringMap;
-
 /**
  * Represents the result from a regular expression match.
  */
@@ -14,13 +11,13 @@ class MatchResult extends Capture
 {
     public readonly bool $success;
     /**
-     * @var Sequence<Capture>
+     * @var list<Capture>
      */
-    public readonly Sequence $captures;
+    public readonly array $captures;
     /**
-     * @var StringMap<Capture>
+     * @var array<string,Capture>
      */
-    public readonly StringMap $namedCaptures;
+    public readonly array $namedCaptures;
 
     /**
      * @param array<mixed> $matches The `$matches` result from the PHP function `preg_match()`.
@@ -31,8 +28,8 @@ class MatchResult extends Capture
             parent::__construct('', -1);
 
             $this->success = false;
-            $this->captures = Sequence::ofObject(Capture::class);
-            $this->namedCaptures = StringMap::ofObject(Capture::class);
+            $this->captures = [];
+            $this->namedCaptures = [];
 
             return;
         }
@@ -70,7 +67,7 @@ class MatchResult extends Capture
         parent::__construct($matchValue, $matchIndex);
 
         $this->success = true;
-        $this->captures = Sequence::ofObject(Capture::class, $captures);
-        $this->namedCaptures = StringMap::ofObject(Capture::class, $namedCaptures);
+        $this->captures = $captures;
+        $this->namedCaptures = $namedCaptures;
     }
 }
