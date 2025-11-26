@@ -510,7 +510,7 @@ class ArrayAccessorTest extends TestCase
 
         // Verify the key is deleted from the source array
         self::assertFalse(isset($data['key']));
-        self::assertFalse(\array_key_exists('key', $data));
+        self::assertArrayNotHasKey('key', $data);
     }
 
     public function testHasAndDeleteIntegration(): void
