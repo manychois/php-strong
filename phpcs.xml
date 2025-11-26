@@ -144,6 +144,7 @@
     <properties>
       <property name="rootNamespaces" type="array">
         <element key="src" value="Manychois\PhpStrong" />
+        <element key="tests" value="Manychois\PhpStrongTests" />
       </property>
     </properties>
   </rule>
