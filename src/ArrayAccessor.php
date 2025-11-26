@@ -20,11 +20,11 @@ class ArrayAccessor
     /**
      * Creates a new ArrayAccessor instance.
      *
-     * @param array<string,mixed> $inner The array to be accessed.
+     * @param array<string,mixed> $inner The array to be accessed by reference.
      */
-    public function __construct(array $inner = [])
+    public function __construct(array &$inner)
     {
-        $this->inner = $inner;
+        $this->inner = &$inner;
     }
 
     /**
@@ -41,8 +41,8 @@ class ArrayAccessor
      */
     public function accessor(string $key): self
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = &$this->inner[$key];
             if (\is_array($value)) {
                 // @phpstan-ignore argument.type
                 return new self($value);
@@ -68,6 +68,52 @@ class ArrayAccessor
         );
     }
 
+    /**
+     * Gets the value associated with the given key.
+     * If the key is not found, null is returned.
+     *
+     * @param string $key The key to look up.
+     * 
+     * @return mixed The value associated with the given key, or null if the key is not found.
+     */
+    public function get(string $key): mixed
+    {
+        return $this->inner[$key] ?? null;
+    }
+
+    /**
+     * Sets the value associated with the given key.
+     *
+     * @param string $key   The key to set.
+     * @param mixed  $value The value to set.
+     */
+    public function set(string $key, mixed $value): void
+    {
+        $this->inner[$key] = $value;
+    }
+
+    /**
+     * Checks if a key exists in the array.
+     *
+     * @param string $key The key to check.
+     *
+     * @return bool True if the key exists, false otherwise.
+     */
+    public function has(string $key): bool
+    {
+        return \array_key_exists($key, $this->inner);
+    }
+
+    /**
+     * Deletes a key from the array.
+     *
+     * @param string $key The key to delete.
+     */
+    public function delete(string $key): void
+    {
+        unset($this->inner[$key]);
+    }
+
     #region Boolean
 
     /**
@@ -84,8 +130,8 @@ class ArrayAccessor
      */
     public function asBool(string $key, bool $default = false): bool
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_bool($value)) {
                 return $value;
             }
@@ -148,8 +194,8 @@ class ArrayAccessor
      */
     public function nullableBool(string $key): bool|null
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_bool($value)) {
                 return $value;
             }
@@ -184,8 +230,8 @@ class ArrayAccessor
      */
     public function asInt(string $key, int $default = 0): int
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_int($value)) {
                 return $value;
             }
@@ -245,8 +291,8 @@ class ArrayAccessor
      */
     public function nullableInt(string $key): int|null
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_int($value)) {
                 return $value;
             }
@@ -281,8 +327,8 @@ class ArrayAccessor
      */
     public function asFloat(string $key, float $default = 0.0): float
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_float($value)) {
                 return $value;
             }
@@ -345,8 +391,8 @@ class ArrayAccessor
      */
     public function nullableFloat(string $key): float|null
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_float($value)) {
                 return $value;
             }
@@ -381,8 +427,8 @@ class ArrayAccessor
      */
     public function asString(string $key, string $default = ''): string
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_string($value)) {
                 return $value;
             }
@@ -442,8 +488,8 @@ class ArrayAccessor
      */
     public function nullableString(string $key): string|null
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_string($value)) {
                 return $value;
             }
@@ -510,8 +556,8 @@ class ArrayAccessor
      */
     public function nullableObject(string $key, string $className): object|null
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if ($value === null || \is_object($value) && $value instanceof $className) {
                 return $value;
             }
@@ -573,8 +619,8 @@ class ArrayAccessor
      */
     public function nullableCallable(string $key): callable|null
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_callable($value)) {
                 return $value;
             }
@@ -611,8 +657,8 @@ class ArrayAccessor
      */
     public function intList(string $key): array
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_array($value)) {
                 // @phpstan-ignore return.type
                 return $value;
@@ -646,8 +692,8 @@ class ArrayAccessor
      */
     public function stringList(string $key): array
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_array($value)) {
                 // @phpstan-ignore return.type
                 return $value;
@@ -684,8 +730,8 @@ class ArrayAccessor
      */
     public function objectList(string $key, string $className): array
     {
-        if (\array_key_exists($key, $this->inner)) {
-            $value = $this->inner[$key];
+        if ($this->has($key)) {
+            $value = $this->get($key);
             if (\is_array($value)) {
                 // @phpstan-ignore return.type
                 return $value;

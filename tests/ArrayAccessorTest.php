@@ -246,7 +246,8 @@ class ArrayAccessorTest extends TestCase
 
     public function testAccessorWithArrayAccessorValue(): void
     {
-        $innerAccessor = new ArrayAccessor(['name' => 'Jane']);
+        $innerData = ['name' => 'Jane'];
+        $innerAccessor = new ArrayAccessor($innerData);
         $data = ['user' => $innerAccessor];
         $accessor = new ArrayAccessor($data);
 
@@ -375,5 +376,172 @@ class ArrayAccessorTest extends TestCase
 
         $this->expectException(TypeError::class);
         $accessor->objectList('key', \stdClass::class);
+    }
+
+    public function testSet(): void
+    {
+        $data = ['existing' => 'old value'];
+        $accessor = new ArrayAccessor($data);
+
+        // Test setting a new key
+        $accessor->set('new_key', 'new value');
+        self::assertSame('new value', $accessor->string('new_key'));
+
+        // Test overwriting an existing key
+        $accessor->set('existing', 'updated value');
+        self::assertSame('updated value', $accessor->string('existing'));
+
+        // Test setting different types
+        $accessor->set('number', 42);
+        self::assertSame(42, $accessor->int('number'));
+
+        $accessor->set('flag', true);
+        self::assertTrue($accessor->bool('flag'));
+
+        $accessor->set('price', 19.99);
+        self::assertSame(19.99, $accessor->float('price'));
+
+        // Test that the source array is also updated (reference behavior)
+        self::assertSame('new value', $data['new_key']);
+        self::assertSame('updated value', $data['existing']);
+        self::assertSame(42, $data['number']);
+    }
+
+    public function testSetWithArray(): void
+    {
+        $data = [];
+        $accessor = new ArrayAccessor($data);
+
+        // Test setting an array value
+        $accessor->set('user', ['name' => 'John', 'age' => 30]);
+
+        $userAccessor = $accessor->accessor('user');
+        self::assertSame('John', $userAccessor->string('name'));
+        self::assertSame(30, $userAccessor->int('age'));
+
+        // Verify source array is updated
+        self::assertSame(['name' => 'John', 'age' => 30], $data['user']);
+    }
+
+    public function testSetWithObject(): void
+    {
+        $data = [];
+        $accessor = new ArrayAccessor($data);
+
+        $obj = new \stdClass();
+        $obj->id = 123;
+
+        $accessor->set('object', $obj);
+        self::assertSame($obj, $accessor->object('object', \stdClass::class));
+        self::assertSame($obj, $data['object']);
+    }
+
+    public function testSetWithNull(): void
+    {
+        $data = ['key' => 'value'];
+        $accessor = new ArrayAccessor($data);
+
+        $accessor->set('key', null);
+        self::assertNull($data['key']);
+        self::assertTrue(\array_key_exists('key', $data));
+
+        // Verify the key exists but value is null
+        $this->expectException(TypeError::class);
+        $accessor->string('key');
+    }
+
+    public function testHas(): void
+    {
+        $data = ['existing' => 'value', 'null_value' => null];
+        $accessor = new ArrayAccessor($data);
+
+        // Test with existing key
+        self::assertTrue($accessor->has('existing'));
+
+        // Test with missing key
+        self::assertFalse($accessor->has('missing'));
+
+        // Test with null value (key exists but value is null)
+        self::assertTrue($accessor->has('null_value'));
+
+        // Test after adding a key via set()
+        $accessor->set('new_key', 'new value');
+        self::assertTrue($accessor->has('new_key'));
+
+        // Test after deleting a key
+        $accessor->delete('existing');
+        self::assertFalse($accessor->has('existing'));
+    }
+
+    public function testDelete(): void
+    {
+        $data = ['key1' => 'value1', 'key2' => 'value2', 'key3' => 'value3'];
+        $accessor = new ArrayAccessor($data);
+
+        // Test deleting an existing key
+        $accessor->delete('key2');
+        self::assertFalse($accessor->has('key2'));
+        self::assertFalse(\array_key_exists('key2', $data));
+
+        // Other keys should still exist
+        self::assertTrue($accessor->has('key1'));
+        self::assertTrue($accessor->has('key3'));
+
+        // Test deleting a non-existent key (should not throw)
+        $accessor->delete('non_existent');
+        self::assertFalse($accessor->has('non_existent'));
+
+        // Test deleting all remaining keys
+        $accessor->delete('key1');
+        $accessor->delete('key3');
+        self::assertFalse($accessor->has('key1'));
+        self::assertFalse($accessor->has('key3'));
+        self::assertEmpty($data);
+    }
+
+    public function testDeleteVerifiesSourceArrayUpdate(): void
+    {
+        $data = ['key' => 'value'];
+        $accessor = new ArrayAccessor($data);
+
+        self::assertTrue(isset($data['key']));
+
+        $accessor->delete('key');
+
+        // Verify the key is deleted from the source array
+        self::assertFalse(isset($data['key']));
+        self::assertFalse(\array_key_exists('key', $data));
+    }
+
+    public function testHasAndDeleteIntegration(): void
+    {
+        $data = [];
+        $accessor = new ArrayAccessor($data);
+
+        // Add keys
+        $accessor->set('name', 'Alice');
+        $accessor->set('age', 30);
+        $accessor->set('active', true);
+
+        // Verify all exist
+        self::assertTrue($accessor->has('name'));
+        self::assertTrue($accessor->has('age'));
+        self::assertTrue($accessor->has('active'));
+
+        // Delete one
+        $accessor->delete('age');
+
+        // Verify only that one is gone
+        self::assertTrue($accessor->has('name'));
+        self::assertFalse($accessor->has('age'));
+        self::assertTrue($accessor->has('active'));
+
+        // Verify we can still access remaining values
+        self::assertSame('Alice', $accessor->string('name'));
+        self::assertTrue($accessor->bool('active'));
+
+        // Verify age throws OutOfBoundsException
+        $this->expectException(OutOfBoundsException::class);
+        $accessor->int('age');
     }
 }
