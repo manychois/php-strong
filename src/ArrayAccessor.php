@@ -15,7 +15,7 @@ class ArrayAccessor implements ArrayAccessorInterface
     /**
      * @var array<string,mixed>
      */
-    private array $inner;
+    protected array $inner;
 
     /**
      * Creates a new ArrayAccessor instance.
