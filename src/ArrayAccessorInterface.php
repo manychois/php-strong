@@ -85,7 +85,7 @@ interface ArrayAccessorInterface
      * @throws \OutOfBoundsException If the key does not exist.
      * @throws \TypeError If the value associated with the given key is not a boolean.
      */
-    public function bool(string $key): bool;
+    public function strictBool(string $key): bool;
 
     /**
      * Returns the boolean value associated with the given key.
@@ -130,7 +130,7 @@ interface ArrayAccessorInterface
      * @throws \OutOfBoundsException If the key does not exist.
      * @throws \TypeError If the value associated with the given key is not an integer.
      */
-    public function int(string $key): int;
+    public function strictInt(string $key): int;
 
     /**
      * Returns the integer value associated with the given key.
@@ -175,7 +175,7 @@ interface ArrayAccessorInterface
      * @throws \OutOfBoundsException If the key does not exist.
      * @throws \TypeError If the value associated with the given key is not a float.
      */
-    public function float(string $key): float;
+    public function strictFloat(string $key): float;
 
     /**
      * Returns the float value associated with the given key.
@@ -220,7 +220,7 @@ interface ArrayAccessorInterface
      * @throws \OutOfBoundsException If the key does not exist.
      * @throws \TypeError If the value associated with the given key is not a string.
      */
-    public function string(string $key): string;
+    public function strictString(string $key): string;
 
     /**
      * Returns the string value associated with the given key.

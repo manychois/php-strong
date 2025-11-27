@@ -42,10 +42,10 @@ class ArrayAccessorTest extends TestCase
         $data = ['key' => true];
         $accessor = new ArrayAccessor($data);
 
-        self::assertTrue($accessor->bool('key'));
+        self::assertTrue($accessor->strictBool('key'));
 
         $this->expectException(OutOfBoundsException::class);
-        $accessor->bool('missing');
+        $accessor->strictBool('missing');
     }
 
     public function testNullableBool(): void
@@ -86,10 +86,10 @@ class ArrayAccessorTest extends TestCase
         $data = ['key' => 123];
         $accessor = new ArrayAccessor($data);
 
-        self::assertSame(123, $accessor->int('key'));
+        self::assertSame(123, $accessor->strictInt('key'));
 
         $this->expectException(OutOfBoundsException::class);
-        $accessor->int('missing');
+        $accessor->strictInt('missing');
     }
 
     public function testNullableInt(): void
@@ -129,10 +129,10 @@ class ArrayAccessorTest extends TestCase
         $data = ['key' => 3.14];
         $accessor = new ArrayAccessor($data);
 
-        self::assertSame(3.14, $accessor->float('key'));
+        self::assertSame(3.14, $accessor->strictFloat('key'));
 
         $this->expectException(OutOfBoundsException::class);
-        $accessor->float('missing');
+        $accessor->strictFloat('missing');
     }
 
     public function testNullableFloat(): void
@@ -174,10 +174,10 @@ class ArrayAccessorTest extends TestCase
         $data = ['key' => 'abc'];
         $accessor = new ArrayAccessor($data);
 
-        self::assertSame('abc', $accessor->string('key'));
+        self::assertSame('abc', $accessor->strictString('key'));
 
         $this->expectException(OutOfBoundsException::class);
-        $accessor->string('missing');
+        $accessor->strictString('missing');
     }
 
     public function testNullableString(): void
@@ -228,8 +228,8 @@ class ArrayAccessorTest extends TestCase
         $accessor = new ArrayAccessor($data);
 
         $userAccessor = $accessor->accessor('user');
-        self::assertSame('John', $userAccessor->string('name'));
-        self::assertSame(30, $userAccessor->int('age'));
+        self::assertSame('John', $userAccessor->strictString('name'));
+        self::assertSame(30, $userAccessor->strictInt('age'));
 
         $this->expectException(OutOfBoundsException::class);
         $accessor->accessor('missing');
@@ -253,7 +253,7 @@ class ArrayAccessorTest extends TestCase
 
         $result = $accessor->accessor('user');
         self::assertSame($innerAccessor, $result);
-        self::assertSame('Jane', $result->string('name'));
+        self::assertSame('Jane', $result->strictString('name'));
     }
 
     public function testAccessorWithDeepNesting(): void
@@ -273,14 +273,14 @@ class ArrayAccessorTest extends TestCase
         $lead = $accessor->accessor('company')
             ->accessor('department')
             ->accessor('team')
-            ->string('lead');
+            ->strictString('lead');
 
         self::assertSame('Alice', $lead);
 
         $members = $accessor->accessor('company')
             ->accessor('department')
             ->accessor('team')
-            ->int('members');
+            ->strictInt('members');
 
         self::assertSame(5, $members);
     }
@@ -385,21 +385,21 @@ class ArrayAccessorTest extends TestCase
 
         // Test setting a new key
         $accessor->set('new_key', 'new value');
-        self::assertSame('new value', $accessor->string('new_key'));
+        self::assertSame('new value', $accessor->strictString('new_key'));
 
         // Test overwriting an existing key
         $accessor->set('existing', 'updated value');
-        self::assertSame('updated value', $accessor->string('existing'));
+        self::assertSame('updated value', $accessor->strictString('existing'));
 
         // Test setting different types
         $accessor->set('number', 42);
-        self::assertSame(42, $accessor->int('number'));
+        self::assertSame(42, $accessor->strictInt('number'));
 
         $accessor->set('flag', true);
-        self::assertTrue($accessor->bool('flag'));
+        self::assertTrue($accessor->strictBool('flag'));
 
         $accessor->set('price', 19.99);
-        self::assertSame(19.99, $accessor->float('price'));
+        self::assertSame(19.99, $accessor->strictFloat('price'));
 
         // Test that the source array is also updated (reference behavior)
         self::assertSame('new value', $data['new_key']);
@@ -416,8 +416,8 @@ class ArrayAccessorTest extends TestCase
         $accessor->set('user', ['name' => 'John', 'age' => 30]);
 
         $userAccessor = $accessor->accessor('user');
-        self::assertSame('John', $userAccessor->string('name'));
-        self::assertSame(30, $userAccessor->int('age'));
+        self::assertSame('John', $userAccessor->strictString('name'));
+        self::assertSame(30, $userAccessor->strictInt('age'));
 
         // Verify source array is updated
         self::assertSame(['name' => 'John', 'age' => 30], $data['user']);
@@ -447,7 +447,7 @@ class ArrayAccessorTest extends TestCase
 
         // Verify the key exists but value is null
         $this->expectException(TypeError::class);
-        $accessor->string('key');
+        $accessor->strictString('key');
     }
 
     public function testHas(): void
@@ -537,11 +537,11 @@ class ArrayAccessorTest extends TestCase
         self::assertTrue($accessor->has('active'));
 
         // Verify we can still access remaining values
-        self::assertSame('Alice', $accessor->string('name'));
-        self::assertTrue($accessor->bool('active'));
+        self::assertSame('Alice', $accessor->strictString('name'));
+        self::assertTrue($accessor->strictBool('active'));
 
         // Verify age throws OutOfBoundsException
         $this->expectException(OutOfBoundsException::class);
-        $accessor->int('age');
+        $accessor->strictInt('age');
     }
 }

@@ -125,7 +125,7 @@ class ArrayAccessor implements ArrayAccessorInterface
     /**
      * @inheritDoc
      */
-    public function bool(string $key): bool
+    public function strictBool(string $key): bool
     {
         $value = $this->nullableBool($key);
         if ($value === null) {
@@ -192,7 +192,7 @@ class ArrayAccessor implements ArrayAccessorInterface
     /**
      * @inheritDoc
      */
-    public function int(string $key): int
+    public function strictInt(string $key): int
     {
         $value = $this->nullableInt($key);
         if ($value === null) {
@@ -262,7 +262,7 @@ class ArrayAccessor implements ArrayAccessorInterface
     /**
      * @inheritDoc
      */
-    public function float(string $key): float
+    public function strictFloat(string $key): float
     {
         $value = $this->nullableFloat($key);
         if ($value === null) {
@@ -329,7 +329,7 @@ class ArrayAccessor implements ArrayAccessorInterface
     /**
      * @inheritDoc
      */
-    public function string(string $key): string
+    public function strictString(string $key): string
     {
         $value = $this->nullableString($key);
         if ($value === null) {
