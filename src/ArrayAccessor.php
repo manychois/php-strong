@@ -370,7 +370,7 @@ class ArrayAccessor implements ArrayAccessorInterface
     /**
      * @inheritDoc
      */
-    public function object(string $key, string $className): object
+    public function strictObject(string $key, string $className): object
     {
         $value = $this->nullableObject($key, $className);
         if ($value === null) {

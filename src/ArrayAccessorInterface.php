@@ -254,7 +254,7 @@ interface ArrayAccessorInterface
      *
      * @template T of object
      */
-    public function object(string $key, string $className): object;
+    public function strictObject(string $key, string $className): object;
 
     /**
      * Returns the object value associated with the given key.

@@ -292,10 +292,10 @@ class ArrayAccessorTest extends TestCase
         $data = ['key' => $obj];
         $accessor = new ArrayAccessor($data);
 
-        self::assertSame($obj, $accessor->object('key', \stdClass::class));
+        self::assertSame($obj, $accessor->strictObject('key', \stdClass::class));
 
         $this->expectException(OutOfBoundsException::class);
-        $accessor->object('missing', \stdClass::class);
+        $accessor->strictObject('missing', \stdClass::class);
     }
 
     public function testNullableObject(): void
@@ -432,7 +432,7 @@ class ArrayAccessorTest extends TestCase
         $obj->id = 123;
 
         $accessor->set('object', $obj);
-        self::assertSame($obj, $accessor->object('object', \stdClass::class));
+        self::assertSame($obj, $accessor->strictObject('object', \stdClass::class));
         self::assertSame($obj, $data['object']);
     }
 
