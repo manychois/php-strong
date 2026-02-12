@@ -112,7 +112,7 @@ class ArrayAccessor implements ArrayAccessorInterface
 
             throw new TypeError(
                 \sprintf(
-                    'The value associated with key "%s" is not a boolean, but of type %s.',
+                    'The value associated with key "%s" is neither null nor a boolean, but of type %s.',
                     $key,
                     \get_debug_type($value)
                 )
@@ -127,14 +127,16 @@ class ArrayAccessor implements ArrayAccessorInterface
      */
     public function strictBool(string $key): bool
     {
-        $value = $this->nullableBool($key);
-        if ($value === null) {
-            throw new OutOfBoundsException(
-                \sprintf(
-                    'The key "%s" does not exist in the array.',
-                    $key
-                )
-            );
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_bool($value)) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not a boolean, but of type %s.',
+                $key,
+                \get_debug_type($value)
+            ));
         }
 
         return $value;
@@ -147,7 +149,7 @@ class ArrayAccessor implements ArrayAccessorInterface
     {
         if ($this->has($key)) {
             $value = $this->get($key);
-            if (\is_bool($value)) {
+            if (\is_null($value) || \is_bool($value)) {
                 return $value;
             }
 
@@ -193,7 +195,7 @@ class ArrayAccessor implements ArrayAccessorInterface
 
             throw new TypeError(
                 \sprintf(
-                    'The value associated with key "%s" is not an integer, but of type %s.',
+                    'The value associated with key "%s" is neither null nor an integer, but of type %s.',
                     $key,
                     \get_debug_type($value)
                 )
@@ -208,14 +210,16 @@ class ArrayAccessor implements ArrayAccessorInterface
      */
     public function strictInt(string $key): int
     {
-        $value = $this->nullableInt($key);
-        if ($value === null) {
-            throw new OutOfBoundsException(
-                \sprintf(
-                    'The key "%s" does not exist in the array.',
-                    $key
-                )
-            );
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_int($value)) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not an integer, but of type %s.',
+                $key,
+                \get_debug_type($value)
+            ));
         }
 
         return $value;
@@ -228,7 +232,7 @@ class ArrayAccessor implements ArrayAccessorInterface
     {
         if ($this->has($key)) {
             $value = $this->get($key);
-            if (\is_int($value)) {
+            if ($value === null || \is_int($value)) {
                 return $value;
             }
 
@@ -261,13 +265,10 @@ class ArrayAccessor implements ArrayAccessorInterface
                 }
             }
 
-            throw new TypeError(
-                \sprintf(
-                    'The value associated with key "%s" is not a float, but of type %s.',
-                    $key,
-                    \get_debug_type($value)
-                )
-            );
+            $msg = 'The value associated with key "%s" is neither null nor a float,'
+                . ' but of type %s.';
+
+            throw new TypeError(\sprintf($msg, $key, \get_debug_type($value)));
         }
 
         return $default;
@@ -278,14 +279,16 @@ class ArrayAccessor implements ArrayAccessorInterface
      */
     public function strictFloat(string $key): float
     {
-        $value = $this->nullableFloat($key);
-        if ($value === null) {
-            throw new OutOfBoundsException(
-                \sprintf(
-                    'The key "%s" does not exist in the array.',
-                    $key
-                )
-            );
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_float($value)) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not a float, but of type %s.',
+                $key,
+                \get_debug_type($value)
+            ));
         }
 
         return $value;
@@ -298,7 +301,7 @@ class ArrayAccessor implements ArrayAccessorInterface
     {
         if ($this->has($key)) {
             $value = $this->get($key);
-            if (\is_float($value)) {
+            if ($value === null || \is_float($value)) {
                 return $value;
             }
 
@@ -345,14 +348,16 @@ class ArrayAccessor implements ArrayAccessorInterface
      */
     public function strictString(string $key): string
     {
-        $value = $this->nullableString($key);
-        if ($value === null) {
-            throw new OutOfBoundsException(
-                \sprintf(
-                    'The key "%s" does not exist in the array.',
-                    $key
-                )
-            );
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_string($value)) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not a string, but of type %s.',
+                $key,
+                \get_debug_type($value)
+            ));
         }
 
         return $value;
@@ -365,13 +370,13 @@ class ArrayAccessor implements ArrayAccessorInterface
     {
         if ($this->has($key)) {
             $value = $this->get($key);
-            if (\is_string($value)) {
+            if ($value === null || \is_string($value)) {
                 return $value;
             }
 
             throw new TypeError(
                 \sprintf(
-                    'The value associated with key "%s" is not a string, but of type %s.',
+                    'The value associated with key "%s" is neither null nor a string, but of type %s.',
                     $key,
                     \get_debug_type($value)
                 )
@@ -386,14 +391,17 @@ class ArrayAccessor implements ArrayAccessorInterface
      */
     public function strictObject(string $key, string $className): object
     {
-        $value = $this->nullableObject($key, $className);
-        if ($value === null) {
-            throw new OutOfBoundsException(
-                \sprintf(
-                    'The key "%s" does not exist in the array.',
-                    $key
-                )
-            );
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_object($value) || !$value instanceof $className) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not an instance of %s, but of type %s.',
+                $key,
+                $className,
+                \get_debug_type($value)
+            ));
         }
 
         return $value;
@@ -412,7 +420,7 @@ class ArrayAccessor implements ArrayAccessorInterface
 
             throw new TypeError(
                 \sprintf(
-                    'The value associated with key "%s" is not an instance of %s, but of type %s.',
+                    'The value associated with key "%s" is neither null nor an instance of %s, but of type %s.',
                     $key,
                     $className,
                     \get_debug_type($value)
@@ -428,14 +436,16 @@ class ArrayAccessor implements ArrayAccessorInterface
      */
     public function callable(string $key): callable
     {
-        $value = $this->nullableCallable($key);
-        if ($value === null) {
-            throw new OutOfBoundsException(
-                \sprintf(
-                    'The key "%s" does not exist in the array.',
-                    $key
-                )
-            );
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_callable($value)) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not a callable, but of type %s.',
+                $key,
+                \get_debug_type($value)
+            ));
         }
 
         return $value;
@@ -448,13 +458,13 @@ class ArrayAccessor implements ArrayAccessorInterface
     {
         if ($this->has($key)) {
             $value = $this->get($key);
-            if (\is_callable($value)) {
+            if ($value === null || \is_callable($value)) {
                 return $value;
             }
 
             throw new TypeError(
                 \sprintf(
-                    'The value associated with key "%s" is not a callable, but of type %s.',
+                    'The value associated with key "%s" is neither null nor a callable, but of type %s.',
                     $key,
                     \get_debug_type($value)
                 )

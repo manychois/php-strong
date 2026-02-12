@@ -88,15 +88,15 @@ interface ArrayAccessorInterface
     public function strictBool(string $key): bool;
 
     /**
-     * Returns the boolean value associated with the given key.
-     * If the key does not exist, null is returned.
-     * If the value is not a boolean, a TypeError is thrown.
+    * Returns the boolean value associated with the given key.
+    * If the key does not exist, null is returned.
+    * If the value is neither null nor a boolean, a TypeError is thrown.
      *
      * @param string $key The key to look up.
      *
      * @return ?bool The boolean value associated with the given key.
      *
-     * @throws \TypeError If the value associated with the given key is not a boolean.
+    * @throws \TypeError If the value associated with the given key is neither null nor a boolean.
      */
     public function nullableBool(string $key): bool|null;
 
@@ -133,15 +133,15 @@ interface ArrayAccessorInterface
     public function strictInt(string $key): int;
 
     /**
-     * Returns the integer value associated with the given key.
-     * If the key does not exist, null is returned.
-     * If the value is not an integer, a TypeError is thrown.
+    * Returns the integer value associated with the given key.
+    * If the key does not exist, null is returned.
+    * If the value is neither null nor an integer, a TypeError is thrown.
      *
      * @param string $key The key to look up.
      *
      * @return ?int The integer value associated with the given key.
      *
-     * @throws \TypeError If the value associated with the given key is not an integer.
+    * @throws \TypeError If the value associated with the given key is neither null nor an integer.
      */
     public function nullableInt(string $key): int|null;
 
@@ -178,15 +178,15 @@ interface ArrayAccessorInterface
     public function strictFloat(string $key): float;
 
     /**
-     * Returns the float value associated with the given key.
-     * If the key does not exist, null is returned.
-     * If the value is not a float, a TypeError is thrown.
+    * Returns the float value associated with the given key.
+    * If the key does not exist, null is returned.
+    * If the value is neither null nor a float, a TypeError is thrown.
      *
      * @param string $key The key to look up.
      *
      * @return ?float The float value associated with the given key.
      *
-     * @throws \TypeError If the value associated with the given key is not a float.
+    * @throws \TypeError If the value associated with the given key is neither null nor a float.
      */
     public function nullableFloat(string $key): float|null;
 
@@ -225,13 +225,13 @@ interface ArrayAccessorInterface
     /**
      * Returns the string value associated with the given key.
      * If the key does not exist, null is returned.
-     * If the value is not a string, a TypeError is thrown.
+     * If the value is neither null nor a string, a TypeError is thrown.
      *
      * @param string $key The key to look up.
      *
      * @return ?string The string value associated with the given key.
      *
-     * @throws \TypeError If the value associated with the given key is not a string.
+     * @throws \TypeError If the value associated with the given key is neither null nor a string.
      */
     public function nullableString(string $key): string|null;
 
@@ -257,16 +257,17 @@ interface ArrayAccessorInterface
     public function strictObject(string $key, string $className): object;
 
     /**
-     * Returns the object value associated with the given key.
-     * If the key does not exist, null is returned.
-     * If the value is not null, nor an object of the specified class, a TypeError is thrown.
+    * Returns the object value associated with the given key.
+    * If the key does not exist, null is returned.
+    * If the value is neither null nor an object of the specified class, a TypeError is thrown.
      *
      * @param string          $key       The key to look up.
      * @param class-string<T> $className The class name of the object.
      *
      * @return T|null The object value associated with the given key.
      *
-     * @throws \TypeError If the value associated with the given key is not null, nor an object of the specified class.
+     * @throws \TypeError If the value associated with the given key is neither null nor an object of the specified
+     * class.
      *
      * @template T of object
      */
@@ -291,15 +292,15 @@ interface ArrayAccessorInterface
     public function callable(string $key): callable;
 
     /**
-     * Returns the callable value associated with the given key.
-     * If the key does not exist, null is returned.
-     * If the value is not a callable, a TypeError is thrown.
+    * Returns the callable value associated with the given key.
+    * If the key does not exist, null is returned.
+    * If the value is neither null nor a callable, a TypeError is thrown.
      *
      * @param string $key The key to look up.
      *
      * @return ?callable The callable value associated with the given key.
      *
-     * @throws \TypeError If the value associated with the given key is not a callable.
+    * @throws \TypeError If the value associated with the given key is neither null nor a callable.
      */
     public function nullableCallable(string $key): callable|null;
 
