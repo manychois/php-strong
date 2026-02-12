@@ -457,14 +457,14 @@ class ArrayAccessor implements ArrayAccessorInterface
     {
         if ($this->has($key)) {
             $value = $this->get($key);
-            if (\is_array($value)) {
+            if (\is_array($value) && \array_is_list($value)) {
                 // @phpstan-ignore return.type
                 return $value;
             }
 
             throw new TypeError(
                 \sprintf(
-                    'The value associated with key "%s" is not an array, but of type %s.',
+                    'The value associated with key "%s" is not a list, but of type %s.',
                     $key,
                     \get_debug_type($value)
                 )
@@ -481,14 +481,14 @@ class ArrayAccessor implements ArrayAccessorInterface
     {
         if ($this->has($key)) {
             $value = $this->get($key);
-            if (\is_array($value)) {
+            if (\is_array($value) && \array_is_list($value)) {
                 // @phpstan-ignore return.type
                 return $value;
             }
 
             throw new TypeError(
                 \sprintf(
-                    'The value associated with key "%s" is not an array, but of type %s.',
+                    'The value associated with key "%s" is not a list, but of type %s.',
                     $key,
                     \get_debug_type($value)
                 )
@@ -505,14 +505,14 @@ class ArrayAccessor implements ArrayAccessorInterface
     {
         if ($this->has($key)) {
             $value = $this->get($key);
-            if (\is_array($value)) {
+            if (\is_array($value) && \array_is_list($value)) {
                 // @phpstan-ignore return.type
                 return $value;
             }
 
             throw new TypeError(
                 \sprintf(
-                    'The value associated with key "%s" is not an array, but of type %s.',
+                    'The value associated with key "%s" is not a list, but of type %s.',
                     $key,
                     \get_debug_type($value)
                 )
