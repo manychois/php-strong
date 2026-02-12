@@ -458,6 +458,8 @@ class ArrayAccessor implements ArrayAccessorInterface
         if ($this->has($key)) {
             $value = $this->get($key);
             if (\is_array($value) && \array_is_list($value)) {
+                \assert($this->verifyListOfType($value, 'int'));
+
                 // @phpstan-ignore return.type
                 return $value;
             }
@@ -482,6 +484,8 @@ class ArrayAccessor implements ArrayAccessorInterface
         if ($this->has($key)) {
             $value = $this->get($key);
             if (\is_array($value) && \array_is_list($value)) {
+                \assert($this->verifyListOfType($value, 'string'));
+
                 // @phpstan-ignore return.type
                 return $value;
             }
@@ -506,6 +510,8 @@ class ArrayAccessor implements ArrayAccessorInterface
         if ($this->has($key)) {
             $value = $this->get($key);
             if (\is_array($value) && \array_is_list($value)) {
+                \assert($this->verifyListOfType($value, $className));
+
                 // @phpstan-ignore return.type
                 return $value;
             }
@@ -523,4 +529,38 @@ class ArrayAccessor implements ArrayAccessorInterface
     }
 
     #endregion implementation ArrayAccessorInterface
+
+    /**
+     * Verifies that all items in the list are of the expected type.
+     *
+     * @param array<int,mixed> $list         The list to be verified.
+     * @param string           $expectedType The expected type of the items in the list.
+     *
+     * @return bool Returns true if all items in the list are of the expected type, otherwise throws a TypeError.
+     */
+    private function verifyListOfType(array $list, string $expectedType): bool
+    {
+        foreach ($list as $index => $item) {
+            if ($expectedType === 'int' && \is_int($item)) {
+                continue;
+            }
+            if ($expectedType === 'string' && \is_string($item)) {
+                continue;
+            }
+            if (\is_object($item) && \is_a($item, $expectedType)) {
+                continue;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The item at index %d is not of type %s, but of type %s.',
+                    $index,
+                    $expectedType,
+                    \get_debug_type($item)
+                )
+            );
+        }
+
+        return true;
+    }
 }
