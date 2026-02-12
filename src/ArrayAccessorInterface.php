@@ -16,12 +16,12 @@ interface ArrayAccessorInterface
      *
      * @param string $key The key to look up.
      *
-     * @return self The array value wrapped in an ArrayAccessor.
+     * @return ArrayAccessorInterface The array value wrapped in an ArrayAccessor.
      *
      * @throws \OutOfBoundsException If the key does not exist.
      * @throws \TypeError If the value associated with the given key is not an array.
      */
-    public function accessor(string $key): self;
+    public function accessor(string $key): ArrayAccessorInterface;
 
     /**
      * Gets the value associated with the given key.
