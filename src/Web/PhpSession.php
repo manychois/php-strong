@@ -126,20 +126,18 @@ class PhpSession extends ArrayAccessor implements PhpSessionInterface
 
     private function startSession(): void
     {
-        if (\session_status() !== \PHP_SESSION_NONE) {
-            return;
+        if (\session_status() === \PHP_SESSION_NONE) {
+            \session_name($this->name);
+            $options = \array_merge([
+                'cookie_httponly' => true,
+                'cookie_lifetime' => 0,
+                'cookie_samesite' => 'Lax',
+                'cookie_secure' => true,
+                'use_only_cookies' => true,
+                'use_strict_mode' => true,
+            ], $this->initOptions);
+            \session_start($options);
         }
-
-        \session_name($this->name);
-        $options = \array_merge([
-            'cookie_httponly' => true,
-            'cookie_lifetime' => 0,
-            'cookie_samesite' => 'Lax',
-            'cookie_secure' => true,
-            'use_only_cookies' => true,
-            'use_strict_mode' => true,
-        ], $this->initOptions);
-        \session_start($options);
         // phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
         // @phpstan-ignore assign.propertyType
         $this->inner = &$_SESSION;
