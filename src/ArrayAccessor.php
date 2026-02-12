@@ -1,0 +1,590 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Manychois\PhpStrong;
+
+use OutOfBoundsException;
+use TypeError;
+
+/**
+ * Provides a way to access array values with type safety.
+ */
+class ArrayAccessor implements ArrayAccessorInterface
+{
+    /**
+     * @var array<string,mixed>
+     */
+    protected array $inner;
+
+    /**
+     * Creates a new ArrayAccessor instance.
+     *
+     * @param array<string,mixed> $inner The array to be accessed by reference.
+     */
+    public function __construct(array &$inner)
+    {
+        $this->inner = &$inner;
+    }
+
+    #region implementation ArrayAccessorInterface
+
+    /**
+     * @inheritDoc
+     */
+    public function accessor(string $key): ArrayAccessorInterface
+    {
+        if ($this->has($key)) {
+            $value = &$this->inner[$key];
+            if (\is_array($value)) {
+                // @phpstan-ignore argument.type
+                return new self($value);
+            }
+            if ($value instanceof ArrayAccessorInterface) {
+                return $value;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is not an array or an ArrayAccessor, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        throw new OutOfBoundsException(
+            \sprintf(
+                'The key "%s" does not exist in the array.',
+                $key
+            )
+        );
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function get(string $key): mixed
+    {
+        return $this->inner[$key] ?? null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function set(string $key, mixed $value): void
+    {
+        $this->inner[$key] = $value;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function has(string $key): bool
+    {
+        return \array_key_exists($key, $this->inner);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function delete(string $key): void
+    {
+        unset($this->inner[$key]);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function asBool(string $key, bool $default = false): bool
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if (\is_bool($value)) {
+                return $value;
+            }
+            if (\is_scalar($value)) {
+                $converted = \filter_var($value, \FILTER_VALIDATE_BOOLEAN, \FILTER_NULL_ON_FAILURE);
+                if (\is_bool($converted)) {
+                    return $converted;
+                }
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is neither null nor a boolean, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return $default;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function strictBool(string $key): bool
+    {
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_bool($value)) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not a boolean, but of type %s.',
+                $key,
+                \get_debug_type($value)
+            ));
+        }
+
+        return $value;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function nullableBool(string $key): bool|null
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if (\is_null($value) || \is_bool($value)) {
+                return $value;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is not a boolean, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function asInt(string $key, int $default = 0): int
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if (\is_int($value)) {
+                return $value;
+            }
+            if (\is_float($value) && \is_finite($value)) {
+                if ($value < \PHP_INT_MIN || $value > \PHP_INT_MAX) {
+                    $msg = 'The value associated with key "%s" is a float'
+                        . ' that will overflow when converted to an integer.';
+
+                    throw new TypeError(\sprintf($msg, $key));
+                }
+
+                return \intval($value);
+            }
+
+            if (\is_scalar($value)) {
+                $filtered = \filter_var($value, \FILTER_VALIDATE_INT);
+                if (\is_int($filtered)) {
+                    return $filtered;
+                }
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is neither null nor an integer, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return $default;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function strictInt(string $key): int
+    {
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_int($value)) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not an integer, but of type %s.',
+                $key,
+                \get_debug_type($value)
+            ));
+        }
+
+        return $value;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function nullableInt(string $key): int|null
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if ($value === null || \is_int($value)) {
+                return $value;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is not an integer, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function asFloat(string $key, float $default = 0.0): float
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if (\is_float($value)) {
+                return $value;
+            }
+            if (\is_scalar($value)) {
+                $converted = \filter_var($value, \FILTER_VALIDATE_FLOAT);
+                if (\is_float($converted)) {
+                    return $converted;
+                }
+            }
+
+            $msg = 'The value associated with key "%s" is neither null nor a float,'
+                . ' but of type %s.';
+
+            throw new TypeError(\sprintf($msg, $key, \get_debug_type($value)));
+        }
+
+        return $default;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function strictFloat(string $key): float
+    {
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_float($value)) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not a float, but of type %s.',
+                $key,
+                \get_debug_type($value)
+            ));
+        }
+
+        return $value;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function nullableFloat(string $key): float|null
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if ($value === null || \is_float($value)) {
+                return $value;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is not a float, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function asString(string $key, string $default = ''): string
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if (\is_string($value)) {
+                return $value;
+            }
+            if (\is_scalar($value) || $value instanceof \Stringable) {
+                return \strval($value);
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is not a string, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return $default;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function strictString(string $key): string
+    {
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_string($value)) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not a string, but of type %s.',
+                $key,
+                \get_debug_type($value)
+            ));
+        }
+
+        return $value;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function nullableString(string $key): string|null
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if ($value === null || \is_string($value)) {
+                return $value;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is neither null nor a string, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function strictObject(string $key, string $className): object
+    {
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_object($value) || !$value instanceof $className) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not an instance of %s, but of type %s.',
+                $key,
+                $className,
+                \get_debug_type($value)
+            ));
+        }
+
+        return $value;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function nullableObject(string $key, string $className): object|null
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if ($value === null || \is_object($value) && $value instanceof $className) {
+                return $value;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is neither null nor an instance of %s, but of type %s.',
+                    $key,
+                    $className,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function callable(string $key): callable
+    {
+        if (!$this->has($key)) {
+            throw new OutOfBoundsException(\sprintf('The key "%s" does not exist in the array.', $key));
+        }
+        $value = $this->get($key);
+        if (!\is_callable($value)) {
+            throw new TypeError(\sprintf(
+                'The value associated with key "%s" is not a callable, but of type %s.',
+                $key,
+                \get_debug_type($value)
+            ));
+        }
+
+        return $value;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function nullableCallable(string $key): callable|null
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if ($value === null || \is_callable($value)) {
+                return $value;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is neither null nor a callable, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function intList(string $key): array
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if (\is_array($value) && \array_is_list($value)) {
+                \assert($this->verifyListOfType($value, 'int'));
+
+                // @phpstan-ignore return.type
+                return $value;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is not a list, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return [];
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function stringList(string $key): array
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if (\is_array($value) && \array_is_list($value)) {
+                \assert($this->verifyListOfType($value, 'string'));
+
+                // @phpstan-ignore return.type
+                return $value;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is not a list, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return [];
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function objectList(string $key, string $className): array
+    {
+        if ($this->has($key)) {
+            $value = $this->get($key);
+            if (\is_array($value) && \array_is_list($value)) {
+                \assert($this->verifyListOfType($value, $className));
+
+                // @phpstan-ignore return.type
+                return $value;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The value associated with key "%s" is not a list, but of type %s.',
+                    $key,
+                    \get_debug_type($value)
+                )
+            );
+        }
+
+        return [];
+    }
+
+    #endregion implementation ArrayAccessorInterface
+
+    /**
+     * Verifies that all items in the list are of the expected type.
+     *
+     * @param array<int,mixed> $list         The list to be verified.
+     * @param string           $expectedType The expected type of the items in the list.
+     *
+     * @return bool Returns true if all items in the list are of the expected type, otherwise throws a TypeError.
+     */
+    private function verifyListOfType(array $list, string $expectedType): bool
+    {
+        foreach ($list as $index => $item) {
+            if ($expectedType === 'int' && \is_int($item)) {
+                continue;
+            }
+            if ($expectedType === 'string' && \is_string($item)) {
+                continue;
+            }
+            if (\is_object($item) && \is_a($item, $expectedType)) {
+                continue;
+            }
+
+            throw new TypeError(
+                \sprintf(
+                    'The item at index %d is not of type %s, but of type %s.',
+                    $index,
+                    $expectedType,
+                    \get_debug_type($item)
+                )
+            );
+        }
+
+        return true;
+    }
+}

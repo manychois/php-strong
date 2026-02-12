@@ -13,6 +13,7 @@
     <exclude name="SlevomatCodingStandard.Classes.ForbiddenPublicProperty" />
     <exclude name="SlevomatCodingStandard.Classes.DisallowConstructorPropertyPromotion" />
     <exclude name="SlevomatCodingStandard.Classes.RequireConstructorPropertyPromotion" />
+    <exclude name="SlevomatCodingStandard.Classes.RequireSelfReference" />
     <exclude name="SlevomatCodingStandard.Classes.SuperfluousAbstractClassNaming" />
     <exclude name="SlevomatCodingStandard.Classes.SuperfluousExceptionNaming.SuperfluousSuffix" />
     <exclude name="SlevomatCodingStandard.Classes.SuperfluousInterfaceNaming" />
@@ -144,6 +145,7 @@
     <properties>
       <property name="rootNamespaces" type="array">
         <element key="src" value="Manychois\PhpStrong" />
+        <element key="tests" value="Manychois\PhpStrongTests" />
       </property>
     </properties>
   </rule>
