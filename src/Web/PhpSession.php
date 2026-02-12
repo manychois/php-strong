@@ -64,6 +64,7 @@ class PhpSession extends ArrayAccessor implements PhpSessionInterface
             \setcookie($sessionName, '', $options);
         }
         \session_destroy();
+        \session_write_close();
     }
 
     #endregion implements PhpSessionInterface
