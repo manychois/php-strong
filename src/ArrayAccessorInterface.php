@@ -107,7 +107,7 @@ interface ArrayAccessorInterface
     /**
      * Returns the integer value associated with the given key.
      * If the key does not exist, the default value is returned.
-     * If the value is not an integer, `intval()` is used to convert the value to an integer.
+     * If the value is not an integer, `filter_var()` is used to convert the value to an integer.
      *
      * @param string $key     The key to look up.
      * @param int    $default The default value to return if the key does not exist.

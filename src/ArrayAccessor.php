@@ -173,8 +173,22 @@ class ArrayAccessor implements ArrayAccessorInterface
             if (\is_int($value)) {
                 return $value;
             }
-            if (\is_scalar($value)) {
+            if (\is_float($value) && \is_finite($value)) {
+                if ($value < \PHP_INT_MIN || $value > \PHP_INT_MAX) {
+                    $msg = 'The value associated with key "%s" is a float'
+                        . ' that will overflow when converted to an integer.';
+
+                    throw new TypeError(\sprintf($msg, $key));
+                }
+
                 return \intval($value);
+            }
+
+            if (\is_scalar($value)) {
+                $filtered = \filter_var($value, \FILTER_VALIDATE_INT);
+                if (\is_int($filtered)) {
+                    return $filtered;
+                }
             }
 
             throw new TypeError(
