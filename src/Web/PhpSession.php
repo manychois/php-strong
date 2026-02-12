@@ -59,15 +59,17 @@ class PhpSession extends ArrayAccessor implements PhpSessionInterface
             $params = \session_get_cookie_params();
             $sessionName = \session_name();
             \assert(\is_string($sessionName));
-            \setcookie(
-                $sessionName,
-                '',
-                \time() - 42000,
-                $params['path'],
-                $params['domain'],
-                $params['secure'],
-                $params['httponly']
-            );
+            $options = [
+                'expires'  => \time() - 42000,
+                'path'     => $params['path'] ?? '',
+                'domain'   => $params['domain'] ?? '',
+                'secure'   => $params['secure'] ?? false,
+                'httponly' => $params['httponly'] ?? false,
+            ];
+            if (isset($params['samesite'])) {
+                $options['samesite'] = $params['samesite'];
+            }
+            \setcookie($sessionName, '', $options);
         }
         \session_destroy();
     }
