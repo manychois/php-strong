@@ -311,7 +311,7 @@ interface ArrayAccessorInterface
      * Returns the array value associated with the given key.
      * If the key does not exist, an empty array is returned.
      * If the value is not an array, a TypeError is thrown.
-     * Note that type check of the array elements is not performed.
+     * Note that type check of the array elements is performed within `assert()`.
      *
      * @param string $key The key to look up.
      *
@@ -327,7 +327,7 @@ interface ArrayAccessorInterface
      * Returns the array value associated with the given key.
      * If the key does not exist, an empty array is returned.
      * If the value is not an array, a TypeError is thrown.
-     * Note that type check of the array elements is not performed.
+     * Note that type check of the array elements is performed within `assert()`.
      *
      * @param string $key The key to look up.
      *
@@ -343,7 +343,7 @@ interface ArrayAccessorInterface
      * Returns the array value associated with the given key.
      * If the key does not exist, an empty array is returned.
      * If the value is not an array, a TypeError is thrown.
-     * Note that type check of the array elements is not performed.
+     * Note that type check of the array elements is performed within `assert()`.
      *
      * @param string          $key       The key to look up.
      * @param class-string<T> $className The class name of the objects.

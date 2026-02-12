@@ -4,7 +4,7 @@ A utility library for PHP 8.4+ that helps you write strong-typed code with confi
 
 **Key Features:**
 
-- **Type-Safe Array Access** - `ArrayAccessor` provides strongly-typed methods to retrieve array values (getString, getInt, getBool, etc.)
+- **Type-Safe Array Access** - `ArrayAccessor` provides strongly-typed methods to retrieve array values (asString, asInt, asBool, etc.)
 
 - **Comparison Interfaces** - `EqualInterface` and `ComparableInterface` enable value-based equality and ordering comparisons for custom objects, similar to Java/.NET patterns
 

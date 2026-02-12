@@ -60,7 +60,7 @@ class PhpSession extends ArrayAccessor implements PhpSessionInterface
             \assert(\is_string($sessionName));
             $options = \session_get_cookie_params();
             unset($options['lifetime']);
-            $options['expires'] = \time() - 42000;
+            $options['expires'] = \time() - 3600;
             \setcookie($sessionName, '', $options);
         }
         \session_destroy();
