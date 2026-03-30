@@ -5,12 +5,35 @@ A PHP 8.4+ utility library for strong-typed code. Namespace: `Manychois\PhpStron
 ## Build/Test Commands
 
 ```bash
-composer test                    # Run all tests
-./vendor/bin/phpunit --filter TestName tests/Path/To/Test.php  # Single test
-composer phpcbf                  # Auto-fix code style
-composer phpcs                   # Check PSR-12 style
-composer phpstan                 # Static analysis (max level)
-composer code                    # Run phpcbf + phpcs + phpstan
+composer test                    # Run all tests with code coverage
+composer phpcs                   # Check PSR-12 style compliance
+composer phpcbf                  # Auto-fix code style violations
+composer phpstan                 # Static analysis at max level
+composer code                    # Run phpcbf + phpcs + phpstan (full quality check)
+
+# Single test by function name
+./vendor/bin/phpunit --filter testFunctionName tests/Path/To/TestFile.php
+
+# Single test file
+./vendor/bin/phpunit tests/Path/To/TestFile.php
+
+# Single test method (exact match)
+./vendor/bin/phpunit --filter '/::testMethodName$/' tests/Path/To/TestFile.php
+
+# Tests matching a pattern
+./vendor/bin/phpunit --filter '/test.*Order/' tests/
+```
+
+### Common Test Patterns
+```bash
+# Test all methods in a class
+./vendor/bin/phpunit tests/Collections/ArrayListTest.php
+
+# Run tests for a specific interface implementation
+./vendor/bin/phpunit --filter ReadonlyListTest
+
+# Debug test output
+./vendor/bin/phpunit --testdox tests/Collections/ArrayListTest.php
 ```
 
 ## Code Style
@@ -44,6 +67,17 @@ class Xxx implements IXxx { }
 - Remove unused imports (auto-fixed by phpcbf)
 - Use `as` aliases for interfaces to avoid name conflicts
 - Group order: extends/implements, then `use` statements, then other imports
+
+### DocBlock Spacing (PHPCS Rule)
+- Require 1 empty line between different annotation types (e.g., `@param` and `@return`)
+- Example:
+  ```php
+  /**
+   * @param int $index The index.
+   *
+   * @return mixed The value.
+   */
+  ```
 
 ### DocBlocks
 
@@ -108,6 +142,7 @@ public function first(): mixed { }
 
 ### Error Handling
 - `InvalidArgumentException` - Invalid argument values
+- `OutOfBoundsException` - Index out of bounds or invalid offset access
 - `BadMethodCallException` - Unsupported operations (e.g., modifying readonly collections)
 - `RuntimeException` - Runtime errors
 - `UnderflowException` - Empty structure operations
@@ -152,6 +187,39 @@ class Sequence implements ISequence {
 }
 ```
 
+### Abstract Classes and Inheritance
+- Use `AbstractSequence` for sequence-like collections
+- Use `AbstractBaseList` for list-like collections (extends `AbstractSequence`, provides `at()`, `findIndex()`, `offsetExists()`, `offsetGet()`)
+- Subclasses must implement `count()` and `getIterator()` methods
+- Subclasses must define `$source` property with appropriate type
+
+### Abstract Factory Pattern (createReadonlyList)
+- AbstractBaseList defines abstract method `createReadonlyList(iterable $source): IReadonlyList`
+- Concrete classes (ArrayList, ReadonlyList) implement using `new static($source)`
+- This allows optimization methods in AbstractBaseList to return IReadonlyList without coupling to concrete class
+```php
+// In AbstractBaseList:
+abstract protected function createReadonlyList(iterable $source): IReadonlyList;
+
+public function reverse(): IReadonlyList
+{
+    return $this->createReadonlyList(array_reverse($this->source));
+}
+
+// In ArrayList:
+#[Override]
+protected function createReadonlyList(iterable $source): IReadonlyList
+{
+    return new static($source);
+}
+```
+
+### Internal Namespace
+- Place internal/helper classes in `src/Collections/Internal/`
+- Mark classes with `/** @internal */` docblock comment
+- Use `Internal` namespace only for code not meant for public API
+- Traits in Internal namespace are implementation details (not public API)
+
 ## Directory Structure
 ```
 src/Collections/Defaults/*.php    # Default implementations
@@ -167,3 +235,19 @@ Before completing any task, run:
 2. `composer phpcs` - verify PSR-12
 3. `composer phpstan` - type safety
 4. `composer test` - all tests pass
+
+## Key Patterns for This Project
+
+### Read-Optimized Methods in AbstractBaseList
+- AbstractBaseList provides optimized implementations for read-type methods using direct array access
+- Methods like `isEmpty()`, `contains()`, `first()`, `firstOrNull()`, `last()`, `lastOrNull()`, `slice()`, `skip()`, `take()`, `orderBy()`, `orderDescBy()`, `reverse()`, `shuffle()` use array functions instead of iterator-based approaches
+- Both ArrayList and ReadonlyList inherit these optimizations automatically
+
+### Constructor Requirements
+- Use `final public function __construct(...)` for concrete collection classes
+- Accept `iterable $source = []` as parameter for flexible construction from arrays or iterables
+
+### Interface Implementation Guidelines
+- Always use `#[Override]` attribute when implementing interface methods
+- Place implementation in appropriate region comment (e.g., `#region implements ISequence`)
+- Return narrowed types when appropriate (e.g., `IReadonlyList<T>` instead of `ISequence<T>`)

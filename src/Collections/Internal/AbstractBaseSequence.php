@@ -19,6 +19,8 @@ use UnderflowException;
 /**
  * Provides common implementations for sequence operations.
  *
+ * @internal
+ *
  * @template T
  *
  * @implements ISequence<T>
@@ -96,6 +98,19 @@ abstract class AbstractBaseSequence implements ISequence
             }
         }
         return false;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public function asArray(): array
+    {
+        $array = [];
+        foreach ($this->getIterator() as $item) {
+            $array[] = $item;
+        }
+        return $array;
     }
 
     /**
@@ -439,10 +454,42 @@ abstract class AbstractBaseSequence implements ISequence
      * @inheritDoc
      */
     #[Override]
+    public function slice(int $index, int $length): ISequence
+    {
+        if ($length < 0) {
+            throw new InvalidArgumentException('Length must be greater than or equal to 0');
+        }
+        if ($index < 0) {
+            throw new InvalidArgumentException('Index must be greater than or equal to 0');
+        }
+        if ($length === 0) {
+            return $this->createLazySequence([]);
+        }
+
+        $generator = function () use ($index, $length) {
+            $i = 0;
+            $end = $index + $length;
+            foreach ($this->getIterator() as $item) {
+                if ($i >= $index && $i < $end) {
+                    yield $item;
+                }
+                if ($i >= $end) {
+                    break;
+                }
+                $i++;
+            }
+        };
+        return $this->createLazySequence($generator());
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
     public function skip(int $count): ISequence
     {
         if ($count < 0) {
-            throw new InvalidArgumentException('Count must be greater than 0');
+            throw new InvalidArgumentException('Count must be greater than or equal to 0');
         }
 
         $generator = function () use ($count) {
@@ -464,7 +511,7 @@ abstract class AbstractBaseSequence implements ISequence
     public function skipLast(int $count): ISequence
     {
         if ($count < 0) {
-            throw new InvalidArgumentException('Count must be greater than 0');
+            throw new InvalidArgumentException('Count must be greater than or equal to 0');
         }
 
         $generator = function () use ($count) {
@@ -486,6 +533,13 @@ abstract class AbstractBaseSequence implements ISequence
     #[Override]
     public function take(int $count): ISequence
     {
+        if ($count < 0) {
+            throw new InvalidArgumentException('Count must be greater than or equal to 0');
+        }
+        if ($count === 0) {
+            return $this->createLazySequence([]);
+        }
+
         $generator = function () use ($count) {
             $i = 0;
             foreach ($this->getIterator() as $item) {
@@ -505,6 +559,13 @@ abstract class AbstractBaseSequence implements ISequence
     #[Override]
     public function takeLast(int $count): ISequence
     {
+        if ($count < 0) {
+            throw new InvalidArgumentException('Count must be greater than or equal to 0');
+        }
+        if ($count === 0) {
+            return $this->createLazySequence([]);
+        }
+
         $generator = function () use ($count) {
             $buffer = [];
             foreach ($this->getIterator() as $item) {

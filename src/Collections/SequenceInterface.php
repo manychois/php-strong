@@ -19,6 +19,7 @@ use UnderflowException;
  * @template T
  *
  * @extends IteratorAggregate<int, T>
+ *
  * @phpstan-extends IteratorAggregate<non-negative-int, T>
  */
 interface SequenceInterface extends Countable, IteratorAggregate
@@ -40,6 +41,13 @@ interface SequenceInterface extends Countable, IteratorAggregate
      * @return bool `true` if any value of the sequence satisfies the predicate; otherwise, `false`.
      */
     public function any(callable $predicate): bool;
+
+    /**
+     * Returns the values of the sequence as an array.
+     *
+     * @return list<T> The values of the sequence as an array.
+     */
+    public function asArray(): array;
 
     /**
      * Chunks the sequence into smaller ones of the given maximum size.
@@ -251,6 +259,18 @@ interface SequenceInterface extends Countable, IteratorAggregate
      * @return SequenceInterface<T> A new sequence that is shuffled.
      */
     public function shuffle(): SequenceInterface;
+
+    /**
+     * Returns a new sequence that contains a slice of the current sequence.
+     *
+     * @param int $index The zero-based index at which to start the slice.
+     * @param int $length The length of the slice.
+     *
+     * @return SequenceInterface<T> A new sequence that contains a slice of the current sequence.
+     *
+     * @throws InvalidArgumentException if the index or length is less than 0.
+     */
+    public function slice(int $index, int $length): SequenceInterface;
 
     /**
      * Returns a new sequence that skips the first `count` values.

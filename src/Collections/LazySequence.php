@@ -15,7 +15,7 @@ use Override;
  *
  * @extends AbstractBaseSequence<T>
  */
-class Sequence extends AbstractBaseSequence
+class LazySequence extends AbstractBaseSequence
 {
     /**
      * @var iterable<T>
@@ -38,7 +38,7 @@ class Sequence extends AbstractBaseSequence
     #[Override]
     protected function createLazySequence(iterable $source): SequenceInterface
     {
-        return new Sequence($source);
+        return new LazySequence($source);
     }
 
     /**

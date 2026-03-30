@@ -7,6 +7,7 @@ namespace Manychois\PhpStrong\Collections;
 use ArrayAccess;
 use BadMethodCallException;
 use InvalidArgumentException;
+use Manychois\PhpStrong\Collections\EqualityComparerInterface as IEqualityComparer;
 use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;
 use OutOfBoundsException;
 
@@ -25,7 +26,9 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
      *
      * @param int $index The index of the item to return.
      * Negative indices are supported, which count from the end of the list.
+     *
      * @return T The item at the specified index.
+     *
      * @throws OutOfBoundsException If the index is out of bounds.
      */
     public function at(int $index): mixed;
@@ -35,11 +38,50 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
      *
      * @param callable(T,int): bool $predicate The predicate to check.
      * @param int $start The index to start searching from. Negative indices count from the end.
+     *
      * @return int The index of the first item that satisfies the predicate, or -1 if no such item is found.
      *
      * @throws OutOfBoundsException If the start index is out of bounds.
      */
     public function findIndex(callable $predicate, int $start = 0): int;
+
+    /**
+     * Finds the index of the last item that satisfies the specified predicate.
+     *
+     * @param callable(T,int): bool $predicate The predicate to check.
+     * @param int $start The index to start searching from. Negative indices count from the end.
+     *
+     * @return int The index of the last item that satisfies the predicate, or -1 if no such item is found.
+     *
+     * @throws OutOfBoundsException If the start index is out of bounds.
+     */
+    public function findLastIndex(callable $predicate, int $start = -1): int;
+
+    /**
+     * Returns the index of the first occurrence of the specified item in the list.
+     *
+     * @param T $item The item to search for.
+     * @param int $start The index to start searching from. Negative indices count from the end.
+     * @param ?IEqualityComparer $eq The equality comparer to use.
+     *
+     * @return int The index of the first occurrence of the item, or -1 if the item is not found.
+     *
+     * @throws OutOfBoundsException If the start index is out of bounds.
+     */
+    public function indexOf(mixed $item, int $start = 0, ?IEqualityComparer $eq = null): int;
+
+    /**
+     * Returns the index of the last occurrence of the specified item in the list.
+     *
+     * @param T $item The item to search for.
+     * @param int $start The index to start searching from. Negative indices count from the end.
+     * @param ?IEqualityComparer $eq The equality comparer to use.
+     *
+     * @return int The index of the last occurrence of the item, or -1 if the item is not found.
+     *
+     * @throws OutOfBoundsException If the start index is out of bounds.
+     */
+    public function lastIndexOf(mixed $item, int $start = -1, ?IEqualityComparer $eq = null): int;
 
     #region extends ArrayAccess
 

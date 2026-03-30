@@ -17,6 +17,7 @@ interface ComparableInterface
      * @param T $other The object to compare with
      *
      * @return int The comparison result:
+     *
      * @phpstan-return int<-1,1>
      *                   -1 if the current object is less than the given object,
      *                    0 if they are equal,

@@ -84,4 +84,11 @@
       <property name="spacesCountAroundEqualsSign" value="0"/>
     </properties>
   </rule>
+  <!-- Require empty line between different annotation types (e.g., @param and @return). -->
+  <rule ref="SlevomatCodingStandard.Commenting.DocCommentSpacing">
+    <properties>
+      <!-- 1 empty line between @param, @return, @throws, etc. -->
+      <property name="linesCountBetweenDifferentAnnotationsTypes" value="1"/>
+    </properties>
+  </rule>
 </ruleset>
