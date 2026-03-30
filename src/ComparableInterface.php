@@ -5,16 +5,22 @@ declare(strict_types=1);
 namespace Manychois\PhpStrong;
 
 /**
- * Exposes a method that compares the current object with another object.
+ * An interface for objects that can be compared.
+ *
+ * @template T of object
  */
-interface ComparableInterface extends EqualInterface
+interface ComparableInterface
 {
     /**
-     * Compares the current object with another object.
+     * Compares the current object with the given object.
      *
-     * @param mixed $other The object to compare with this object.
+     * @param T $other The object to compare with
      *
-     * @return int A signed integer that indicates the relative values of the two objects.
+     * @return int The comparison result:
+     * @phpstan-return int<-1,1>
+     *                   -1 if the current object is less than the given object,
+     *                    0 if they are equal,
+     *                    1 if the current object is greater than the given object
      */
-    public function compareTo(mixed $other): int;
+    public function compareTo(object $other): int;
 }
