@@ -9,6 +9,10 @@
     <exclude name="PSR2.Classes.PropertyDeclaration.Multiple"/>
     <exclude name="PSR2.Classes.PropertyDeclaration.ScopeMissing"/>
   </rule>
+  <!-- PHPCS parse layer treats interface property hooks as member vars; PHP 8.4 allows hooks on interfaces. -->
+  <rule ref="Internal.ParseError.InterfaceHasMemberVar">
+    <severity>0</severity>
+  </rule>
   <!-- Align docblock asterisks and spacing before @tags (fixable by phpcbf). -->
   <rule ref="Squiz.Commenting.DocCommentAlignment" />
   <!-- Require `/** ... */` on public and protected methods (not private). Other PEAR function-comment checks are disabled. -->

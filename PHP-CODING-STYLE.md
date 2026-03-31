@@ -45,7 +45,8 @@ class Xxx implements IXxx { }
    - final then non-final
    - abstract public, public, abstract protected, protected, private
    - **Alphabetically within each category** (e.g., all public instance methods sorted A-Z)
-8. Use `#[Override]` attribute wherever applicable, with `@inheritDoc` in docblock
+8. Within each `#region implements IInterface` (or equivalent) block, **`public` property hooks** that implement members of that interface belong at the **top** of the region, **before** any methods—matching the class-level rule that properties come before methods. Remaining members in that region are methods ordered as in step 7.
+9. Use `#[Override]` attribute wherever applicable, with `@inheritDoc` in docblock
 
 **Example:** In a class where all methods are public instance methods with `#[Override]`, they must be sorted alphabetically: `add()`, `all()`, `any()`, `asArray()`, `asList()`, etc.
 
@@ -165,6 +166,8 @@ Use property hooks for simple getter/setter patterns:
 public mixed $key { get => $this->k; }
 public mixed $value { get => $this->v; }
 ```
+
+When a hook implements an interface member inside `#region implements IInterface`, place that hook **first** in the region, then the methods (alphabetically per **Class Code Structure Order**). Ordinary fields stay in the class-level properties section above the constructor; only hooks declared as part of the interface implementation block go at the top of that region.
 
 ## Closures/Generators
 
