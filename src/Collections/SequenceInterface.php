@@ -9,7 +9,6 @@ use InvalidArgumentException;
 use Iterator;
 use IteratorAggregate;
 use Manychois\PhpStrong\Collections\ComparerInterface as IComparer;
-use Manychois\PhpStrong\Collections\EqualityComparerInterface as IEqualityComparer;
 use RuntimeException;
 use UnderflowException;
 
@@ -27,18 +26,22 @@ interface SequenceInterface extends Countable, IteratorAggregate
     /**
      * Determines whether all values of the sequence satisfy the predicate.
      *
-     * @param callable(T): bool $predicate The predicate to check.
+     * @param callable $predicate The predicate to check.
      *
      * @return bool `true` if all values of the sequence satisfy the predicate; otherwise, `false`.
+     *
+     * @phpstan-param callable(T,non-negative-int):bool $predicate
      */
     public function all(callable $predicate): bool;
 
     /**
      * Determines whether any value of the sequence satisfies the predicate.
      *
-     * @param callable(T): bool $predicate The predicate to check.
+     * @param callable $predicate The predicate to check.
      *
      * @return bool `true` if any value of the sequence satisfies the predicate; otherwise, `false`.
+     *
+     * @phpstan-param callable(T,non-negative-int):bool $predicate
      */
     public function any(callable $predicate): bool;
 
@@ -72,45 +75,32 @@ interface SequenceInterface extends Countable, IteratorAggregate
      * Determines whether the sequence contains the specified value.
      *
      * @param T $value The value to check.
-     * @param ?IEqualityComparer $eq The equality comparer to use.
      *
      * @return bool `true` if the sequence contains the specified value; otherwise, `false`.
      */
-    public function contains(mixed $value, ?IEqualityComparer $eq = null): bool;
+    public function contains(mixed $value): bool;
 
     /**
      * Returns a new sequence that contains only distinct values.
      *
-     * @param ?IEqualityComparer $eq The equality comparer to use.
-     *
      * @return SequenceInterface<T> A new sequence that contains only distinct values.
      */
-    public function distinct(?IEqualityComparer $eq = null): SequenceInterface;
+    public function distinct(): SequenceInterface;
 
     /**
      * Returns a new sequence that contains only values that are not present in the given source.
      *
      * @param iterable<T> $sequence The sequence to exclude.
-     * @param ?IEqualityComparer $eq The equality comparer to use.
      *
      * @return SequenceInterface<T> A new sequence that contains only values that are not present in the
      * given source.
      */
-    public function except(iterable $sequence, ?IEqualityComparer $eq = null): SequenceInterface;
-
-    /**
-     * Determines whether the sequence contains any value that satisfies the predicate.
-     *
-     * @param callable(T): bool $predicate The predicate to check.
-     *
-     * @return bool `true` if the sequence contains any value that satisfies the predicate; otherwise, `false`.
-     */
-    public function exists(callable $predicate): bool;
+    public function except(iterable $sequence): SequenceInterface;
 
     /**
      * Returns a new sequence that contains only values that satisfy the predicate.
      *
-     * @param callable(T,int):bool $predicate The predicate to check.
+     * @param callable $predicate The predicate to check.
      *
      * @return SequenceInterface<T> A new sequence that contains only values that satisfy the predicate.
      *
@@ -121,7 +111,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
     /**
      * Returns the first value of the sequence.
      *
-     * @param ?callable(T,int):bool $predicate The predicate to check.
+     * @param ?callable $predicate The predicate to check.
      *
      * @return T The first value of the sequence.
      *
@@ -135,7 +125,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
     /**
      * Returns the first value of the sequence, or `null` if the sequence is empty, or no value satisfies the predicate.
      *
-     * @param ?callable(T,int):bool $predicate The predicate to check.
+     * @param ?callable $predicate The predicate to check.
      *
      * @return ?T The first value of the sequence, or `null` if the sequence is empty, or no value
      * satisfies the predicate.
@@ -164,17 +154,16 @@ interface SequenceInterface extends Countable, IteratorAggregate
      * Returns a new sequence that contains only values that are present in both the current sequence and the given one.
      *
      * @param iterable<T> $sequence The sequence to intersect with.
-     * @param ?IEqualityComparer $eq The equality comparer to use.
      *
      * @return SequenceInterface<T> A new sequence that contains only values that are present in both the current
      * sequence and the given one.
      */
-    public function intersect(iterable $sequence, ?IEqualityComparer $eq = null): SequenceInterface;
+    public function intersect(iterable $sequence): SequenceInterface;
 
     /**
      * Returns the last value of the sequence.
      *
-     * @param ?callable(T,int):bool $predicate The predicate to check.
+     * @param ?callable $predicate The predicate to check.
      *
      * @return T The last value of the sequence.
      *
@@ -188,7 +177,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
     /**
      * Returns the last value of the sequence, or `null` if the sequence is empty.
      *
-     * @param ?callable(T,int):bool $predicate The predicate to check.
+     * @param ?callable $predicate The predicate to check.
      *
      * @return ?T The last value of the sequence, or `null` if the sequence is empty.
      *
@@ -202,7 +191,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @template TResult
      *
-     * @param callable(T,int):TResult $callback The callback to apply to each value of the current sequence.
+     * @param callable $callback The callback to apply to each value of the current sequence.
      *
      * @return SequenceInterface<TResult> A new sequence that contains the results of applying the given callback to
      * each value of the current sequence.
@@ -243,7 +232,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @template TResult
      *
-     * @param callable(TResult,T,int):TResult $callback The callback to apply to the elements of the sequence.
+     * @param callable $callback The callback to apply to the elements of the sequence.
      * @param TResult $initial The initial value to pass to the callback.
      *
      * @return TResult The reduced value.
@@ -338,10 +327,9 @@ interface SequenceInterface extends Countable, IteratorAggregate
      * duplicates.
      *
      * @param iterable<T> $sequence The sequence to union with.
-     * @param ?IEqualityComparer $eq The equality comparer to use.
      *
      * @return SequenceInterface<T> A new sequence that contains the values of the current sequence and the given
      * sequence.
      */
-    public function union(iterable $sequence, ?IEqualityComparer $eq = null): SequenceInterface;
+    public function union(iterable $sequence): SequenceInterface;
 }

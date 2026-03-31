@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\Collections\Defaults;
+namespace Manychois\PhpStrong\Collections;
 
 use Iterator;
 use Manychois\PhpStrong\Collections\Entry;

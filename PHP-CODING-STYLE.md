@@ -29,10 +29,25 @@ class Xxx implements IXxx { }
 
 ## Import Rules
 
-- Sort alphabetically within groups (PSR-12 order)
 - Remove unused imports (auto-fixed by phpcbf)
 - Use `as` aliases for interfaces as a personal preference for shorter names
-- Group order: extends/implements, then `use` statements, then other imports
+
+## Class Code Structure Order
+
+1. Define `extends` then `implements` in class declaration, with each item in alphabetical order
+2. Constants
+3. Properties
+4. Constructor
+5. Organise methods into `#region` blocks based on `extends`/`implements`
+6. Methods outside of regions are placed at top, then `#region` blocks in the order declared in the class declaration
+7. Order methods within each region (and those outside regions) by:
+   - static then instance
+   - final then non-final
+   - abstract public, public, abstract protected, protected, private
+   - **Alphabetically within each category** (e.g., all public instance methods sorted A-Z)
+8. Use `#[Override]` attribute wherever applicable, with `@inheritDoc` in docblock
+
+**Example:** In a class where all methods are public instance methods with `#[Override]`, they must be sorted alphabetically: `add()`, `all()`, `any()`, `asArray()`, `asList()`, etc.
 
 ## DocBlock Spacing
 
@@ -67,14 +82,17 @@ class Xxx implements ISequence { }
 Required on public/protected:
 ```php
 /**
- * @param callable(T,int):bool $predicate The predicate to check.
+ * Method description here, begins with a verb and ends with a period.
+ * The verb should be in simple present tense ending with s.
+ *
+ * @param callable $predicate The predicate to check.
  *
  * @return int The first value.
  *
  * @throws UnderflowException if empty.
  * @throws RuntimeException if no match.
  *
- * @phpstan-param callable(T,int<0,max>):bool $predicate
+ * @phpstan-param callable(T,non-negative-int):bool $predicate
  */
 public function first(?callable $predicate = null): int { }
 ```
@@ -85,21 +103,29 @@ public function first(?callable $predicate = null): int { }
 - Use plain `int` in readable positions (params, returns, extends)
 - Use `@phpstan-` prefixed tags for PHPStan-specific precision types
 - Lowercase native types: `@return bool`
-- Class names for objects: `@return SequenceInterface<T>`
-- Nullable: `@param int|null $count`
+- Prefer shorter interface alias: `use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;`
+- Shorter nullable: `@param ?int $count`
+
+## Intelephense Workarounds
+
+Intelephense doesn't understand `int<0,max>`, so use plain `int` in `@param` for readability, then add a separate `@phpstan-param non-negative-int` instead.
 
 ## Callable Parameter Pattern
 
-Intelephense doesn't understand `int<0,max>`, so use plain `int` in `@param` for readability, then add a separate `@phpstan-param` with the precise type:
+Prefer this style, general `callable` in `@param`, but specify precise signature in `@phpstan-param` for static analysis, e.g.:
+
 ```php
-@param callable(T,int):bool $predicate The predicate to check.
-@phpstan-param callable(T,int<0,max>):bool $predicate
+@param callable $predicate The predicate to check.
+@phpstan-param callable(T,non-negative-int):bool $predicate
 ```
 
 ## Override Attribute
 
 Use `#[Override]` on interface method implementations:
 ```php
+/**
+ * @inheritDoc
+ */
 #[Override]
 public function getIterator(): Iterator { }
 ```
@@ -109,6 +135,9 @@ public function getIterator(): Iterator { }
 ```php
 #region implements ISequence
 
+/**
+ * @inheritDoc
+ */
 #[Override]
 public function first(): mixed { }
 

@@ -1,6 +1,6 @@
 # AGENTS.md - php-strong
 
-A PHP 8.4+ utility library for strong-typed code. Namespace: `Manychois\PhpStrong`, PSR-4 autoload.
+PHP 8.4+ utility library for strong-typed code. Namespace: `Manychois\PhpStrong`, PSR-4 autoload.
 
 ## Build/Test Commands
 
@@ -11,63 +11,73 @@ composer phpcbf                  # Auto-fix code style violations
 composer phpstan                 # Static analysis at max level
 composer code                    # Run phpcbf + phpcs + phpstan (full quality check)
 
-# Single test by function name
-./vendor/bin/phpunit --filter testFunctionName tests/Path/To/TestFile.php
-
 # Single test file
-./vendor/bin/phpunit tests/Path/To/TestFile.php
+./vendor/bin/phpunit tests/Collections/ArrayListTest.php
 
 # Single test method (exact match)
 ./vendor/bin/phpunit --filter '/::testMethodName$/' tests/Path/To/TestFile.php
 
 # Tests matching a pattern
 ./vendor/bin/phpunit --filter '/test.*Order/' tests/
-```
-
-### Common Test Patterns
-```bash
-# Test all methods in a class
-./vendor/bin/phpunit tests/Collections/ArrayListTest.php
-
-# Run tests for a specific interface implementation
 ./vendor/bin/phpunit --filter ReadonlyListTest
 
 # Debug test output
 ./vendor/bin/phpunit --testdox tests/Collections/ArrayListTest.php
 ```
 
-## Code Style
+## Code Style Guidelines
 
-See [PHP-CODING-STYLE.md](./PHP-CODING-STYLE.md) for code formatting guidelines.
+See [PHP-CODING-STYLE.md](./PHP-CODING-STYLE.md) for complete coding standards.
 
-## Directory Structure
-```
-src/Collections/Defaults/*.php    # Default implementations
-src/Collections/*.php             # Collection classes/interfaces
-src/*.php                         # Core interfaces
-tests/                            # Mirrors src structure
-```
+**Critical rules:**
+- Always use interface aliases: `use SequenceInterface as ISequence`
+- Use `#[Override]` attribute on all interface implementations
+- Place methods in `#region implements IInterface` blocks
+- **Sort methods alphabetically within each region** (same visibility/static/final category)
+- Use `readonly` properties and precise types (`list<T>`, `non-negative-int`)
 
 ## Quality Gates
 
-Before completing any task, run:
+**Before completing any task, ALWAYS run:**
 1. `composer phpcbf` - auto-fix style
 2. `composer phpcs` - verify PSR-12
-3. `composer phpstan` - type safety
+3. `composer phpstan` - type safety at max level
 4. `composer test` - all tests pass
 
-## Key Patterns for This Project
+## Architecture Overview
 
-### Read-Optimized Methods in AbstractBaseList
-- AbstractBaseList provides optimized implementations for read-type methods using direct array access
-- Methods like `isEmpty()`, `contains()`, `first()`, `firstOrNull()`, `last()`, `lastOrNull()`, `slice()`, `skip()`, `take()`, `orderBy()`, `orderDescBy()`, `reverse()`, `shuffle()` use array functions instead of iterator-based approaches
-- Both ArrayList and ReadonlyList inherit these optimizations automatically
+### Interface Hierarchy
+```
+SequenceInterface (ISequence) - 30+ query/transformation methods
+  ↓ extends
+ReadonlyListInterface (IReadonlyList) + ArrayAccess - index-based access
+  ↓ extends
+ListInterface (IList) - mutation operations
+```
 
-### Constructor Requirements
-- Use `final public function __construct(...)` for concrete collection classes
-- Accept `iterable $source = []` as parameter for flexible construction from arrays or iterables
+### Concrete Implementations
 
-### Interface Implementation Guidelines
-- Always use `#[Override]` attribute when implementing interface methods
-- Place implementation in appropriate region comment (e.g., `#region implements ISequence`)
-- Return narrowed types when appropriate (e.g., `IReadonlyList<T>` instead of `ISequence<T>`)
+**LazySequence** (implements ISequence)
+- Lazy evaluation via generators, wraps any iterable
+- Optimizes arrays with direct functions, returns new LazySequence instances
+
+**ArrayList** (implements IList)
+- Mutable array-backed (`list<T>`), eager evaluation
+- Delegates ISequence methods to LazySequence, supports negative indices
+
+**ReadonlyList** (implements IReadonlyList)
+- Immutable wrapper via composition, wraps ArrayList internally
+- Delegates reads, throws BadMethodCallException on mutations
+
+### Design Patterns
+1. **Lazy vs Eager**: LazySequence (generators) vs ArrayList (arrays)
+2. **Delegation/Composition**: ReadonlyList→ArrayList, ArrayList→LazySequence
+3. **No inheritance**: Pure interfaces, composition over inheritance
+4. **Array optimization**: Fast paths for array sources
+
+### Implementation Guidelines
+- Use `#[Override]` on all interface methods
+- Place methods in `#region implements IInterface` blocks
+- Return narrowed types when appropriate (`IList<T>` vs `ISequence<T>`)
+- Sort methods alphabetically within regions
+- Document all public/protected methods with proper PHPDoc

@@ -27,6 +27,16 @@ class Entry
     private readonly mixed $v;
 
     /**
+     * Gets the key of the entry.
+     */
+    public mixed $key { get => $this->k; }
+
+    /**
+     * Gets the value of the entry.
+     */
+    public mixed $value { get => $this->v; }
+
+    /**
      * Initializes a new entry with the specified key and value.
      *
      * @param TKey $key The key of the entry.
@@ -37,7 +47,4 @@ class Entry
         $this->k = $key;
         $this->v = $value;
     }
-
-    public mixed $key { get => $this->k; }
-    public mixed $value { get => $this->v; }
 }

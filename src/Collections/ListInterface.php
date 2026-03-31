@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Collections;
 
-use Manychois\PhpStrong\Collections\EqualityComparerInterface as IEqualityComparer;
 use Manychois\PhpStrong\Collections\ReadonlyListInterface as IReadonlyList;
 use OutOfBoundsException;
 
@@ -67,20 +66,21 @@ interface ListInterface extends IReadonlyList
      * Removes the first occurrence of the specified item from the list.
      *
      * @param T $item The item to remove from the list.
-     * @param IEqualityComparer|null $eq An optional equality comparer to determine item equality.
      *
      * @return bool True if the item was found and removed; otherwise, false.
      *
      * @throws OutOfBoundsException If the item is not found in the list.
      */
-    public function remove(mixed $item, ?IEqualityComparer $eq = null): bool;
+    public function remove(mixed $item): bool;
 
     /**
      * Removes all items that satisfy the specified predicate from the list.
      *
-     * @param callable(T,int): bool $predicate The predicate function to determine which items to remove.
+     * @param callable $predicate The predicate function to determine which items to remove.
      *
      * @return ListInterface<T> A list containing the removed items.
+     *
+     * @phpstan-param callable(T,int): bool $predicate
      */
     public function removeAll(callable $predicate): ListInterface;
 
@@ -89,9 +89,11 @@ interface ListInterface extends IReadonlyList
      *
      * @param int ...$indices The indices of the items to remove. Negative indices count from the end.
      *
+     * @return int The number of items removed.
+     *
      * @throws OutOfBoundsException If any index is out of bounds.
      */
-    public function removeAt(int ...$indices): void;
+    public function removeAt(int ...$indices): int;
 
     /**
      * Sets the item at the specified index.

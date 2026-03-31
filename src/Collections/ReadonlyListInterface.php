@@ -7,7 +7,6 @@ namespace Manychois\PhpStrong\Collections;
 use ArrayAccess;
 use BadMethodCallException;
 use InvalidArgumentException;
-use Manychois\PhpStrong\Collections\EqualityComparerInterface as IEqualityComparer;
 use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;
 use OutOfBoundsException;
 
@@ -60,28 +59,26 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
     /**
      * Returns the index of the first occurrence of the specified item in the list.
      *
-     * @param T $item The item to search for.
+     * @param mixed $item The item to search for.
      * @param int $start The index to start searching from. Negative indices count from the end.
-     * @param ?IEqualityComparer $eq The equality comparer to use.
      *
      * @return int The index of the first occurrence of the item, or -1 if the item is not found.
      *
      * @throws OutOfBoundsException If the start index is out of bounds.
      */
-    public function indexOf(mixed $item, int $start = 0, ?IEqualityComparer $eq = null): int;
+    public function indexOf(mixed $item, int $start = 0): int;
 
     /**
      * Returns the index of the last occurrence of the specified item in the list.
      *
-     * @param T $item The item to search for.
+     * @param mixed $item The item to search for.
      * @param int $start The index to start searching from. Negative indices count from the end.
-     * @param ?IEqualityComparer $eq The equality comparer to use.
      *
      * @return int The index of the last occurrence of the item, or -1 if the item is not found.
      *
      * @throws OutOfBoundsException If the start index is out of bounds.
      */
-    public function lastIndexOf(mixed $item, int $start = -1, ?IEqualityComparer $eq = null): int;
+    public function lastIndexOf(mixed $item, int $start = -1): int;
 
     #region extends ArrayAccess
 
