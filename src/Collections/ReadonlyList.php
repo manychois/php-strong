@@ -6,6 +6,7 @@ namespace Manychois\PhpStrong\Collections;
 
 use BadMethodCallException;
 use Manychois\PhpStrong\Collections\Internal\AbstractBaseList;
+use Manychois\PhpStrong\Collections\ListInterface as IList;
 use Manychois\PhpStrong\Collections\ReadonlyListInterface as IReadonlyList;
 use Override;
 
@@ -35,6 +36,15 @@ class ReadonlyList extends AbstractBaseList
     protected function createReadonlyList(iterable $source): IReadonlyList
     {
         return new static($source);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    protected function createList(iterable $source): IList
+    {
+        return new ArrayList($source);
     }
 
     #region extends AbstractBaseList

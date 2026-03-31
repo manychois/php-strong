@@ -50,6 +50,13 @@ interface SequenceInterface extends Countable, IteratorAggregate
     public function asArray(): array;
 
     /**
+     * Returns a new mutable list containing the values of the sequence.
+     *
+     * @return ListInterface<T> A new mutable list containing the values of the sequence.
+     */
+    public function asList(): ListInterface;
+
+    /**
      * Chunks the sequence into smaller ones of the given maximum size.
      *
      * @param int $size The maximum size of the chunks.

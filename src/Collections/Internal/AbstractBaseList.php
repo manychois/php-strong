@@ -10,6 +10,7 @@ use Iterator;
 use Manychois\PhpStrong\Collections\ComparerInterface as IComparer;
 use Manychois\PhpStrong\Collections\EqualityComparerInterface as IEqualityComparer;
 use Manychois\PhpStrong\Collections\LazySequence;
+use Manychois\PhpStrong\Collections\ListInterface as IList;
 use Manychois\PhpStrong\Collections\ReadonlyListInterface as IReadonlyList;
 use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;
 use OutOfBoundsException;
@@ -86,6 +87,24 @@ abstract class AbstractBaseList extends AbstractBaseSequence implements IReadonl
      * @return IReadonlyList<T> A new readonly list.
      */
     abstract protected function createReadonlyList(iterable $source): IReadonlyList;
+
+    /**
+     * Creates a new mutable list from the specified iterable.
+     *
+     * @param iterable<T> $source The source iterable.
+     *
+     * @return IList<T> A new mutable list.
+     */
+    abstract protected function createList(iterable $source): IList;
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public function asList(): IList
+    {
+        return $this->createList($this->source);
+    }
 
     /**
      * @inheritDoc

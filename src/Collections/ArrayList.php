@@ -93,6 +93,15 @@ class ArrayList extends AbstractBaseList implements IList
         return new static($source);
     }
 
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    protected function createList(iterable $source): IList
+    {
+        return new static($source);
+    }
+
     #endregion extends AbstractBaseList
 
     #region implements IList

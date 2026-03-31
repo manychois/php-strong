@@ -6,11 +6,13 @@ namespace Manychois\PhpStrong\Collections\Internal;
 
 use InvalidArgumentException;
 use Iterator;
+use Manychois\PhpStrong\Collections\ArrayList;
 use Manychois\PhpStrong\Collections\ComparerInterface as IComparer;
 use Manychois\PhpStrong\Collections\Defaults\CacheIterator;
 use Manychois\PhpStrong\Collections\Defaults\DefaultEqualityComparer;
 use Manychois\PhpStrong\Collections\Defaults\NoRewindLimitIterator;
 use Manychois\PhpStrong\Collections\EqualityComparerInterface as IEqualityComparer;
+use Manychois\PhpStrong\Collections\ListInterface as IList;
 use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;
 use Override;
 use RuntimeException;
@@ -111,6 +113,15 @@ abstract class AbstractBaseSequence implements ISequence
             $array[] = $item;
         }
         return $array;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public function asList(): IList
+    {
+        return new ArrayList($this->getIterator());
     }
 
     /**
