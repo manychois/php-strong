@@ -442,6 +442,9 @@ class ArrayList implements IList
     #[Override]
     public function offsetUnset(mixed $offset): void
     {
+        if (!is_int($offset)) {
+            throw new InvalidArgumentException('Offset must be an integer');
+        }
         $count = $this->count();
         if ($offset < 0) {
             $offset += $count;

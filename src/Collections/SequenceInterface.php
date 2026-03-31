@@ -175,11 +175,12 @@ interface SequenceInterface extends Countable, IteratorAggregate
     public function last(?callable $predicate = null): mixed;
 
     /**
-     * Returns the last value of the sequence, or `null` if the sequence is empty.
+     * Returns the last value of the sequence, or `null` if the sequence is empty, or no value satisfies the predicate.
      *
      * @param ?callable $predicate The predicate to check.
      *
-     * @return ?T The last value of the sequence, or `null` if the sequence is empty.
+     * @return ?T The last value of the sequence, or `null` if the sequence is empty, or no value
+     * satisfies the predicate.
      *
      * @phpstan-param ?callable(T,non-negative-int):bool $predicate
      */

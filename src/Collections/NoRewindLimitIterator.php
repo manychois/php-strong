@@ -9,7 +9,7 @@ use Iterator;
 use Override;
 
 /**
- * Wraps an iterator which ignores rewind operations and restrict iterations to a bounded number.
+ * Wraps an iterator which ignores rewind operations and restricts iterations to a bounded number.
  *
  * @template TKey
  * @template TValue

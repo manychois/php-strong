@@ -67,9 +67,7 @@ interface ListInterface extends IReadonlyList
      *
      * @param T $item The item to remove from the list.
      *
-     * @return bool True if the item was found and removed; otherwise, false.
-     *
-     * @throws OutOfBoundsException If the item is not found in the list.
+     * @return bool `true` if the item was found and removed; otherwise, `false`.
      */
     public function remove(mixed $item): bool;
 
@@ -80,7 +78,7 @@ interface ListInterface extends IReadonlyList
      *
      * @return ListInterface<T> A list containing the removed items.
      *
-     * @phpstan-param callable(T,int): bool $predicate
+     * @phpstan-param callable(T,int):bool $predicate
      */
     public function removeAll(callable $predicate): ListInterface;
 

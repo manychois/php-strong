@@ -35,24 +35,28 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
     /**
      * Finds the index of the first item that satisfies the specified predicate.
      *
-     * @param callable(T,int): bool $predicate The predicate to check.
+     * @param callable $predicate The predicate to check.
      * @param int $start The index to start searching from. Negative indices count from the end.
      *
      * @return int The index of the first item that satisfies the predicate, or -1 if no such item is found.
      *
      * @throws OutOfBoundsException If the start index is out of bounds.
+     *
+     * @phpstan-param callable(T,int):bool $predicate
      */
     public function findIndex(callable $predicate, int $start = 0): int;
 
     /**
      * Finds the index of the last item that satisfies the specified predicate.
      *
-     * @param callable(T,int): bool $predicate The predicate to check.
+     * @param callable $predicate The predicate to check.
      * @param int $start The index to start searching from. Negative indices count from the end.
      *
      * @return int The index of the last item that satisfies the predicate, or -1 if no such item is found.
      *
      * @throws OutOfBoundsException If the start index is out of bounds.
+     *
+     * @phpstan-param callable(T,int):bool $predicate
      */
     public function findLastIndex(callable $predicate, int $start = -1): int;
 
@@ -108,7 +112,7 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
 
     /**
      * Unsets the item at the specified offset.
-     * Unsetting an out of bounds offset is an no-op.
+     * Unsetting an out-of-bounds offset is a no-op.
      *
      * @throws BadMethodCallException if the list is readonly.
      * @throws InvalidArgumentException If the offset is not an integer.
