@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Collections;
 
-use BadMethodCallException;
 use InvalidArgumentException;
 use Iterator;
 use Manychois\PhpStrong\Collections\MapInterface as IMap;
@@ -14,10 +13,14 @@ use OutOfBoundsException;
 use Override;
 use RuntimeException;
 use SplObjectStorage;
+use stdClass;
+use WeakMap;
+use WeakReference;
 
 /**
  * A map of items keyed by object identity.
- * Implementation is not yet provided.
+ *
+ * Optional weak keys or weak values are controlled by the constructor flags `isWeakKey` and `isWeakValue`.
  *
  * @template TKey of object
  * @template TValue
@@ -26,11 +29,21 @@ use SplObjectStorage;
  */
 class ObjectMap implements IMap
 {
-    /**
-     * @var SplObjectStorage<TKey, TValue>
-     */
-    private SplObjectStorage $source;
+    private static object $destroyed;
+    private static object $missing;
+
+    public readonly bool $isWeakKey;
+    public readonly bool $isWeakValue;
+
     private readonly DuplicationPolicy $policy;
+    /**
+     * @var SplObjectStorage<TKey, TValue|WeakReference<object>>
+     */
+    private SplObjectStorage $spl;
+    /**
+     * @var WeakMap<TKey, TValue|WeakReference<object>>
+     */
+    private WeakMap $weakMap;
 
     /**
      * Initializes a new object map with the specified source.
@@ -38,20 +51,33 @@ class ObjectMap implements IMap
      * @param iterable<TKey, TValue> $source The source iterable for the object map.
      * @param DuplicationPolicy $policy The policy for handling duplicate keys.
      *
-     * @throws BadMethodCallException If the source is a non-empty array (population not implemented).
-     * @throws InvalidArgumentException If the key is not an object (when population is implemented).
+     * @throws InvalidArgumentException If the key of the source is not an object.
      */
-    public function __construct(iterable $source = [], DuplicationPolicy $policy = DuplicationPolicy::Overwrite)
-    {
+    public function __construct(
+        iterable $source = [],
+        DuplicationPolicy $policy = DuplicationPolicy::Overwrite,
+        bool $isWeakKey = false,
+        bool $isWeakValue = false,
+    ) {
+        if (!isset(self::$destroyed)) {
+            self::$destroyed = new stdClass();
+        }
+        if (!isset(self::$missing)) {
+            self::$missing = new stdClass();
+        }
+
+        $this->isWeakKey = $isWeakKey;
+        $this->isWeakValue = $isWeakValue;
         $this->policy = $policy;
         if ($source instanceof ObjectMap) {
             // @phpstan-ignore assign.propertyType
-            $this->source = clone $source->source;
+            $this->spl = clone $source->spl;
+            // @phpstan-ignore assign.propertyType
+            $this->weakMap = clone $source->weakMap;
         } else {
-            $this->source = new SplObjectStorage();
-            foreach ($source as $key => $value) {
-                $this->source->attach($key, $value);
-            }
+            $this->spl = new SplObjectStorage();
+            $this->weakMap = new WeakMap();
+            $this->addRange($source);
         }
     }
 
@@ -62,6 +88,8 @@ class ObjectMap implements IMap
      * @param string $argName The name of the argument for error messages.
      *
      * @throws InvalidArgumentException If the key is not an object.
+     *
+     * @phpstan-assert object $key
      */
     protected function validateKey(mixed $key, string $argName = 'Key'): void
     {
@@ -69,6 +97,157 @@ class ObjectMap implements IMap
             throw new InvalidArgumentException(
                 sprintf('%s must be an object, type %s given', $argName, get_debug_type($key))
             );
+        }
+    }
+
+    /**
+     * Adds a strong key to the map.
+     *
+     * @param TKey $key The key to add.
+     * @param TValue|WeakReference<object> $value The value to add (possibly wrapped when `isWeakValue` is true).
+     *
+     * @throws InvalidArgumentException If the key already exists and the policy is not to overwrite.
+     */
+    private function addStrongKey(object $key, mixed $value): void
+    {
+        if ($this->spl->contains($key)) {
+            if ($this->policy === DuplicationPolicy::Overwrite) {
+                $this->spl->attach($key, $value);
+            } elseif ($this->policy === DuplicationPolicy::Ignore) {
+                // do nothing
+            } elseif ($this->policy === DuplicationPolicy::ThrowError) {
+                throw new InvalidArgumentException('Key already exists');
+            }
+        } else {
+            $this->spl->attach($key, $value);
+        }
+    }
+
+    /**
+     * Adds a weak key to the map.
+     *
+     * @param TKey $key The key to add.
+     * @param TValue|WeakReference<object> $value The value to add.
+     *
+     * @throws InvalidArgumentException If the key already exists and the policy is not to overwrite.
+     */
+    private function addWeakKey(object $key, mixed $value): void
+    {
+        if ($this->weakMap->offsetExists($key)) {
+            if ($this->policy === DuplicationPolicy::Overwrite) {
+                $this->weakMap->offsetSet($key, $value);
+            } elseif ($this->policy === DuplicationPolicy::Ignore) {
+                // do nothing
+            } elseif ($this->policy === DuplicationPolicy::ThrowError) {
+                throw new InvalidArgumentException('Key already exists');
+            }
+        } else {
+            $this->weakMap->offsetSet($key, $value);
+        }
+    }
+
+    /**
+     * Gets the value associated with the specified strong key.
+     *
+     * May detach the key if `isWeakValue` is true and the stored referent was collected.
+     *
+     * @param TKey $key The key to get the value for.
+     *
+     * @return mixed The value associated with the key, or `self::$destroyed` if the value has been garbage collected,
+     * or `self::$missing` if the key is not found.
+     */
+    private function getFromStrongKey(object $key): mixed
+    {
+        if ($this->spl->contains($key)) {
+            $value = $this->spl->offsetGet($key);
+            if ($this->isWeakValue && $value instanceof WeakReference) {
+                $value = $value->get();
+                if ($value === null) {
+                    $this->spl->detach($key);
+                    return self::$destroyed;
+                }
+            }
+            return $value;
+        }
+        return self::$missing;
+    }
+
+    /**
+     * Gets the value associated with the specified weak key.
+     *
+     * May unset the key if `isWeakValue` is true and the stored referent was collected.
+     *
+     * @param TKey $key The key to get the value for.
+     *
+     * @return mixed The value associated with the key, or `self::$destroyed` if the value has been garbage collected,
+     * or `self::$missing` if the key is not found.
+     */
+    private function getFromWeakKey(object $key): mixed
+    {
+        if ($this->weakMap->offsetExists($key)) {
+            $value = $this->weakMap->offsetGet($key);
+            if ($this->isWeakValue && $value instanceof WeakReference) {
+                $value = $value->get();
+                if ($value === null) {
+                    $this->weakMap->offsetUnset($key);
+                    return self::$destroyed;
+                }
+            }
+            return $value;
+        }
+        return self::$missing;
+    }
+
+    /**
+     * @return Iterator<TKey, TValue>
+     */
+    private function iterateWeakKeys(): Iterator
+    {
+        $toDestroy = [];
+        try {
+            foreach ($this->weakMap as $objKey => $value) {
+                if ($this->isWeakValue && $value instanceof WeakReference) {
+                    $dereferenced = $value->get();
+                    if ($dereferenced === null) {
+                        $toDestroy[] = $objKey;
+                        continue;
+                    }
+                    $value = $dereferenced;
+                }
+                // @phpstan-ignore generator.valueType
+                yield $objKey => $value;
+            }
+        } finally {
+            foreach ($toDestroy as $key) {
+                $this->weakMap->offsetUnset($key);
+            }
+        }
+    }
+
+    /**
+     * @return Iterator<TKey, TValue>
+     */
+    private function iterateStrongKeys(): Iterator
+    {
+        $toDestroy = [];
+        try {
+            foreach ($this->spl as $objKey) {
+                $value = $this->spl->offsetGet($objKey);
+                if ($this->isWeakValue && $value instanceof WeakReference) {
+                    $dereferenced = $value->get();
+                    if ($dereferenced === null) {
+                        $toDestroy[] = $objKey;
+                        continue;
+                    }
+                    $value = $dereferenced;
+                }
+                // @phpstan-ignore generator.valueType
+                yield $objKey => $value;
+            }
+        } finally {
+            foreach ($toDestroy as $key) {
+                $this->spl->detach($key);
+            }
         }
     }
 
@@ -87,16 +266,13 @@ class ObjectMap implements IMap
     public function add(mixed $key, mixed $value): void
     {
         $this->validateKey($key);
-        if ($this->source->contains($key)) {
-            if ($this->policy === DuplicationPolicy::Overwrite) {
-                $this->source->attach($key, $value);
-            } elseif ($this->policy === DuplicationPolicy::Ignore) {
-                // do nothing
-            } elseif ($this->policy === DuplicationPolicy::ThrowError) {
-                throw new InvalidArgumentException('Key already exists');
-            }
+        if ($this->isWeakValue && is_object($value)) {
+            $value = WeakReference::create($value);
+        }
+        if ($this->isWeakKey) {
+            $this->addWeakKey($key, $value);
         } else {
-            $this->source->attach($key, $value);
+            $this->addStrongKey($key, $value);
         }
     }
 
@@ -137,16 +313,18 @@ class ObjectMap implements IMap
     #[Override]
     public function clear(): void
     {
-        $this->source = new SplObjectStorage();
+        $this->spl = new SplObjectStorage();
+        $this->weakMap = new WeakMap();
     }
 
     /**
-     * @inheritDoc
+     * Returns the number of values in the map.
+     * Note that if the map is weak, the count is not guaranteed to be accurate.
      */
     #[Override]
     public function count(): int
     {
-        return $this->source->count();
+        return $this->isWeakKey ? $this->weakMap->count() : $this->spl->count();
     }
 
     /**
@@ -175,37 +353,58 @@ class ObjectMap implements IMap
     }
 
     /**
-     * @inheritDoc
+     * Gets the value associated with the specified key.
+     *
+     * When `isWeakValue` is true and the referent was collected, the entry is removed and a {@see RuntimeException} is
+     * thrown (use {@see nullGet} for a non-throwing null).
+     *
+     * @param TKey $key The key to get the value for.
+     *
+     * @return TValue The value associated with the key.
+     *
+     * @throws InvalidArgumentException If the key is not an object.
+     * @throws OutOfBoundsException If the key is not found.
+     * @throws RuntimeException If the value has been garbage collected.
      */
     #[Override]
     public function get(mixed $key): mixed
     {
         $this->validateKey($key);
-        if (!$this->source->contains($key)) {
+        $value = $this->isWeakKey ? $this->getFromWeakKey($key) : $this->getFromStrongKey($key);
+        if ($value === self::$destroyed) {
+            throw new RuntimeException('Value has been garbage collected');
+        }
+        if ($value === self::$missing) {
             throw new OutOfBoundsException('Key not found');
         }
-        return $this->source->offsetGet($key);
+        return $value;
     }
 
     /**
      * @inheritDoc
+     *
+     * Dead weak-value entries scheduled during iteration are removed in a `finally` block so cleanup runs even when the
+     * consumer stops iterating early (generator close/destruction).
      */
     #[Override]
     public function getIterator(): Iterator
     {
-        foreach ($this->source as $objKey) {
-            yield $objKey => $this->source->offsetGet($objKey);
-        }
+        // Weak-value dereference widens the generator value type vs template `TValue`; inner ignores document this.
+        return $this->isWeakKey ? $this->iterateWeakKeys() : $this->iterateStrongKeys();
     }
+
 
     /**
      * @inheritDoc
+     *
+     * When `isWeakValue` is true, may remove the entry if the weak referent was collected (same as {@see get}).
      */
     #[Override]
     public function has(mixed $key): bool
     {
         $this->validateKey($key);
-        return $this->source->contains($key);
+        $value = $this->isWeakKey ? $this->getFromWeakKey($key) : $this->getFromStrongKey($key);
+        return $value !== self::$destroyed && $value !== self::$missing;
     }
 
     /**
@@ -215,24 +414,36 @@ class ObjectMap implements IMap
     public function keys(): ISequence
     {
         $generator = function () {
-            foreach ($this->source as $objKey) {
-                yield $objKey;
+            foreach ($this->getIterator() as $key => $value) {
+                yield $key;
             }
         };
         return new LazySequence($generator());
     }
 
     /**
-     * @inheritDoc
+     * Gets the value associated with the specified key, or `null` if the key is not found, or the weak value has been
+     * collected.
+     *
+     * @param TKey $key The key to get the value for.
+     *
+     * @return ?TValue The value associated with the key, or `null` if the key is not found, or the weak value has been
+     * collected.
+     *
+     * @throws InvalidArgumentException If the key is not an object.
      */
     #[Override]
     public function nullGet(mixed $key): mixed
     {
         $this->validateKey($key);
-        if (!$this->source->contains($key)) {
+        $value = $this->isWeakKey ? $this->getFromWeakKey($key) : $this->getFromStrongKey($key);
+        if ($value === self::$destroyed) {
             return null;
         }
-        return $this->source->offsetGet($key);
+        if ($value === self::$missing) {
+            return null;
+        }
+        return $value;
     }
 
     /**
@@ -242,7 +453,7 @@ class ObjectMap implements IMap
     public function offsetExists(mixed $offset): bool
     {
         $this->validateKey($offset, 'Offset');
-        return $this->source->contains($offset);
+        return $this->has($offset);
     }
 
     /**
@@ -252,10 +463,7 @@ class ObjectMap implements IMap
     public function offsetGet(mixed $offset): mixed
     {
         $this->validateKey($offset, 'Offset');
-        if (!$this->source->contains($offset)) {
-            throw new OutOfBoundsException('Key not found');
-        }
-        return $this->source->offsetGet($offset);
+        return $this->get($offset);
     }
 
     /**
@@ -265,8 +473,7 @@ class ObjectMap implements IMap
     public function offsetSet(mixed $offset, mixed $value): void
     {
         $this->validateKey($offset, 'Offset');
-        assert(is_object($offset));
-        $this->source->attach($offset, $value);
+        $this->add($offset, $value);
     }
 
     /**
@@ -276,7 +483,7 @@ class ObjectMap implements IMap
     public function offsetUnset(mixed $offset): void
     {
         $this->validateKey($offset, 'Offset');
-        $this->source->detach($offset);
+        $this->remove($offset);
     }
 
     /**
@@ -286,10 +493,17 @@ class ObjectMap implements IMap
     public function remove(mixed $key): bool
     {
         $this->validateKey($key, 'Key');
-        if (!$this->source->contains($key)) {
+        if ($this->isWeakKey) {
+            if (!$this->weakMap->offsetExists($key)) {
+                return false;
+            }
+            $this->weakMap->offsetUnset($key);
+            return true;
+        }
+        if (!$this->spl->contains($key)) {
             return false;
         }
-        $this->source->detach($key);
+        $this->spl->detach($key);
         return true;
     }
 
@@ -300,8 +514,8 @@ class ObjectMap implements IMap
     public function values(): ISequence
     {
         $generator = function () {
-            foreach ($this->source as $objKey) {
-                yield $this->source->offsetGet($objKey);
+            foreach ($this->getIterator() as $value) {
+                yield $value;
             }
         };
         return new LazySequence($generator());
