@@ -60,7 +60,8 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      *
      * @return TValue The value associated with the key.
      *
-     * @throws InvalidArgumentException If the key is not found.
+     * @throws InvalidArgumentException If the key is not a valid key type for this map.
+     * @throws OutOfBoundsException If the key is not found.
      */
     public function get(mixed $key): mixed;
 
@@ -70,6 +71,8 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      * @param TKey $key The key to check.
      *
      * @return bool `true` if the map contains the key; otherwise, `false`.
+     *
+     * @throws InvalidArgumentException If the key is not a valid key type for this map.
      */
     public function has(mixed $key): bool;
 
@@ -86,6 +89,8 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      * @param TKey $key The key to get the value for.
      *
      * @return ?TValue The value associated with the key, or `null` if the key is not found.
+     *
+     * @throws InvalidArgumentException If the key is not a valid key type for this map.
      */
     public function nullGet(mixed $key): mixed;
 
