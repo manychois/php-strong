@@ -47,10 +47,10 @@
   },
   "require-dev": {
     "phpstan/extension-installer": "^1.4.3",
-    "phpstan/phpstan": "^2.1.44",
+    "phpstan/phpstan": "^2.1.46",
     "phpstan/phpstan-phpunit": "^2.0.16",
     "phpstan/phpstan-strict-rules": "^2.0.10",
-    "phpunit/phpunit": "^12.5.14",
+    "phpunit/phpunit": "^12.5.15",
     "slevomat/coding-standard": "^8.22.1",
     "squizlabs/php_codesniffer": "^3.13.5"
   },

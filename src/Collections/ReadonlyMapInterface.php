@@ -11,6 +11,7 @@ use InvalidArgumentException;
 use Iterator;
 use IteratorAggregate;
 use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;
+use NoDiscard;
 use OutOfBoundsException;
 use RuntimeException;
 
@@ -37,6 +38,7 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      *
      * @throws RuntimeException If the map cannot be converted to an array due to incompatible key types.
      */
+    #[NoDiscard]
     public function asArray(): array;
 
     /**
@@ -44,6 +46,7 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      *
      * @return ISequence<Entry<TKey, TValue>> A sequence of the entries in the map.
      */
+    #[NoDiscard]
     public function entries(): ISequence;
 
     /**
@@ -51,6 +54,7 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      *
      * @return Iterator<TValue, TKey> An iterator with the keys and values flipped.
      */
+    #[NoDiscard]
     public function flip(): Iterator;
 
     /**
@@ -63,6 +67,7 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      * @throws InvalidArgumentException If the key is not a valid key type for this map.
      * @throws OutOfBoundsException If the key is not found.
      */
+    #[NoDiscard]
     public function get(mixed $key): mixed;
 
     /**
@@ -74,6 +79,7 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      *
      * @throws InvalidArgumentException If the key is not a valid key type for this map.
      */
+    #[NoDiscard]
     public function has(mixed $key): bool;
 
     /**
@@ -81,6 +87,7 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      *
      * @return ISequence<TKey> A sequence of the keys in the map.
      */
+    #[NoDiscard]
     public function keys(): ISequence;
 
     /**
@@ -92,6 +99,7 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      *
      * @throws InvalidArgumentException If the key is not a valid key type for this map.
      */
+    #[NoDiscard]
     public function nullGet(mixed $key): mixed;
 
     /**
@@ -99,6 +107,7 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      *
      * @return ISequence<TValue> A sequence of the values in the map.
      */
+    #[NoDiscard]
     public function values(): ISequence;
 
     #region extends ArrayAccess
@@ -108,6 +117,7 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      *
      * @throws InvalidArgumentException If the offset is not a valid key type.
      */
+    #[NoDiscard]
     public function offsetExists(mixed $offset): bool;
 
     /**
@@ -116,6 +126,7 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      * @throws InvalidArgumentException If the offset is not a valid key type.
      * @throws OutOfBoundsException If the offset is out of bounds.
      */
+    #[NoDiscard]
     public function offsetGet(mixed $offset): mixed;
 
     /**
@@ -145,6 +156,7 @@ interface ReadonlyMapInterface extends ArrayAccess, Countable, IteratorAggregate
      *
      * @return Iterator<TKey, TValue> The iterator for the map.
      */
+    #[NoDiscard]
     public function getIterator(): Iterator;
 
     #endregion extends IteratorAggregate

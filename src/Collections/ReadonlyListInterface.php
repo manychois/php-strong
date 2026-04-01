@@ -8,6 +8,7 @@ use ArrayAccess;
 use BadMethodCallException;
 use InvalidArgumentException;
 use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;
+use NoDiscard;
 use OutOfBoundsException;
 
 /**
@@ -30,6 +31,7 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
      *
      * @throws OutOfBoundsException If the index is out of bounds.
      */
+    #[NoDiscard]
     public function at(int $index): mixed;
 
     /**
@@ -44,6 +46,7 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
      *
      * @phpstan-param callable(T,int):bool $predicate
      */
+    #[NoDiscard]
     public function findIndex(callable $predicate, int $start = 0): int;
 
     /**
@@ -58,6 +61,7 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
      *
      * @phpstan-param callable(T,int):bool $predicate
      */
+    #[NoDiscard]
     public function findLastIndex(callable $predicate, int $start = -1): int;
 
     /**
@@ -70,6 +74,7 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
      *
      * @throws OutOfBoundsException If the start index is out of bounds.
      */
+    #[NoDiscard]
     public function indexOf(mixed $item, int $start = 0): int;
 
     /**
@@ -82,6 +87,7 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
      *
      * @throws OutOfBoundsException If the start index is out of bounds.
      */
+    #[NoDiscard]
     public function lastIndexOf(mixed $item, int $start = -1): int;
 
     #region extends ArrayAccess
@@ -91,6 +97,7 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
      *
      * @throws InvalidArgumentException If the offset is not an integer.
      */
+    #[NoDiscard]
     public function offsetExists(mixed $offset): bool;
 
     /**
@@ -99,6 +106,7 @@ interface ReadonlyListInterface extends ArrayAccess, ISequence
      * @throws InvalidArgumentException If the offset is not an integer.
      * @throws OutOfBoundsException If the offset is out of bounds.
      */
+    #[NoDiscard]
     public function offsetGet(mixed $offset): mixed;
 
     /**

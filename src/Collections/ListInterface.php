@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Manychois\PhpStrong\Collections;
 
 use Manychois\PhpStrong\Collections\ReadonlyListInterface as IReadonlyList;
+use NoDiscard;
 use OutOfBoundsException;
 
 /**
@@ -35,6 +36,7 @@ interface ListInterface extends IReadonlyList
      *
      * @return IReadonlyList<T> A readonly version of the list.
      */
+    #[NoDiscard]
     public function asReadonly(): IReadonlyList;
 
     /**

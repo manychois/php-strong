@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use Iterator;
 use IteratorAggregate;
 use Manychois\PhpStrong\Collections\ComparerInterface as IComparer;
+use NoDiscard;
 use RuntimeException;
 use UnderflowException;
 
@@ -32,6 +33,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @phpstan-param callable(T,non-negative-int):bool $predicate
      */
+    #[NoDiscard]
     public function all(callable $predicate): bool;
 
     /**
@@ -43,6 +45,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @phpstan-param callable(T,non-negative-int):bool $predicate
      */
+    #[NoDiscard]
     public function any(callable $predicate): bool;
 
     /**
@@ -50,6 +53,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @return list<T> The values of the sequence as an array.
      */
+    #[NoDiscard]
     public function asArray(): array;
 
     /**
@@ -57,6 +61,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @return ListInterface<T> A new mutable list containing the values of the sequence.
      */
+    #[NoDiscard]
     public function asList(): ListInterface;
 
     /**
@@ -69,6 +74,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @throws InvalidArgumentException if the size is less than or equal to 0.
      */
+    #[NoDiscard]
     public function chunk(int $size): SequenceInterface;
 
     /**
@@ -78,6 +84,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @return bool `true` if the sequence contains the specified value; otherwise, `false`.
      */
+    #[NoDiscard]
     public function contains(mixed $value): bool;
 
     /**
@@ -85,6 +92,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @return SequenceInterface<T> A new sequence that contains only distinct values.
      */
+    #[NoDiscard]
     public function distinct(): SequenceInterface;
 
     /**
@@ -95,6 +103,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      * @return SequenceInterface<T> A new sequence that contains only values that are not present in the
      * given source.
      */
+    #[NoDiscard]
     public function except(iterable $sequence): SequenceInterface;
 
     /**
@@ -106,6 +115,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @phpstan-param callable(T,non-negative-int):bool $predicate
      */
+    #[NoDiscard]
     public function filter(callable $predicate): SequenceInterface;
 
     /**
@@ -120,6 +130,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @phpstan-param ?callable(T,non-negative-int):bool $predicate
      */
+    #[NoDiscard]
     public function first(?callable $predicate = null): mixed;
 
     /**
@@ -132,6 +143,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @phpstan-param ?callable(T,non-negative-int):bool $predicate
      */
+    #[NoDiscard]
     public function firstOrNull(?callable $predicate = null): mixed;
 
     /**
@@ -141,6 +153,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @phpstan-return Iterator<non-negative-int, T>
      */
+    #[NoDiscard]
     public function getIterator(): Iterator;
 
     /**
@@ -148,6 +161,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @return bool `true` if the sequence is empty; otherwise, `false`.
      */
+    #[NoDiscard]
     public function isEmpty(): bool;
 
     /**
@@ -158,6 +172,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      * @return SequenceInterface<T> A new sequence that contains only values that are present in both the current
      * sequence and the given one.
      */
+    #[NoDiscard]
     public function intersect(iterable $sequence): SequenceInterface;
 
     /**
@@ -172,6 +187,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @phpstan-param ?callable(T,non-negative-int):bool $predicate
      */
+    #[NoDiscard]
     public function last(?callable $predicate = null): mixed;
 
     /**
@@ -184,6 +200,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @phpstan-param ?callable(T,non-negative-int):bool $predicate
      */
+    #[NoDiscard]
     public function lastOrNull(?callable $predicate = null): mixed;
 
     /**
@@ -199,6 +216,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @phpstan-param callable(T,non-negative-int):TResult $callback
      */
+    #[NoDiscard]
     public function map(callable $callback): SequenceInterface;
 
     /**
@@ -208,6 +226,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @return SequenceInterface<T> A new sequence that is ordered by the given comparer.
      */
+    #[NoDiscard]
     public function orderBy(IComparer $comparer): SequenceInterface;
 
     /**
@@ -217,6 +236,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @return SequenceInterface<T> A new sequence that is ordered by the given comparer in descending order.
      */
+    #[NoDiscard]
     public function orderDescBy(IComparer $comparer): SequenceInterface;
 
     /**
@@ -226,6 +246,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @return SequenceInterface<T> A new sequence that loops through the given sequences first, then the current one.
      */
+    #[NoDiscard]
     public function precededBy(iterable ...$sequences): SequenceInterface;
 
     /**
@@ -240,6 +261,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @phpstan-param callable(TResult,T,non-negative-int):TResult $callback
      */
+    #[NoDiscard]
     public function reduce(callable $callback, mixed $initial): mixed;
 
     /**
@@ -247,6 +269,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @return SequenceInterface<T> A new sequence that is the reverse of the current sequence.
      */
+    #[NoDiscard]
     public function reverse(): SequenceInterface;
 
     /**
@@ -255,6 +278,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @return SequenceInterface<T> A new sequence that is shuffled.
      */
+    #[NoDiscard]
     public function shuffle(): SequenceInterface;
 
     /**
@@ -267,6 +291,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @throws InvalidArgumentException if the index or length is less than 0.
      */
+    #[NoDiscard]
     public function slice(int $index, int $length): SequenceInterface;
 
     /**
@@ -278,6 +303,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @throws InvalidArgumentException if the count is less than 0.
      */
+    #[NoDiscard]
     public function skip(int $count): SequenceInterface;
 
     /**
@@ -289,6 +315,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @throws InvalidArgumentException if the count is less than 0.
      */
+    #[NoDiscard]
     public function skipLast(int $count): SequenceInterface;
 
     /**
@@ -300,6 +327,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @throws InvalidArgumentException if the count is less than 0.
      */
+    #[NoDiscard]
     public function take(int $count): SequenceInterface;
 
     /**
@@ -311,6 +339,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      *
      * @throws InvalidArgumentException if the count is less than 0.
      */
+    #[NoDiscard]
     public function takeLast(int $count): SequenceInterface;
 
     /**
@@ -321,6 +350,7 @@ interface SequenceInterface extends Countable, IteratorAggregate
      * @return SequenceInterface<T> A new sequence that loops through the current sequence first, then the given
      * sequences.
      */
+    #[NoDiscard]
     public function then(iterable ...$sequences): SequenceInterface;
 
     /**
@@ -332,5 +362,6 @@ interface SequenceInterface extends Countable, IteratorAggregate
      * @return SequenceInterface<T> A new sequence that contains the values of the current sequence and the given
      * sequence.
      */
+    #[NoDiscard]
     public function union(iterable $sequence): SequenceInterface;
 }

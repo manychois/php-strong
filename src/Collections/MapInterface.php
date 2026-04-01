@@ -6,6 +6,7 @@ namespace Manychois\PhpStrong\Collections;
 
 use InvalidArgumentException;
 use Manychois\PhpStrong\Collections\ReadonlyMapInterface as IReadonlyMap;
+use NoDiscard;
 
 /**
  * Defines a mutable map of items.
@@ -43,6 +44,7 @@ interface MapInterface extends IReadonlyMap
      *
      * @return IReadonlyMap<TKey, TValue> A readonly version of the map.
      */
+    #[NoDiscard]
     public function asReadonly(): IReadonlyMap;
 
     /**

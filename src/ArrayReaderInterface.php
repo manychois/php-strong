@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Manychois\PhpStrong;
 
 use Manychois\PhpStrong\Collections\MapInterface as IMap;
+use NoDiscard;
 use OutOfBoundsException;
 use UnexpectedValueException;
 
@@ -30,6 +31,7 @@ interface ArrayReaderInterface
      * @throws OutOfBoundsException If the path cannot be resolved.
      * @throws UnexpectedValueException If the value is not an array.
      */
+    #[NoDiscard]
     public function array(string $path): array;
 
     /**
@@ -41,6 +43,7 @@ interface ArrayReaderInterface
      * @return array<mixed>|null The resolved value, or `null` when the path cannot be resolved or the value is not an
      * array.
      */
+    #[NoDiscard]
     public function arrayOrNull(string $path): ?array;
 
     /**
@@ -53,6 +56,7 @@ interface ArrayReaderInterface
      * @throws OutOfBoundsException If the path cannot be resolved.
      * @throws UnexpectedValueException If the value is not an array or an object.
      */
+    #[NoDiscard]
     public function at(string $path): ArrayReaderInterface;
 
     /**
@@ -65,6 +69,7 @@ interface ArrayReaderInterface
      * @throws OutOfBoundsException If the path cannot be resolved.
      * @throws UnexpectedValueException If the value is not a boolean.
      */
+    #[NoDiscard]
     public function bool(string $path): bool;
 
     /**
@@ -75,6 +80,7 @@ interface ArrayReaderInterface
      *
      * @return bool|null The resolved value, or `null` when the path cannot be resolved or the value is not a boolean.
      */
+    #[NoDiscard]
     public function boolOrNull(string $path): ?bool;
 
     /**
@@ -87,6 +93,7 @@ interface ArrayReaderInterface
      * @throws OutOfBoundsException If the path cannot be resolved.
      * @throws UnexpectedValueException If the value is not callable.
      */
+    #[NoDiscard]
     public function callable(string $path): callable;
 
     /**
@@ -98,6 +105,7 @@ interface ArrayReaderInterface
      * @return callable|null The resolved value, or `null` when the path cannot be resolved or the value is not
      * callable.
      */
+    #[NoDiscard]
     public function callableOrNull(string $path): ?callable;
 
     /**
@@ -110,6 +118,7 @@ interface ArrayReaderInterface
      * @throws OutOfBoundsException If the path cannot be resolved.
      * @throws UnexpectedValueException If the value is not a float.
      */
+    #[NoDiscard]
     public function float(string $path): float;
 
     /**
@@ -120,6 +129,7 @@ interface ArrayReaderInterface
      *
      * @return float|null The resolved value, or `null` when the path cannot be resolved or the value is not a float.
      */
+    #[NoDiscard]
     public function floatOrNull(string $path): ?float;
 
     /**
@@ -134,6 +144,7 @@ interface ArrayReaderInterface
      *
      * @throws OutOfBoundsException If the path cannot be resolved.
      */
+    #[NoDiscard]
     public function get(string $path): mixed;
 
     /**
@@ -144,6 +155,7 @@ interface ArrayReaderInterface
      *
      * @return mixed The resolved value, or `null` when the path cannot be resolved.
      */
+    #[NoDiscard]
     public function getOrNull(string $path): mixed;
 
     /**
@@ -153,6 +165,7 @@ interface ArrayReaderInterface
      *
      * @return bool True if the value can be resolved and is not null, false otherwise.
      */
+    #[NoDiscard]
     public function has(string $path): bool;
 
     /**
@@ -170,6 +183,7 @@ interface ArrayReaderInterface
      *
      * @phpstan-param class-string<T> $class
      */
+    #[NoDiscard]
     public function instanceOf(string $path, string $class): object;
 
     /**
@@ -186,6 +200,7 @@ interface ArrayReaderInterface
      *
      * @phpstan-param class-string<T> $class
      */
+    #[NoDiscard]
     public function instanceOfOrNull(string $path, string $class): ?object;
 
     /**
@@ -198,6 +213,7 @@ interface ArrayReaderInterface
      * @throws OutOfBoundsException If the path cannot be resolved.
      * @throws UnexpectedValueException If the value is not an integer.
      */
+    #[NoDiscard]
     public function int(string $path): int;
 
     /**
@@ -208,6 +224,7 @@ interface ArrayReaderInterface
      *
      * @return int|null The resolved value, or `null` when the path cannot be resolved or the value is not an integer.
      */
+    #[NoDiscard]
     public function intOrNull(string $path): ?int;
 
     /**
@@ -221,6 +238,7 @@ interface ArrayReaderInterface
      * @throws OutOfBoundsException If the path cannot be resolved.
      * @throws UnexpectedValueException If the value is not an object.
      */
+    #[NoDiscard]
     public function object(string $path): object;
 
     /**
@@ -232,6 +250,7 @@ interface ArrayReaderInterface
      * @return object|null The resolved value, or `null` when the path cannot be resolved or the value is not an
      * object.
      */
+    #[NoDiscard]
     public function objectOrNull(string $path): ?object;
 
     /**
@@ -244,6 +263,7 @@ interface ArrayReaderInterface
      * @throws OutOfBoundsException If the path cannot be resolved.
      * @throws UnexpectedValueException If the value is not a string.
      */
+    #[NoDiscard]
     public function string(string $path): string;
 
     /**
@@ -254,6 +274,7 @@ interface ArrayReaderInterface
      *
      * @return string|null The resolved value, or `null` when the path cannot be resolved or the value is not a string.
      */
+    #[NoDiscard]
     public function stringOrNull(string $path): ?string;
 
     /**
@@ -264,5 +285,6 @@ interface ArrayReaderInterface
      *
      * @return ArrayReaderInterface The new array reader.
      */
+    #[NoDiscard]
     public function with(array|IMap $overrides): ArrayReaderInterface;
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Collections;
 
+use NoDiscard;
+
 /**
  * Defines methods to compare two values of the same type.
  *
@@ -24,5 +26,6 @@ interface ComparerInterface
      *
      * @phpstan-return int<-1,1>
      */
+    #[NoDiscard]
     public function compare(mixed $x, mixed $y): int;
 }

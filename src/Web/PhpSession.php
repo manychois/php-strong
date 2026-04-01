@@ -117,7 +117,7 @@ class PhpSession extends AbstractArrayReader implements IPhpSession
                 $_SESSION[$key] = $value;
             }
         }
-        return $this;
+        return new self($this->options);
     }
 
     #endregion implements IPhpSession
