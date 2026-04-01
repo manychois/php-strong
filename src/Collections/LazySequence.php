@@ -14,6 +14,7 @@ use Manychois\PhpStrong\Collections\NoRewindLimitIterator;
 use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;
 use Override;
 use RuntimeException;
+use stdClass;
 use UnderflowException;
 
 /**
@@ -101,10 +102,10 @@ class LazySequence implements ISequence
     public function asArray(): array
     {
         if (is_array($this->source)) {
-            return \array_is_list($this->source) ? $this->source : array_values($this->source);
+            return array_is_list($this->source) ? $this->source : array_values($this->source);
         }
         $result = iterator_to_array($this->source, false);
-        assert(\array_is_list($result));
+        assert(array_is_list($result));
         return $result;
     }
 
@@ -246,7 +247,7 @@ class LazySequence implements ISequence
             if ($count === 0) {
                 throw new UnderflowException('The sequence is empty');
             }
-            $firstKey = \array_key_first($this->source);
+            $firstKey = array_key_first($this->source);
             return $this->source[$firstKey];
         }
 
@@ -276,7 +277,7 @@ class LazySequence implements ISequence
             if ($count === 0) {
                 return null;
             }
-            $firstKey = \array_key_first($this->source);
+            $firstKey = array_key_first($this->source);
             return $this->source[$firstKey];
         }
 
@@ -354,13 +355,13 @@ class LazySequence implements ISequence
             if ($count === 0) {
                 throw new UnderflowException('The sequence is empty');
             }
-            $lastKey = \array_key_last($this->source);
+            $lastKey = array_key_last($this->source);
             return $this->source[$lastKey];
         }
 
         $isEmpty = true;
         $i = 0;
-        $temp = new \stdClass();
+        $temp = new stdClass();
         $last = $temp;
         foreach ($this->source as $item) {
             $isEmpty = false;
@@ -375,7 +376,7 @@ class LazySequence implements ISequence
         if ($last === $temp) {
             throw new RuntimeException('No item satisfies the predicate');
         }
-        assert(!($last instanceof \stdClass));
+        assert(!($last instanceof stdClass));
         return $last;
     }
 
@@ -390,7 +391,7 @@ class LazySequence implements ISequence
             if ($count === 0) {
                 return null;
             }
-            $lastKey = \array_key_last($this->source);
+            $lastKey = array_key_last($this->source);
             return $this->source[$lastKey];
         }
 
@@ -497,7 +498,7 @@ class LazySequence implements ISequence
             return new self(array_reverse($this->source));
         }
 
-        $list = \iterator_to_array($this->source, false);
+        $list = iterator_to_array($this->source, false);
         $list = array_reverse($list);
 
         return new self($list);
@@ -509,7 +510,7 @@ class LazySequence implements ISequence
     #[Override]
     public function shuffle(): ISequence
     {
-        $list = is_array($this->source) ? $this->source : \iterator_to_array($this->source, false);
+        $list = is_array($this->source) ? $this->source : iterator_to_array($this->source, false);
         shuffle($list);
         return new self($list);
     }

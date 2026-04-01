@@ -27,7 +27,7 @@ composer code                    # Run phpcbf + phpcs + phpstan (full quality ch
 
 ## Code Style Guidelines
 
-See [PHP-CODING-STYLE.md](./PHP-CODING-STYLE.md) for complete coding standards.
+See [documentation/php-coding-standard.md](./documentation/php-coding-standard.md) for complete coding standards.
 
 **Critical rules:**
 - Always use interface aliases: `use SequenceInterface as ISequence`

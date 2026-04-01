@@ -79,6 +79,18 @@
       <property name="psr12Compatible" value="true"/>
     </properties>
   </rule>
+  <!-- Native PHP classes: use `use` imports (no leading `\`). Global functions/constants may use `\`, unqualified names, or `use function` / `use const` (not required). -->
+  <rule ref="SlevomatCodingStandard.Namespaces.ReferenceUsedNamesOnly">
+    <properties>
+      <property name="searchAnnotations" value="true"/>
+      <property name="allowFullyQualifiedGlobalClasses" value="false"/>
+      <property name="allowFullyQualifiedGlobalFunctions" value="true"/>
+      <property name="allowFullyQualifiedGlobalConstants" value="true"/>
+      <property name="allowFullyQualifiedExceptions" value="false"/>
+      <property name="allowFallbackGlobalFunctions" value="true"/>
+      <property name="allowFallbackGlobalConstants" value="true"/>
+    </properties>
+  </rule>
   <!-- Require declare(strict_types=1); with blank line after <?php and before following code (matches project style). -->
   <rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes">
     <properties>
@@ -86,6 +98,12 @@
       <property name="linesCountBeforeDeclare" value="1"/>
       <property name="linesCountAfterDeclare" value="1"/>
       <property name="spacesCountAroundEqualsSign" value="0"/>
+    </properties>
+  </rule>
+  <!-- Prefer ?T over T|null for simple nullable types in native parameter, return, and property hints. -->
+  <rule ref="SlevomatCodingStandard.TypeHints.DNFTypeHintFormat">
+    <properties>
+      <property name="shortNullable" value="yes"/>
     </properties>
   </rule>
   <!-- Require empty line between different annotation types (e.g., @param and @return). -->

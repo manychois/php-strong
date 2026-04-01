@@ -62,6 +62,12 @@ class Xxx implements IXxx { }
    */
   ```
 
+## PHPDoc inline layout
+
+- Use **single spaces** between parts of a tag: after `@param`, between the type and `$name`, and before the description (e.g. `@param string $text The text.`). Do **not** pad types or names with extra spaces to column-align multiple `@param` or `@return` lines.
+- Long descriptions may wrap to the next doc line; avoid indenting continuation text to match a fictional “description column.”
+- Standard PHPCS rules in this project do not auto-fix horizontal padding inside tags; keep this style by convention.
+
 ## DocBlocks
 
 ### Classes/Interfaces

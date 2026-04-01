@@ -413,7 +413,7 @@ class ArrayList implements IList
             return;
         }
         if (!is_int($offset)) {
-            throw new \InvalidArgumentException('Offset must be an integer');
+            throw new InvalidArgumentException('Offset must be an integer');
         }
         $count = $this->count();
         $newIndex = $offset;
@@ -538,7 +538,7 @@ class ArrayList implements IList
             $normalizedIndices[] = $this->normaliseIndex($index);
         }
         $normalizedIndices = array_unique($normalizedIndices);
-        rsort($normalizedIndices, \SORT_NUMERIC);
+        rsort($normalizedIndices, SORT_NUMERIC);
         foreach ($normalizedIndices as $index) {
             array_splice($this->source, $index, 1);
         }
