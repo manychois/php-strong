@@ -47,6 +47,62 @@ interface ArrayReaderInterface
     public function arrayOrNull(string $path): ?array;
 
     /**
+     * Gets the boolean value at the given path.
+     * If the value is not a boolean, various boolean conversion techniques are attempted.
+     * If all attempts fail, the default value is returned.
+     * The conversion techniques are implementation-dependent.
+     *
+     * @param string $path The path, e.g. `user.address.city`.
+     * @param bool $default The default value to return if all attempts fail.
+     *
+     * @return bool The resolved value.
+     */
+    #[NoDiscard]
+    public function asBool(string $path, bool $default = false): bool;
+
+    /**
+     * Gets the float value at the given path.
+     * If the value is not a float, various float conversion techniques are attempted.
+     * If all attempts fail, the default value is returned.
+     * The conversion techniques are implementation-dependent.
+     *
+     * @param string $path The path, e.g. `user.address.city`.
+     * @param float $default The default value to return if all attempts fail.
+     *
+     * @return float The resolved value.
+     */
+    #[NoDiscard]
+    public function asFloat(string $path, float $default = 0.0): float;
+
+    /**
+     * Gets the integer value at the given path.
+     * If the value is not an integer, various integer conversion techniques are attempted.
+     * If all attempts fail, the default value is returned.
+     * The conversion techniques are implementation-dependent.
+     *
+     * @param string $path The path, e.g. `user.address.city`.
+     * @param int $default The default value to return if all attempts fail.
+     *
+     * @return int The resolved value.
+     */
+    #[NoDiscard]
+    public function asInt(string $path, int $default = 0): int;
+
+    /**
+     * Gets the string value at the given path.
+     * If the value is not a string, various string conversion techniques are attempted.
+     * If all attempts fail, the default value is returned.
+     * The conversion techniques are implementation-dependent.
+     *
+     * @param string $path The path, e.g. `user.address.city`.
+     * @param string $default The default value to return if all attempts fail.
+     *
+     * @return string The resolved value.
+     */
+    #[NoDiscard]
+    public function asString(string $path, string $default = ''): string;
+
+    /**
      * Gets a new array reader at the given path.
      *
      * @param string $path The path, e.g. `user.address.city`.

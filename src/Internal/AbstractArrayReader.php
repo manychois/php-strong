@@ -9,6 +9,7 @@ use Manychois\PhpStrong\ArrayReaderInterface as IArrayReader;
 use OutOfBoundsException;
 use Override;
 use stdClass;
+use Stringable;
 use UnexpectedValueException;
 
 /**
@@ -148,6 +149,82 @@ abstract class AbstractArrayReader implements IArrayReader
             return $value;
         }
         return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public function asBool(string $path, bool $default = false): bool
+    {
+        $value = $this->getOrMissingValue($path);
+        if ($value === static::$missingValue) {
+            return $default;
+        }
+        $value = filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+        if (is_bool($value)) {
+            return $value;
+        }
+        return $default;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public function asFloat(string $path, float $default = 0.0): float
+    {
+        $value = $this->getOrMissingValue($path);
+        if ($value === static::$missingValue) {
+            return $default;
+        }
+        $value = filter_var($value, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE);
+        if (is_float($value)) {
+            return $value;
+        }
+        return $default;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public function asInt(string $path, int $default = 0): int
+    {
+        $value = $this->getOrMissingValue($path);
+        if ($value === static::$missingValue) {
+            return $default;
+        }
+        $value = filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE);
+        if (is_int($value)) {
+            return $value;
+        }
+        return $default;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public function asString(string $path, string $default = ''): string
+    {
+        $value = $this->getOrMissingValue($path);
+        if ($value === static::$missingValue) {
+            return $default;
+        }
+        if (is_string($value)) {
+            return $value;
+        }
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+        if ($value === null) {
+            return $default;
+        }
+        if ($value instanceof Stringable) {
+            return $value->__toString();
+        }
+        return $default;
     }
 
     /**
