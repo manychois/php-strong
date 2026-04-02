@@ -8,6 +8,7 @@
     <!-- Exclude PSR2 property rules that don't understand PHP 8.4 property hooks -->
     <exclude name="PSR2.Classes.PropertyDeclaration.Multiple"/>
     <exclude name="PSR2.Classes.PropertyDeclaration.ScopeMissing"/>
+    <exclude name="PSR2.Classes.PropertyDeclaration.SpacingAfterType"/>
   </rule>
   <!-- PHPCS parse layer treats interface property hooks as member vars; PHP 8.4 allows hooks on interfaces. -->
   <rule ref="Internal.ParseError.InterfaceHasMemberVar">

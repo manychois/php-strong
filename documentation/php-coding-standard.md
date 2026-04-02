@@ -22,7 +22,7 @@ class Xxx implements IXxx { }
 |---------|-----------|---------|
 | Classes | PascalCase | `ReadonlyList` |
 | Interfaces | `XxxInterface` | `SequenceInterface` |
-| Interface alias | `IXxx` | `use SequenceInterface as ISequence;` |
+| Interface alias | `IXxx` (only when the type is named `XxxInterface`) | `use SequenceInterface as ISequence;` |
 | Methods/Properties | camelCase | `firstOrNull`, `$source` |
 | Constants | UPPER_SNAKE_CASE | `MAX_SIZE` |
 | Regions | `#region implements IInterface` | |
@@ -30,7 +30,7 @@ class Xxx implements IXxx { }
 ## Import Rules
 
 - Remove unused imports (auto-fixed by phpcbf)
-- Use `as` aliases for interfaces as a personal preference for shorter names
+- Use `as` aliases for interfaces with `Interface` suffix as a personal preference for shorter names
 
 ## Class Code Structure Order
 
@@ -46,7 +46,7 @@ class Xxx implements IXxx { }
    - abstract public, public, abstract protected, protected, private
    - **Alphabetically within each category** (e.g., all public instance methods sorted A-Z)
 8. Within each `#region implements IInterface` (or equivalent) block, **`public` property hooks** that implement members of that interface belong at the **top** of the region, **before** any methods—matching the class-level rule that properties come before methods. Remaining members in that region are methods ordered as in step 7.
-9. Use `#[Override]` attribute wherever applicable, with `@inheritDoc` in docblock
+9. Use `#[Override]` attribute wherever applicable. See [Override Attribute](#override-attribute) for PHPDoc.
 
 **Example:** In a class where all methods are public instance methods with `#[Override]`, they must be sorted alphabetically: `add()`, `all()`, `any()`, `asArray()`, `asList()`, etc.
 
@@ -110,7 +110,7 @@ public function first(?callable $predicate = null): int { }
 - Use plain `int` in readable positions (params, returns, extends)
 - Use `@phpstan-` prefixed tags for PHPStan-specific precision types
 - Lowercase native types: `@return bool`
-- Prefer shorter interface alias: `use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;`
+- Prefer shorter `I*` alias for project interfaces named `XxxInterface`: `use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;`
 - Shorter nullable: `@param ?int $count`
 
 ## Intelephense Workarounds
@@ -128,7 +128,12 @@ Prefer this style, general `callable` in `@param`, but specify precise signature
 
 ## Override Attribute
 
-Use `#[Override]` on interface method implementations:
+Use `#[Override]` on interface method implementations (and other applicable overrides).
+
+`@inheritDoc` is **optional**. IDEs often supply inherited documentation by default. You may omit `@inheritDoc` or write a **full replacement** docblock when the parent or interface comment is insufficient—either style is acceptable alongside `#[Override]`.
+
+Typical shorthand when the inherited text is enough:
+
 ```php
 /**
  * @inheritDoc
