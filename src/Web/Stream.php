@@ -46,9 +46,13 @@ final class Stream implements IStream
             }
             $this->rewind();
             $contents = stream_get_contents($this->getResource());
+            // `stream_get_contents` is documented to return false on failure; in practice user-space wrappers
+            // often yield an empty string instead, so this branch is rarely exercised.
+            // @codeCoverageIgnoreStart
             if ($contents === false) {
                 return '';
             }
+            // @codeCoverageIgnoreEnd
             return $contents;
         } catch (RuntimeException) {
             return '';
@@ -97,9 +101,11 @@ final class Stream implements IStream
     public function getContents(): string
     {
         $contents = stream_get_contents($this->getResource());
+        // @codeCoverageIgnoreStart
         if ($contents === false) {
             throw new RuntimeException('Failed to read stream contents.');
         }
+        // @codeCoverageIgnoreEnd
         return $contents;
     }
 
@@ -146,9 +152,12 @@ final class Stream implements IStream
             return false;
         }
         $modeMetadata = $this->getMetadata('mode');
+        // PHP stream metadata always exposes `mode` as a non-empty string; guard retained for static analysis.
+        // @codeCoverageIgnoreStart
         if (!is_string($modeMetadata)) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
         $mode = $modeMetadata;
         return str_contains($mode, 'r') || str_contains($mode, '+');
     }
@@ -172,9 +181,11 @@ final class Stream implements IStream
             return false;
         }
         $modeMetadata = $this->getMetadata('mode');
+        // @codeCoverageIgnoreStart
         if (!is_string($modeMetadata)) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
         $mode = $modeMetadata;
         return strpbrk($mode, 'waxc+') !== false;
     }
@@ -232,9 +243,11 @@ final class Stream implements IStream
     public function tell(): int
     {
         $position = ftell($this->getResource());
+        // @codeCoverageIgnoreStart
         if ($position === false) {
             throw new RuntimeException('Failed to get stream position.');
         }
+        // @codeCoverageIgnoreEnd
         return $position;
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Manychois\PhpStrongTests\Web;
 
 use InvalidArgumentException;
+use Manychois\PhpStrongTests\Web\Fixtures\StreamFactoryWithFailedTempOpen;
 use Manychois\PhpStrong\Web\Stream;
 use Manychois\PhpStrong\Web\StreamFactory;
 use PHPUnit\Framework\Attributes\Test;
@@ -34,6 +35,16 @@ final class StreamFactoryTest extends TestCase
         $stream = $factory->createStream('hello');
 
         self::assertSame('hello', $stream->getContents());
+    }
+
+    #[Test]
+    public function createStream_throws_when_temp_handle_cannot_be_created(): void
+    {
+        $factory = new StreamFactoryWithFailedTempOpen();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Failed to create temporary stream.');
+        $factory->createStream();
     }
 
     #[Test]

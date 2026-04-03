@@ -182,7 +182,8 @@ class OutRequest extends AbstractMessage implements IRequest
     }
 
     /**
-     * @param array<string,mixed> $serverParams
+     * @param array<array-key,mixed> $serverParams Typically {@see $_SERVER}; may contain non-string keys,
+     *                                            which are ignored when deriving headers.
      *
      * @return array<string,string>
      */

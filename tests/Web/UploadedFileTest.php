@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Manychois\PhpStrongTests\Web;
 
 use InvalidArgumentException;
+use Manychois\PhpStrongTests\Web\Fixtures\FailingFwriteStreamWrapper;
 use Manychois\PhpStrong\Web\Stream;
 use Manychois\PhpStrong\Web\StreamFactory;
 use Manychois\PhpStrong\Web\UploadedFile;
-use ReflectionClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\StreamInterface as IStream;
+use ReflectionClass;
 use RuntimeException;
 
 /**
@@ -313,6 +315,64 @@ final class UploadedFileTest extends TestCase
         try {
             $file->moveTo($target);
             self::assertSame('prefix-suffix', file_get_contents($target));
+        } finally {
+            if (is_file($target)) {
+                unlink($target);
+            }
+        }
+    }
+
+    #[Test]
+    public function moveTo_throws_when_destination_write_fails(): void
+    {
+        self::assertTrue(stream_wrapper_register(
+            FailingFwriteStreamWrapper::REGISTER_SCHEME,
+            FailingFwriteStreamWrapper::class,
+        ));
+        try {
+            $streams = new StreamFactory();
+            $stream = $streams->createStream('chunk');
+            $file = new UploadedFile(
+                $stream,
+                size: null,
+                error: \UPLOAD_ERR_OK,
+                clientFilename: null,
+                clientMediaType: null,
+            );
+
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('Failed writing to');
+            $file->moveTo(FailingFwriteStreamWrapper::REGISTER_SCHEME . '://out');
+        } finally {
+            if (in_array(FailingFwriteStreamWrapper::REGISTER_SCHEME, stream_get_wrappers(), true)) {
+                stream_wrapper_unregister(FailingFwriteStreamWrapper::REGISTER_SCHEME);
+            }
+        }
+    }
+
+    #[Test]
+    public function moveTo_stops_copy_when_read_returns_empty_before_eof(): void
+    {
+        $stream = $this->createStub(IStream::class);
+        $stream->method('isSeekable')->willReturn(false);
+        $stream->method('eof')->willReturn(false);
+        $stream->method('read')->willReturn('');
+
+        $file = new UploadedFile(
+            $stream,
+            size: 0,
+            error: \UPLOAD_ERR_OK,
+            clientFilename: null,
+            clientMediaType: null,
+        );
+
+        $target = tempnam(sys_get_temp_dir(), 'php-strong-uploaded-');
+        self::assertNotFalse($target);
+        unlink($target);
+        try {
+            $file->moveTo($target);
+            self::assertFileExists($target);
+            self::assertSame('', (string) file_get_contents($target));
         } finally {
             if (is_file($target)) {
                 unlink($target);

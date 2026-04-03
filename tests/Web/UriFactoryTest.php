@@ -9,6 +9,7 @@ use Manychois\PhpStrong\Web\Uri;
 use Manychois\PhpStrong\Web\UriFactory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 /**
  * Unit tests for {@see UriFactory}.
@@ -45,5 +46,20 @@ final class UriFactoryTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         $factory->createUri(':');
+    }
+
+    #[Test]
+    public function createUri_chains_previous_exception_from_uri_parse(): void
+    {
+        $factory = new UriFactory();
+        $caught = null;
+        try {
+            $factory->createUri(':');
+        } catch (InvalidArgumentException $ex) {
+            $caught = $ex;
+        }
+
+        self::assertInstanceOf(InvalidArgumentException::class, $caught);
+        self::assertInstanceOf(RuntimeException::class, $caught->getPrevious());
     }
 }

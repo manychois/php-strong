@@ -650,4 +650,95 @@ final class OutRequestTest extends TestCase
             $_COOKIE = $cookieBackup;
         }
     }
+
+    #[Test]
+    public function fromGlobals_maps_content_md5_header(): void
+    {
+        $serverBackup = $_SERVER;
+        $getBackup = $_GET;
+        $postBackup = $_POST;
+        $cookieBackup = $_COOKIE;
+
+        try {
+            $_SERVER = [
+                'REQUEST_METHOD' => 'GET',
+                'REQUEST_URI' => '/',
+                'HTTP_HOST' => 'md5.test',
+                'CONTENT_MD5' => 'Q2hlY2sgSW50ZWdyaXR5IQ==',
+            ];
+            $_GET = [];
+            $_POST = [];
+            $_COOKIE = [];
+
+            self::assertSame(
+                ['Q2hlY2sgSW50ZWdyaXR5IQ=='],
+                OutRequest::fromGlobals()->getHeader('Content-Md5'),
+            );
+        } finally {
+            $_SERVER = $serverBackup;
+            $_GET = $getBackup;
+            $_POST = $postBackup;
+            $_COOKIE = $cookieBackup;
+        }
+    }
+
+    #[Test]
+    public function fromGlobals_skips_http_entries_with_non_scalar_values(): void
+    {
+        $serverBackup = $_SERVER;
+        $getBackup = $_GET;
+        $postBackup = $_POST;
+        $cookieBackup = $_COOKIE;
+
+        try {
+            $_SERVER = [
+                'REQUEST_METHOD' => 'GET',
+                'REQUEST_URI' => '/',
+                'HTTP_HOST' => 'scalar.test',
+                'HTTP_X_SKIP' => ['not' => 'scalar'],
+            ];
+            $_GET = [];
+            $_POST = [];
+            $_COOKIE = [];
+
+            self::assertFalse(OutRequest::fromGlobals()->hasHeader('X-Skip'));
+        } finally {
+            $_SERVER = $serverBackup;
+            $_GET = $getBackup;
+            $_POST = $postBackup;
+            $_COOKIE = $cookieBackup;
+        }
+    }
+
+    #[Test]
+    public function fromGlobals_drops_server_entries_with_non_string_names(): void
+    {
+        $serverBackup = $_SERVER;
+        $getBackup = $_GET;
+        $postBackup = $_POST;
+        $cookieBackup = $_COOKIE;
+
+        try {
+            $_SERVER = [
+                'REQUEST_METHOD' => 'GET',
+                'REQUEST_URI' => '/',
+                'HTTP_HOST' => 'keys.test',
+                404 => 'ignored-non-string-key',
+            ];
+            $_GET = [];
+            $_POST = [];
+            $_COOKIE = [];
+
+            $request = OutRequest::fromGlobals();
+
+            self::assertSame('http://keys.test/', (string) $request->getUri());
+            self::assertArrayNotHasKey('404', $request->getServerParams());
+            self::assertArrayNotHasKey(404, $request->getServerParams());
+        } finally {
+            $_SERVER = $serverBackup;
+            $_GET = $getBackup;
+            $_POST = $postBackup;
+            $_COOKIE = $cookieBackup;
+        }
+    }
 }

@@ -15,6 +15,14 @@ use RuntimeException;
  */
 class StreamFactory implements IStreamFactory
 {
+    /**
+     * @return resource|false
+     */
+    protected function createTempStreamResource()
+    {
+        return fopen('php://temp', 'r+b');
+    }
+
     #region implements IStreamFactory
 
     /**
@@ -23,7 +31,7 @@ class StreamFactory implements IStreamFactory
     #[Override]
     public function createStream(string $content = ''): IStream
     {
-        $resource = fopen('php://temp', 'r+b');
+        $resource = $this->createTempStreamResource();
         if ($resource === false) {
             throw new RuntimeException('Failed to create temporary stream.');
         }

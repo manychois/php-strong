@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrongTests\Web;
 
+use Manychois\PhpStrongTests\Web\Fixtures\ConfigurableTestStreamWrapper;
 use Manychois\PhpStrong\Web\Stream;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -98,6 +99,17 @@ final class StreamTest extends TestCase
     {
         $stream = self::memoryStream();
         self::assertNull($stream->getMetadata('no_such_meta_key'));
+    }
+
+    #[Test]
+    public function getMetadata_without_key_returns_full_metadata_array(): void
+    {
+        $stream = self::memoryStream('probe');
+
+        $meta = $stream->getMetadata();
+        self::assertIsArray($meta);
+        self::assertArrayHasKey('mode', $meta);
+        self::assertArrayHasKey('seekable', $meta);
     }
 
     #[Test]
@@ -204,6 +216,15 @@ final class StreamTest extends TestCase
     }
 
     #[Test]
+    public function seek_throws_when_fseek_fails(): void
+    {
+        $stream = self::memoryStream('');
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Failed to seek in stream.');
+        $stream->seek(-50);
+    }
+
+    #[Test]
     public function toString_returns_contents_for_seekable_memory_stream(): void
     {
         $body = 'payload';
@@ -255,6 +276,70 @@ final class StreamTest extends TestCase
         self::assertSame('foo', $stream->getContents());
     }
 
+    #[Test]
+    public function getSize_returns_null_when_fstat_fails(): void
+    {
+        ConfigurableTestStreamWrapper::setBehavior('fstat_false');
+        self::registerConfigurableTestWrapper();
+        $handle = null;
+        try {
+            $handle = fopen(ConfigurableTestStreamWrapper::REGISTER_SCHEME . '://x', 'r+b');
+            self::assertNotFalse($handle);
+            $stream = new Stream($handle);
+            self::assertNull($stream->getSize());
+        } finally {
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
+            self::unregisterConfigurableTestWrapper();
+            ConfigurableTestStreamWrapper::resetBehavior();
+        }
+    }
+
+    #[Test]
+    public function read_throws_when_fread_returns_false(): void
+    {
+        ConfigurableTestStreamWrapper::setBehavior('fread_false');
+        self::registerConfigurableTestWrapper();
+        $handle = null;
+        try {
+            $handle = fopen(ConfigurableTestStreamWrapper::REGISTER_SCHEME . '://x', 'r+b');
+            self::assertNotFalse($handle);
+            $stream = new Stream($handle);
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('Failed to read from stream.');
+            $stream->read(1);
+        } finally {
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
+            self::unregisterConfigurableTestWrapper();
+            ConfigurableTestStreamWrapper::resetBehavior();
+        }
+    }
+
+    #[Test]
+    public function write_throws_when_fwrite_returns_false(): void
+    {
+        ConfigurableTestStreamWrapper::setBehavior('write_false');
+        self::registerConfigurableTestWrapper();
+        $handle = null;
+        try {
+            $handle = fopen(ConfigurableTestStreamWrapper::REGISTER_SCHEME . '://x', 'r+b');
+            self::assertNotFalse($handle);
+            $stream = new Stream($handle);
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('Failed to write to stream.');
+            $stream->write('x');
+        } finally {
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
+            self::unregisterConfigurableTestWrapper();
+            ConfigurableTestStreamWrapper::resetBehavior();
+        }
+    }
+
     /**
      * @return Stream Stream over `php://memory` with optional initial bytes; closed by caller via {@see Stream::close()}.
      */
@@ -267,6 +352,22 @@ final class StreamTest extends TestCase
             rewind($resource);
         }
         return new Stream($resource);
+    }
+
+    private static function registerConfigurableTestWrapper(): void
+    {
+        @stream_wrapper_unregister(ConfigurableTestStreamWrapper::REGISTER_SCHEME);
+        self::assertTrue(stream_wrapper_register(
+            ConfigurableTestStreamWrapper::REGISTER_SCHEME,
+            ConfigurableTestStreamWrapper::class,
+        ));
+    }
+
+    private static function unregisterConfigurableTestWrapper(): void
+    {
+        if (in_array(ConfigurableTestStreamWrapper::REGISTER_SCHEME, stream_get_wrappers(), true)) {
+            stream_wrapper_unregister(ConfigurableTestStreamWrapper::REGISTER_SCHEME);
+        }
     }
 
     /**
