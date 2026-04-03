@@ -53,6 +53,19 @@ final class RegexTest extends TestCase
     }
 
     #[Test]
+    public function match_throws_when_utf8_pattern_and_subject_is_not_valid_utf8(): void
+    {
+        $r = new Regex('//u');
+        $invalidUtf8 = "\xFF";
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Malformed UTF-8');
+        $this->expectExceptionCode(\PREG_BAD_UTF8_ERROR);
+
+        $r->match($invalidUtf8);
+    }
+
+    #[Test]
     public function match_collects_named_groups(): void
     {
         $r = new Regex('/(?<word>\w+)/');
