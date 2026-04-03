@@ -2,7 +2,7 @@
 
 **php-strong** is a small PHP library that adds **typed boundaries** around places PHP is usually loose: nested arrays, the DI container, native sessions, and string matching. It does not replace the language type system; it gives you explicit, predictable APIs so invalid shapes fail **at the edge** (when you read a value or resolve a service) instead of far down the call stack.
 
-It targets **PHP 8.5+**, uses the `Manychois\PhpStrong` namespace with PSR-4 autoloading, and integrates with **PSR-11** (containers) and **PSR-20** (clock) where relevant.
+It targets **PHP 8.5+**, uses the `Manychois\PhpStrong` namespace with PSR-4 autoloading, and integrates with **PSR-7** (HTTP messages), **PSR-17** (HTTP factories), **PSR-11** (containers), and **PSR-20** (clock) where relevant.
 
 ## What’s in the box
 
@@ -12,7 +12,7 @@ It targets **PHP 8.5+**, uses the `Manychois\PhpStrong` namespace with PSR-4 aut
 
 - **PSR-11 container** — `StrongContainerInterface` and `StrongContainerWrapper` wrap any `Psr\Container\ContainerInterface` and add `getObject($id, $class)` so resolved services are checked against an expected class or interface.
 
-- **`Web`** — `PhpSession` (and `PhpSessionInterface`) treat `$_SESSION` like a typed reader: same style of safe access as `ArrayReader`, with session lifecycle helpers.
+- **`Web`** — **PSR-7** value objects: `OutRequest`, `InRequest`, `Response`, `Stream`, `Uri`, and **`UploadedFile`**, plus **`Method`** and **`StatusCode`** enums. **PSR-17** factories: `RequestFactory` (requests and server requests), `ResponseFactory`, `StreamFactory`, `UploadedFileFactory`, and `UriFactory`. **Sessions:** `PhpSession` / `PhpSessionInterface` expose `$_SESSION` with the same path-style, validated access as `ArrayReader`, plus lifecycle helpers.
 
 - **Time** — `UtcClock` implements PSR-20’s clock in UTC, with support for deterministic tests (e.g. frozen instants).
 

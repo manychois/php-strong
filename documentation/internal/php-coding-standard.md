@@ -31,6 +31,7 @@ class Xxx implements IXxx { }
 
 - Remove unused imports (auto-fixed by phpcbf)
 - Use `as` aliases for interfaces with `Interface` suffix as a personal preference for shorter names
+- For **global PHP constants** (e.g. `UPLOAD_ERR_*`, `PHP_*`), use a **leading backslash** (e.g. `\UPLOAD_ERR_OK`) instead of `use const`; this keeps them obviously in the global namespace and avoids extra import lines
 
 ## Class Code Structure Order
 

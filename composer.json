@@ -43,7 +43,9 @@
   "require": {
     "php": ">=8.5",
     "psr/container": "^2.0.2",
-    "psr/clock": "^1"
+    "psr/clock": "^1",
+    "psr/http-message": "^2.0",
+    "psr/http-factory": "^1.1"
   },
   "require-dev": {
     "phpstan/extension-installer": "^1.4.3",
