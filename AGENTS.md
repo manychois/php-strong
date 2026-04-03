@@ -27,7 +27,7 @@ composer code                    # Run phpcbf + phpcs + phpstan (full quality ch
 
 ## Code Style Guidelines
 
-See [documentation/php-coding-standard.md](./documentation/php-coding-standard.md) for complete coding standards.
+See [documentation/internal/php-coding-standard.md](./documentation/internal/php-coding-standard.md) for complete coding standards.
 
 **Critical rules:**
 - Always use interface aliases: `use SequenceInterface as ISequence`
@@ -35,6 +35,10 @@ See [documentation/php-coding-standard.md](./documentation/php-coding-standard.m
 - Place methods in `#region implements IInterface` blocks
 - **Sort methods alphabetically within each region** (same visibility/static/final category)
 - Use `readonly` properties and precise types (`list<T>`, `non-negative-int`)
+
+## Public technical documentation
+
+When writing or updating **public** technical documentation (README sections, guides, tutorials, API reference aimed at library users), use the Diátaxis-oriented guidance in [documentation/internal/diataxis-framework-reference.md](./documentation/internal/diataxis-framework-reference.md): separate tutorials, how-to guides, explanation, and reference, and match content to the reader’s goal.
 
 ## Quality Gates
 
