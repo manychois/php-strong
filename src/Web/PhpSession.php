@@ -4,138 +4,121 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Web;
 
-use Manychois\PhpStrong\ArrayAccessor;
+use Manychois\PhpStrong\ArrayReader;
+use Manychois\PhpStrong\ArrayReaderInterface as IArrayReader;
+use Manychois\PhpStrong\Collections\MapInterface as IMap;
+use Manychois\PhpStrong\Internal\AbstractArrayReader;
+use Manychois\PhpStrong\Web\PhpSessionInterface as IPhpSession;
+use Override;
 
 /**
- * Represents a session that uses the native PHP session mechanism.
+ * Represents the PHP session and a wrapper of `$_SESSION`.
  */
-class PhpSession extends ArrayAccessor implements PhpSessionInterface
+class PhpSession extends AbstractArrayReader implements IPhpSession
 {
-    public readonly string $name;
     /**
-     * @var array<string,mixed>
+     * @var array<string,mixed> The options to pass to `session_start()`.
      */
-    private array $initOptions;
+    private readonly array $options;
 
     /**
-     * Creates a new PhpSession instance.
+     * Initializes a PHP session.
      *
-     * @param string              $name        The name of the session.
-     * @param array<string,mixed> $initOptions The options to be used when initializing the session.
-     *                                         Refer to `session_start` for available options.
+     * @param array<string,mixed> $options The options to pass to `session_start()`.
      */
-    public function __construct(string $name = 'PHPSESSID', array $initOptions = [])
+    public function __construct(array $options = [])
     {
-        $this->name = $name;
-        $this->initOptions = $initOptions;
-
-        $empty = [];
-
-        parent::__construct($empty);
+        parent::__construct();
+        $this->options = $options;
     }
 
-    #region implements PhpSessionInterface
+    private function autoStart(): void
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start($this->options);
+        }
+    }
+
+    #region extends AbstractArrayReader
 
     /**
      * @inheritDoc
      */
+    #[Override]
+    public function at(string $path): IArrayReader
+    {
+        $value = $this->get($path);
+        if (is_array($value) || is_object($value)) {
+            // @phpstan-ignore argument.type
+            return new ArrayReader($value);
+        }
+        throw $this->createMismatchException($path, 'array or object', $value);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    protected function getRoot(): array|object
+    {
+        $this->autoStart();
+        // @phpstan-ignore return.type
+        return $_SESSION;
+    }
+
+    #endregion extends AbstractArrayReader
+
+    #region implements IPhpSession
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
     public function clear(): void
     {
-        $this->startSession();
-        // phpcs:ignore SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
+        $this->autoStart();
         $_SESSION = [];
     }
 
     /**
      * @inheritDoc
      */
-    public function destroy(): void
+    #[Override]
+    public function remove(string $name): void
     {
-        $this->startSession();
-        // phpcs:ignore SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
-        $_SESSION = [];
-        $useCookie = \boolval(\ini_get('session.use_cookies'));
-        if ($useCookie) {
-            $sessionName = \session_name();
-            \assert(\is_string($sessionName));
-            $options = \session_get_cookie_params();
-            unset($options['lifetime']);
-            $options['expires'] = \time() - 3600;
-            \setcookie($sessionName, '', $options);
+        $this->autoStart();
+        unset($_SESSION[$name]);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public function set(string $name, mixed $value): void
+    {
+        $this->autoStart();
+        $_SESSION[$name] = $value;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
+    public function with(array|IMap $overrides): IPhpSession
+    {
+        $this->autoStart();
+        if ($overrides instanceof IMap) {
+            $overrides = $overrides->asArray();
         }
-        \session_destroy();
-        \session_write_close();
-    }
-
-    #endregion implements PhpSessionInterface
-
-    #region extends ArrayAccessor
-
-    /**
-     * @inheritDoc
-     */
-    public function get(string $key): mixed
-    {
-        $this->startSession();
-
-        // phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
-
-        return $_SESSION[$key] ?? null;
-        // phpcs:enable
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function set(string $key, mixed $value): void
-    {
-        $this->startSession();
-        // phpcs:ignore SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
-        $_SESSION[$key] = $value;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function has(string $key): bool
-    {
-        $this->startSession();
-
-        // phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
-
-        return \array_key_exists($key, $_SESSION);
-        // phpcs:enable
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function delete(string $key): void
-    {
-        $this->startSession();
-        // phpcs:ignore SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
-        unset($_SESSION[$key]);
-    }
-
-    #endregion extends ArrayAccessor
-
-    private function startSession(): void
-    {
-        if (\session_status() === \PHP_SESSION_NONE) {
-            \session_name($this->name);
-            $options = \array_merge([
-                'cookie_httponly' => true,
-                'cookie_lifetime' => 0,
-                'cookie_samesite' => 'Lax',
-                'cookie_secure' => true,
-                'use_only_cookies' => true,
-                'use_strict_mode' => true,
-            ], $this->initOptions);
-            \session_start($options);
+        foreach ($overrides as $key => $value) {
+            if ($value === null) {
+                unset($_SESSION[$key]);
+            } else {
+                $_SESSION[$key] = $value;
+            }
         }
-        // phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable
-        // @phpstan-ignore assign.propertyType
-        $this->inner = &$_SESSION;
-        // phpcs:enable
+        return new self($this->options);
     }
+
+    #endregion implements IPhpSession
 }
