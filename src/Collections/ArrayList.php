@@ -60,9 +60,14 @@ class ArrayList implements IList
         if ($newIndex < 0) {
             $newIndex += $count + ($allowEnd ? 1 : 0);
         }
-        if ($newIndex < 0 || $newIndex >= $count) {
+        if ($allowEnd) {
+            if ($newIndex < 0 || $newIndex > $count) {
+                throw new OutOfBoundsException(sprintf('%s out of bounds: %d', $argName, $index));
+            }
+        } elseif ($newIndex < 0 || $newIndex >= $count) {
             throw new OutOfBoundsException(sprintf('%s out of bounds: %d', $argName, $index));
         }
+
         return $newIndex;
     }
 
@@ -421,7 +426,10 @@ class ArrayList implements IList
             $newIndex += $count;
             if ($newIndex === -1) {
                 array_unshift($this->source, $value);
-            } elseif ($newIndex < 0) {
+
+                return;
+            }
+            if ($newIndex < 0) {
                 throw new OutOfBoundsException(sprintf('Offset out of bounds: %d', $offset));
             }
             // @phpstan-ignore assign.propertyType
@@ -562,7 +570,7 @@ class ArrayList implements IList
     #[Override]
     public function set(int $index, mixed $item): void
     {
-        $index = $this->normaliseIndex($index, true);
+        $index = $this->normaliseIndex($index);
         // @phpstan-ignore assign.propertyType
         $this->source[$index] = $item;
     }

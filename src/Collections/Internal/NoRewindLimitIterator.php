@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\Collections;
+namespace Manychois\PhpStrong\Collections\Internal;
 
 use InvalidArgumentException;
 use Iterator;
