@@ -101,8 +101,9 @@ final class Utf8String implements ArrayAccess, Countable, IteratorAggregate, Jso
                 throw new InvalidArgumentException(
                     sprintf('Argument %d must be a scalar, type %s given', $index, get_debug_type($arg))
                 );
+            } else {
+                $values[] = $arg;
             }
-            $values[] = $arg;
         }
 
         return new self(vsprintf($format, $values));
@@ -223,7 +224,6 @@ final class Utf8String implements ArrayAccess, Countable, IteratorAggregate, Jso
      * @return int The Unicode code point of the first character of the string.
      *
      * @throws UnderflowException if the string is empty.
-     * @throws UnexpectedValueException if the string contains an invalid UTF-8 character.
      */
     #[NoDiscard]
     public function ord(): int
@@ -231,11 +231,9 @@ final class Utf8String implements ArrayAccess, Countable, IteratorAggregate, Jso
         if ($this->raw === '') {
             throw new UnderflowException('The string is empty');
         }
-        $value = mb_ord($this->raw[0], self::ENCODING);
-        if ($value === false) {
-            throw new UnexpectedValueException('The string contains an invalid UTF-8 character');
-        }
-        return $value;
+        $first = mb_substr($this->raw, 0, 1, self::ENCODING);
+
+        return mb_ord($first, self::ENCODING);
     }
 
     /**

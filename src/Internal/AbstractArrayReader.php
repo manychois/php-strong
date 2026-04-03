@@ -413,6 +413,9 @@ abstract class AbstractArrayReader implements IArrayReader
     public function objectOrNull(string $path): ?object
     {
         $value = $this->getOrMissingValue($path);
+        if ($value === static::$missingValue) {
+            return null;
+        }
         if (is_object($value)) {
             return $value;
         }

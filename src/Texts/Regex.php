@@ -54,8 +54,11 @@ class Regex
         $matches = [];
         $this->callNativeRegexFn(
             false,
-            fn() => preg_match($this->pattern, $subject, $matches, PREG_OFFSET_CAPTURE, $offset)
+            function () use (&$matches, $subject, $offset): int|false {
+                return preg_match($this->pattern, $subject, $matches, PREG_OFFSET_CAPTURE, $offset);
+            }
         );
+
         return new MatchResult($matches);
     }
 
@@ -72,7 +75,9 @@ class Regex
         $matches = [];
         $this->callNativeRegexFn(
             false,
-            fn() => preg_match_all($this->pattern, $subject, $matches, PREG_OFFSET_CAPTURE, $offset)
+            function () use (&$matches, $subject, $offset): int|false {
+                return preg_match_all($this->pattern, $subject, $matches, PREG_OFFSET_CAPTURE, $offset);
+            }
         );
 
         /** @phpstan-var array<int|string, array<int, array{0: string, 1: int}>> $matches */

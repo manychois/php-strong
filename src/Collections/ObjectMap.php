@@ -110,16 +110,16 @@ class ObjectMap implements IMap
      */
     private function addStrongKey(object $key, mixed $value): void
     {
-        if ($this->spl->contains($key)) {
+        if ($this->spl->offsetExists($key)) {
             if ($this->policy === DuplicationPolicy::Overwrite) {
-                $this->spl->attach($key, $value);
+                $this->spl->offsetSet($key, $value);
             } elseif ($this->policy === DuplicationPolicy::Ignore) {
                 // do nothing
             } elseif ($this->policy === DuplicationPolicy::ThrowError) {
                 throw new InvalidArgumentException('Key already exists');
             }
         } else {
-            $this->spl->attach($key, $value);
+            $this->spl->offsetSet($key, $value);
         }
     }
 
@@ -158,12 +158,12 @@ class ObjectMap implements IMap
      */
     private function getFromStrongKey(object $key): mixed
     {
-        if ($this->spl->contains($key)) {
+        if ($this->spl->offsetExists($key)) {
             $value = $this->spl->offsetGet($key);
             if ($this->isWeakValue && $value instanceof WeakReference) {
                 $value = $value->get();
                 if ($value === null) {
-                    $this->spl->detach($key);
+                    $this->spl->offsetUnset($key);
                     return self::$destroyed;
                 }
             }
@@ -246,7 +246,7 @@ class ObjectMap implements IMap
             }
         } finally {
             foreach ($toDestroy as $key) {
-                $this->spl->detach($key);
+                $this->spl->offsetUnset($key);
             }
         }
     }
@@ -500,10 +500,10 @@ class ObjectMap implements IMap
             $this->weakMap->offsetUnset($key);
             return true;
         }
-        if (!$this->spl->contains($key)) {
+        if (!$this->spl->offsetExists($key)) {
             return false;
         }
-        $this->spl->detach($key);
+        $this->spl->offsetUnset($key);
         return true;
     }
 
