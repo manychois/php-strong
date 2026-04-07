@@ -1,0 +1,9 @@
+# Files/directories excluded from Composer dist packages (export-ignore).
+
+/documentation/           export-ignore
+/tests/                   export-ignore
+/phpcs.xml                export-ignore
+/phpstan.dist.neon        export-ignore
+/phpunit.xml              export-ignore
+/AGENTS.md                export-ignore
+/composer.lock            export-ignore
