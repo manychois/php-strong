@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }} – ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        php: ["8.5"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring
+          coverage: xdebug
+          ini-values: memory_limit=256M
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-${{ matrix.php }}-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run PHPStan
+        run: composer phpstan
+
+      - name: Run PHPCS
+        run: composer phpcs
+
+      - name: Run tests
+        run: composer test
