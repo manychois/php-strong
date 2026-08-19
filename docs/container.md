@@ -1,13 +1,15 @@
 # PSR-11 Container — `Manychois\PhpStrong\Container`
 
-An implementation of `Psr\Container\ContainerInterface` that resolves services lazily from closures. Definitions are
-collected on a mutable `ContainerBuilder`; `build()` returns an immutable `Container`. There is no autowiring: every
-service is registered explicitly.
+An implementation of `Psr\Container\ContainerInterface` that resolves services lazily from closures or by reflection.
+Definitions are collected on a mutable `ContainerBuilder`; `build()` returns an immutable `Container`. Every service
+identifier is registered explicitly — autowiring is opt-in per class.
 
 ```php
 $container = (new ContainerBuilder())
     ->singleton(PDO::class, static fn (ContainerInterface $c): PDO => new PDO('sqlite::memory:'))
     ->factory('uuid', static fn (): string => bin2hex(random_bytes(16)))
+    ->autowire(UserRepository::class)                 // built by reflection, singleton
+    ->autowire(ClockInterface::class, UtcClock::class) // interface → concrete class
     ->build();
 
 $container->get(PDO::class);  // created on first call, same instance afterwards
@@ -21,6 +23,7 @@ $container->has('uuid');      // true; never invokes the factory
 | ------ | ----- |
 | `singleton(string $id, Closure $factory): static` | Factory runs at most once; the result (including `null`) is cached. |
 | `factory(string $id, Closure $factory): static` | Factory runs on every `get()`. |
+| `autowire(string $id, ?string $class = null, bool $shared = true): static` | Built by reflection from `$class` (default `$id`); cached like `singleton()` unless `$shared` is `false`. See [Autowiring](#autowiring). |
 | `build(): Container` | Snapshots the definitions; later registrations do not affect the built container. |
 
 `new ContainerBuilder(?ContainerInterface $parent = null)` — identifiers not registered on the builder are delegated
@@ -47,6 +50,24 @@ Registering an identifier twice throws `InvalidArgumentException`.
 
 `NotFoundException extends ContainerException`, so a single `catch (ContainerException)` covers both. A failed
 resolution leaves no partial state: a later `get()` for the same identifier retries the factory.
+
+## Autowiring
+
+`autowire()` checks at registration that the class exists and is instantiable (`InvalidArgumentException` otherwise),
+then instantiates it lazily on first `get()`. Each constructor parameter is resolved by the first matching rule:
+
+1. The parameter has a class/interface type that is registered in the container → `get(Type::class)`.
+2. The parameter has a default value → the default.
+3. The type is an unregistered, instantiable class → built recursively by the same rules (not cached; `autowire()` it
+   too if it should be shared).
+4. The type is nullable → `null`.
+5. Otherwise → `ContainerException`
+   (`Cannot autowire parameter $count of App\Foo::__construct(): no registered service, default value or
+   instantiable class for type int.`).
+
+Scalars, union/intersection types and untyped parameters therefore need a default value or must be wired through a
+closure instead. Variadic parameters receive no arguments. Cycles among unregistered classes are reported as
+`Circular dependency detected: A -> B -> A.`; cycles through registered identifiers are caught by `get()`.
 
 ## Long-running processes
 

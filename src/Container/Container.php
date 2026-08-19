@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Container;
 
+use Closure;
+use Manychois\PhpStrong\Container\Internal\Autowirer;
 use Manychois\PhpStrong\Container\Internal\Definition;
 use Override;
 use Psr\Container\ContainerInterface as IContainer;
@@ -22,6 +24,8 @@ class Container implements IContainer
     private readonly array $definitions;
 
     private readonly ?IContainer $parent;
+
+    private readonly Autowirer $autowirer;
 
     /**
      * @var array<string, mixed>
@@ -45,6 +49,7 @@ class Container implements IContainer
     {
         $this->definitions = $definitions;
         $this->parent = $parent;
+        $this->autowirer = new Autowirer();
     }
 
     #region implements IContainer
@@ -77,7 +82,9 @@ class Container implements IContainer
 
         $this->resolving[] = $id;
         try {
-            $value = ($definition->factory)($this);
+            $value = $definition->source instanceof Closure
+                ? ($definition->source)($this)
+                : $this->autowirer->instantiate($definition->source, $this);
         } catch (ContainerException $e) {
             throw $e;
         } catch (Throwable $e) {

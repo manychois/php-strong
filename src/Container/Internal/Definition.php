@@ -15,13 +15,13 @@ use Psr\Container\ContainerInterface as IContainer;
 final readonly class Definition
 {
     /**
-     * @param Closure $factory Produces the service.
+     * @param Closure|string $source A closure producing the service, or the name of a class to autowire.
      * @param bool $shared Whether the produced value is cached for subsequent lookups.
      *
-     * @phpstan-param Closure(IContainer):mixed $factory
+     * @phpstan-param Closure(IContainer):mixed|class-string $source
      */
     public function __construct(
-        public Closure $factory,
+        public Closure|string $source,
         public bool $shared,
     ) {
     }
