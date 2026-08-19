@@ -8,8 +8,8 @@ use Manychois\PhpStrong\Logging\Internal\ContextTail;
 use Override;
 
 /**
- * Formats a log as a single line: `[time] channel.LEVEL: message {unused context as JSON}`,
- * followed by the `exception` context entry, if any.
+ * Formats a log as a single line: `[time] channel.LEVEL: message {unused context as JSON}`, followed by the
+ * `exception` context entry, if any.
  */
 final class LineFormatter implements FormatterInterface
 {

@@ -4,17 +4,16 @@
   "description": "A utility library for PHP to help you write strong-typed code.",
   "type": "library",
   "keywords": [
-    "array-accessor",
-    "clock",
-    "container",
-    "psr-11",
+    "psr",
+    "psr-3",
+    "psr-7",
+    "psr-17",
     "psr-20",
-    "regex",
-    "session",
-    "strong-type",
-    "strong-typing",
-    "type-safety",
-    "typed-array"
+    "logger",
+    "http-message",
+    "http-factory",
+    "clock",
+    "strong-typing"
   ],
   "homepage": "https://github.com/manychois/php-strong",
   "support": {
