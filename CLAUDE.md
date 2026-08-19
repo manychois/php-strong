@@ -24,7 +24,7 @@ Before finishing any task, run in order and fix anything they report:
 
 ## Code style
 
-Full standard: @documentation/internal/php-coding-standard.md
+Full standard: @docs/internal/php-coding-standard.md
 
 Non-negotiable:
 - Alias interfaces on import: `use SequenceInterface as ISequence`
@@ -37,7 +37,7 @@ Non-negotiable:
 
 ## Public documentation
 
-For user-facing docs (README, guides, API reference), follow Diátaxis: @documentation/internal/diataxis-framework-reference.md — keep tutorials, how-tos, explanation, and reference separate.
+For user-facing docs (README, guides, API reference), follow Diátaxis: @docs/internal/diataxis-framework-reference.md — keep tutorials, how-tos, explanation, and reference separate.
 
 ## Architecture
 
