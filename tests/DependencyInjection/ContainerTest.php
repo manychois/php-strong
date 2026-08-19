@@ -218,6 +218,34 @@ final class ContainerTest extends TestCase
     }
 
     #[Test]
+    public function getInstance_returnsTypedObject(): void
+    {
+        $obj = new stdClass();
+        $container = (new ContainerBuilder())->singleton(stdClass::class, static fn (): stdClass => $obj)->build();
+
+        self::assertSame($obj, $container->getInstance(stdClass::class));
+    }
+
+    #[Test]
+    public function getInstance_throwsWhenServiceIsNotInstanceOfClass(): void
+    {
+        $container = (new ContainerBuilder())->singleton(stdClass::class, static fn (): string => 'nope')->build();
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage('Service "stdClass" is not an instance of stdClass.');
+        $container->getInstance(stdClass::class);
+    }
+
+    #[Test]
+    public function getInstance_throwsNotFoundForUnknownId(): void
+    {
+        $container = (new ContainerBuilder())->build();
+
+        $this->expectException(NotFoundException::class);
+        $container->getInstance(stdClass::class);
+    }
+
+    #[Test]
     public function has_doesNotInvokeFactory(): void
     {
         $calls = 0;

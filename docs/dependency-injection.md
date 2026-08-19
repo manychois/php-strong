@@ -44,6 +44,7 @@ To bind an interface to a class, `autowire(Impl::class)` then `alias(Interface::
 | Method | Notes |
 | ------ | ----- |
 | `get(string $id): mixed` | Resolves the service from this container's definitions, else from the parent. |
+| `getInstance(string $class): object` | `get($class)` with an `instanceof $class` check; returns the precise type for static analysis (`@return T` for `class-string<T>`). Throws `ContainerException` on mismatch. |
 | `has(string $id): bool` | Whether the identifier is registered here or in the parent; does not resolve anything. |
 
 `get()` throws:

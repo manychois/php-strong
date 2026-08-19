@@ -63,6 +63,32 @@ class Container implements IContainer
         $this->awares = $awares;
     }
 
+    /**
+     * Resolves a service and asserts it is an instance of `$class`, so callers get a precise static type.
+     *
+     * @template T of object
+     *
+     * @param string $class The service identifier, which must also be the expected class or interface.
+     *
+     * @return object The resolved instance.
+     *
+     * @throws NotFoundException if the identifier is not registered.
+     * @throws ContainerException if resolution fails or the service is not an instance of `$class`.
+     *
+     * @phpstan-param class-string<T> $class
+     *
+     * @phpstan-return T
+     */
+    public function getInstance(string $class): object
+    {
+        $value = $this->get($class);
+        if (!$value instanceof $class) {
+            throw new ContainerException(sprintf('Service "%s" is not an instance of %s.', $class, $class));
+        }
+
+        return $value;
+    }
+
     #region implements IContainer
 
     /**
