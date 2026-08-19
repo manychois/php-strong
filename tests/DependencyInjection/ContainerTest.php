@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrongTests\Container;
+namespace Manychois\PhpStrongTests\DependencyInjection;
 
-use Manychois\PhpStrong\Container\ContainerBuilder;
-use Manychois\PhpStrong\Container\ContainerException;
-use Manychois\PhpStrong\Container\NotFoundException;
+use Manychois\PhpStrong\DependencyInjection\ContainerBuilder;
+use Manychois\PhpStrong\DependencyInjection\ContainerException;
+use Manychois\PhpStrong\DependencyInjection\NotFoundException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerExceptionInterface as IContainerException;

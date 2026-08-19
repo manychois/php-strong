@@ -2,29 +2,29 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrongTests\Container;
+namespace Manychois\PhpStrongTests\DependencyInjection;
 
 use InvalidArgumentException;
 use LogicException;
-use Manychois\PhpStrong\Container\ContainerBuilder;
-use Manychois\PhpStrong\Container\ContainerException;
-use Manychois\PhpStrong\Container\NotFoundException;
-use Manychois\PhpStrongTests\Container\Fixtures\AbstractThing;
-use Manychois\PhpStrongTests\Container\Fixtures\CycleA;
-use Manychois\PhpStrongTests\Container\Fixtures\CycleB;
-use Manychois\PhpStrongTests\Container\Fixtures\Greeter;
-use Manychois\PhpStrongTests\Container\Fixtures\GreeterInterface;
-use Manychois\PhpStrongTests\Container\Fixtures\Leaf;
-use Manychois\PhpStrongTests\Container\Fixtures\NeedsAbstract;
-use Manychois\PhpStrongTests\Container\Fixtures\NeedsCycle;
-use Manychois\PhpStrongTests\Container\Fixtures\NeedsInterface;
-use Manychois\PhpStrongTests\Container\Fixtures\NeedsScalar;
-use Manychois\PhpStrongTests\Container\Fixtures\NeedsUntyped;
-use Manychois\PhpStrongTests\Container\Fixtures\NewInInitializer;
-use Manychois\PhpStrongTests\Container\Fixtures\NoConstructor;
-use Manychois\PhpStrongTests\Container\Fixtures\NullableInterface;
-use Manychois\PhpStrongTests\Container\Fixtures\PrivateConstructor;
-use Manychois\PhpStrongTests\Container\Fixtures\Throwing;
+use Manychois\PhpStrong\DependencyInjection\ContainerBuilder;
+use Manychois\PhpStrong\DependencyInjection\ContainerException;
+use Manychois\PhpStrong\DependencyInjection\NotFoundException;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\AbstractThing;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\CycleA;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\CycleB;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\Greeter;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\GreeterInterface;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\Leaf;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NeedsAbstract;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NeedsCycle;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NeedsInterface;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NeedsScalar;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NeedsUntyped;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NewInInitializer;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NoConstructor;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NullableInterface;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\PrivateConstructor;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\Throwing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface as IContainer;
@@ -47,7 +47,7 @@ final class AutowireTest extends TestCase
     #[Test]
     public function autowire_notSharedBuildsNewInstanceEachGet(): void
     {
-        $container = (new ContainerBuilder())->autowire(NoConstructor::class, null, false)->build();
+        $container = (new ContainerBuilder())->autowire(NoConstructor::class, false)->build();
 
         self::assertNotSame($container->get(NoConstructor::class), $container->get(NoConstructor::class));
     }
@@ -55,7 +55,7 @@ final class AutowireTest extends TestCase
     #[Test]
     public function autowire_newInInitializerDefaultIsFreshPerInstance(): void
     {
-        $container = (new ContainerBuilder())->autowire(NewInInitializer::class, null, false)->build();
+        $container = (new ContainerBuilder())->autowire(NewInInitializer::class, false)->build();
 
         $a = $container->get(NewInInitializer::class);
         $b = $container->get(NewInInitializer::class);
@@ -108,18 +108,18 @@ final class AutowireTest extends TestCase
     }
 
     #[Test]
-    public function autowire_aliasesInterfaceToClass(): void
+    public function autowire_resolvesInterfaceParameterViaAlias(): void
     {
         $container = (new ContainerBuilder())
-            ->autowire(GreeterInterface::class, Greeter::class)
+            ->autowire(Greeter::class)
+            ->alias(GreeterInterface::class, Greeter::class)
             ->autowire(NeedsInterface::class)
             ->build();
 
         $needs = $container->get(NeedsInterface::class);
         self::assertInstanceOf(NeedsInterface::class, $needs);
-        self::assertInstanceOf(Greeter::class, $needs->greeter);
+        self::assertSame($container->get(Greeter::class), $needs->greeter);
         self::assertSame($container->get(GreeterInterface::class), $needs->greeter);
-        self::assertFalse($container->has(Greeter::class));
     }
 
     #[Test]
@@ -233,7 +233,7 @@ final class AutowireTest extends TestCase
     }
 
     #[Test]
-    public function autowire_rejectsInterfaceWithoutConcreteClass(): void
+    public function autowire_rejectsInterface(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Class "' . GreeterInterface::class . '" is not instantiable.');

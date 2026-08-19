@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\Container\Internal;
+namespace Manychois\PhpStrong\DependencyInjection\Internal;
 
 use Closure;
 use InvalidArgumentException;
-use Manychois\PhpStrong\Container\ContainerException;
+use Manychois\PhpStrong\DependencyInjection\ContainerException;
 use Psr\Container\ContainerInterface as IContainer;
 use ReflectionClass;
 use ReflectionNamedType;

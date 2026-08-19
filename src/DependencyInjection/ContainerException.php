@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\Container;
+namespace Manychois\PhpStrong\DependencyInjection;
 
 use Psr\Container\ContainerExceptionInterface as IContainerException;
 use RuntimeException;

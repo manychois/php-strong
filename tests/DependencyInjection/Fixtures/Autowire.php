@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrongTests\Container\Fixtures;
+namespace Manychois\PhpStrongTests\DependencyInjection\Fixtures;
 
 interface GreeterInterface
 {

@@ -44,7 +44,7 @@ For user-facing docs (README, guides, API reference), follow Diátaxis: @docs/in
 Scope: concrete implementations of PSR interfaces. Currently depended on: PSR-7 (`psr/http-message`), PSR-17 (`psr/http-factory`), PSR-11 (`psr/container`), PSR-20 (`psr/clock`). Add the matching `psr/*` package to `composer.json` when implementing a new PSR.
 
 Principles:
-- One directory per PSR concern under `src/` (e.g. `Http/`, `Container/`, `Clock/`), tests mirror it under `tests/`.
+- One directory per PSR concern under `src/` (e.g. `Http/`, `DependencyInjection/`, `Clock/`), tests mirror it under `tests/`.
 - Every public class implements a PSR interface (or a small extension of one); no framework coupling beyond `psr/*`.
 - Immutable value objects where the PSR mandates it (PSR-7 `with*` methods return clones); `readonly` elsewhere.
 - Composition over inheritance; no abstract base classes in the public API.

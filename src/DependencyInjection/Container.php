@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\Container;
+namespace Manychois\PhpStrong\DependencyInjection;
 
 use Closure;
-use Manychois\PhpStrong\Container\Internal\Autowirer;
-use Manychois\PhpStrong\Container\Internal\Definition;
+use Manychois\PhpStrong\DependencyInjection\Internal\Autowirer;
+use Manychois\PhpStrong\DependencyInjection\Internal\Definition;
 use Override;
 use Psr\Container\ContainerInterface as IContainer;
 use Throwable;
@@ -28,6 +28,13 @@ class Container implements IContainer
     private readonly Autowirer $autowirer;
 
     /**
+     * @var list<array{string, Closure}>
+     *
+     * @phpstan-var list<array{class-string, Closure(object, IContainer):void}>
+     */
+    private readonly array $awares;
+
+    /**
      * @var array<string, mixed>
      */
     private array $shared = [];
@@ -42,14 +49,18 @@ class Container implements IContainer
     /**
      * @param array<string, Definition> $definitions Service definitions keyed by identifier.
      * @param ?IContainer $parent Container consulted for identifiers not in `$definitions`.
+     * @param list<array{string, Closure}> $awares Type-based configurers applied to produced objects.
      *
      * @internal Use `ContainerBuilder::build()`.
+     *
+     * @phpstan-param list<array{class-string, Closure(object, IContainer):void}> $awares
      */
-    public function __construct(array $definitions, ?IContainer $parent = null)
+    public function __construct(array $definitions, ?IContainer $parent = null, array $awares = [])
     {
         $this->definitions = $definitions;
         $this->parent = $parent;
         $this->autowirer = new Autowirer();
+        $this->awares = $awares;
     }
 
     #region implements IContainer
@@ -85,6 +96,13 @@ class Container implements IContainer
             $value = $definition->source instanceof Closure
                 ? ($definition->source)($this)
                 : $this->autowirer->instantiate($definition->source, $this);
+            if ($definition->configurable && is_object($value)) {
+                foreach ($this->awares as [$type, $configure]) {
+                    if ($value instanceof $type) {
+                        $configure($value, $this);
+                    }
+                }
+            }
         } catch (ContainerException $e) {
             throw $e;
         } catch (Throwable $e) {

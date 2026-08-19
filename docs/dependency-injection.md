@@ -1,4 +1,4 @@
-# PSR-11 Container — `Manychois\PhpStrong\Container`
+# PSR-11 Container — `Manychois\PhpStrong\DependencyInjection`
 
 An implementation of `Psr\Container\ContainerInterface` that resolves services lazily from closures or by reflection.
 Definitions are collected on a mutable `ContainerBuilder`; `build()` returns an immutable `Container`. Every service
@@ -8,8 +8,8 @@ identifier is registered explicitly — autowiring is opt-in per class.
 $container = (new ContainerBuilder())
     ->singleton(PDO::class, static fn (ContainerInterface $c): PDO => new PDO('sqlite::memory:'))
     ->factory('uuid', static fn (): string => bin2hex(random_bytes(16)))
-    ->autowire(UserRepository::class)                 // built by reflection, singleton
-    ->autowire(ClockInterface::class, UtcClock::class) // interface → concrete class
+    ->autowire(UtcClock::class)                     // built by reflection, singleton
+    ->alias(ClockInterface::class, UtcClock::class) // interface → the same UtcClock instance
     ->build();
 
 $container->get(PDO::class);  // created on first call, same instance afterwards
@@ -23,7 +23,9 @@ $container->has('uuid');      // true; never invokes the factory
 | ------ | ----- |
 | `singleton(string $id, Closure $factory): static` | Factory runs at most once; the result (including `null`) is cached. |
 | `factory(string $id, Closure $factory): static` | Factory runs on every `get()`. |
-| `autowire(string $id, ?string $class = null, bool $shared = true): static` | Built by reflection from `$class` (default `$id`); cached like `singleton()` unless `$shared` is `false`. See [Autowiring](#autowiring). |
+| `aware(string $type, Closure $configure): static` | Runs `$configure($object, $container)` on every object produced here that is `instanceof $type`. See [Aware configurers](#aware-configurers). |
+| `alias(string $id, string $target): static` | `get($id)` forwards to `get($target)`; follows the target's lifetime. Target must be registered (here or in the parent) by `build()`. |
+| `autowire(string $class, bool $shared = true): static` | Instantiates `$class` by reflection under id `$class`; cached like `singleton()` unless `$shared` is `false`. See [Autowiring](#autowiring). |
 | `build(): Container` | Snapshots the definitions; later registrations do not affect the built container. |
 
 `new ContainerBuilder(?ContainerInterface $parent = null)` — identifiers not registered on the builder are delegated
@@ -32,7 +34,10 @@ to `$parent` (any PSR-11 container). See [Long-running processes](#long-running-
 To register an already-built value, wrap it: `->singleton('config', static fn (): array => $config)`.
 
 Factories have the signature `Closure(ContainerInterface): mixed` and receive the container being resolved from.
-Registering an identifier twice throws `InvalidArgumentException`.
+Registering an identifier twice throws `InvalidArgumentException`; so does an alias targeting itself or, at
+`build()`, an unregistered identifier.
+
+To bind an interface to a class, `autowire(Impl::class)` then `alias(Interface::class, Impl::class)`.
 
 ## `Container`
 
@@ -68,6 +73,24 @@ then instantiates it lazily on first `get()`. Each constructor parameter is reso
 Scalars, union/intersection types and untyped parameters therefore need a default value or must be wired through a
 closure instead. Variadic parameters receive no arguments. Cycles among unregistered classes are reported as
 `Circular dependency detected: A -> B -> A.`; cycles through registered identifiers are caught by `get()`.
+
+## Aware configurers
+
+`aware()` registers a type-based hook for setter injection, typically for PSR `*AwareInterface`s:
+
+```php
+->aware(LoggerAwareInterface::class, static function (LoggerAwareInterface $obj, ContainerInterface $c): void {
+    $obj->setLogger($c->get(LoggerInterface::class));
+})
+```
+
+- Runs after a definition (closure or `autowire`) produces an object and before a singleton is cached: once per
+  singleton, on every `get()` for factories. Aliases do not re-run it; non-object values are skipped.
+- Several rules may match one object; they run in registration order.
+- Rules apply only to objects produced by the container they are registered on — a child container does not
+  reconfigure its parent's services.
+- Exceptions thrown by a configurer are wrapped in `ContainerException`; `get()` calls inside a configurer take part
+  in circular-dependency detection.
 
 ## Long-running processes
 
