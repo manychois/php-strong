@@ -101,7 +101,7 @@ final class ClientAsyncFeatureTest extends TestCase
     {
         $client = new Client(new RequestOptions(timeout: 0.2));
 
-        $pending = $client->sendAsync(new Request('GET', self::url('/slow?ms=800')));
+        $pending = $client->sendAsync(new Request('GET', self::url('/slow?ms=300')));
 
         $this->expectException(NetworkException::class);
         $pending->response();
@@ -186,7 +186,7 @@ final class ClientAsyncFeatureTest extends TestCase
         $failing = $client->sendAsync(
             new Request('GET', sprintf('http://127.0.0.1:%d/', self::findFreePort())),
         );
-        $slow = $client->sendAsync(new Request('GET', self::url('/slow?ms=600')));
+        $slow = $client->sendAsync(new Request('GET', self::url('/slow?ms=200')));
 
         $winner = PendingRequest::waitAny([$failing, $slow]);
         self::assertSame($failing, $winner);
@@ -199,7 +199,7 @@ final class ClientAsyncFeatureTest extends TestCase
     {
         $client = new Client();
 
-        $discarded = $client->sendAsync(new Request('GET', self::url('/slow?ms=600')));
+        $discarded = $client->sendAsync(new Request('GET', self::url('/slow?ms=200')));
         $kept = $client->sendAsync(new Request('GET', self::url('/hello')));
 
         unset($discarded);

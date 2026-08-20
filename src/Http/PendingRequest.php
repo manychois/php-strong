@@ -125,10 +125,8 @@ final class PendingRequest
      * @param string $errorMessage The error message; '' on success.
      * @param list<string> $headerLines The collected response header lines.
      * @param string $body The response body.
-     *
-     * @internal
      */
-    public function settle(int $errno, string $errorMessage, array $headerLines, string $body): void
+    private function settle(int $errno, string $errorMessage, array $headerLines, string $body): void
     {
         $this->settled = true;
         if ($errno !== \CURLE_OK) {

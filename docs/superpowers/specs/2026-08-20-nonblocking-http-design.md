@@ -34,9 +34,10 @@ covering multi-step flows (dependent request chains overlapping each other).
 | ------ | --------- |
 | `response(): Response` | Drives the executor until this transfer completes; returns the `Response`. On transfer failure throws `NetworkException`; on unparseable response throws `ClientException` (same classification rules as `sendRequest()`). Idempotent: repeated calls return the same `Response` or rethrow the same exception. While waiting, **all** transfers on the same executor progress. |
 | `static waitAny(iterable $requests): PendingRequest` | Pumps the executors involved until at least one input transfer settles (success **or** failure both count as completed), and returns that `PendingRequest`; the caller reads the outcome via its idempotent `response()`. Returns immediately when an input is already settled. Inputs may span multiple `Client` instances (each distinct executor is pumped in turn with bounded waits). Non-`PendingRequest` items or empty input throw `InvalidArgumentException`. Call again with the remaining items to process completions in arrival order. |
-| `__destruct()` | Aborts the transfer when the handle is discarded unsettled: the easy handle is removed from the executor and closed. A discarded `PendingRequest` is a cancelled request — whether the server saw any of it is undefined; call `response()` if the outcome matters. |
+| `__destruct()` | Aborts the transfer when the handle is discarded unsettled: the easy handle is detached from the executor; PHP's refcounting frees the handle. A discarded `PendingRequest` is a cancelled request — whether the server saw any of it is undefined; call `response()` if the outcome matters. |
 
-Not publicly constructible (created by `Client::sendAsync()`). No explicit
+The constructor is public for `Client`'s use but `@internal` — not part of the
+supported API. No explicit
 cancel method (dropping the handle cancels), no `isDone()`, no timeout
 parameter — per-transfer timeouts come from `RequestOptions` and surface as
 `NetworkException` from `response()`.

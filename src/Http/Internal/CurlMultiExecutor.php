@@ -6,6 +6,7 @@ namespace Manychois\PhpStrong\Http\Internal;
 
 use CurlHandle;
 use CurlMultiHandle;
+use Manychois\PhpStrong\Http\ClientException;
 
 /**
  * Runs multiple cURL transfers concurrently and reports each completion to a callback.
@@ -61,6 +62,8 @@ final class CurlMultiExecutor
      * result code, an error message ('' on success), the collected header lines, and the body.
      *
      * @phpstan-param callable(int,string,list<string>,string):void $onComplete
+     *
+     * @throws ClientException if the handle could not be registered with the multi handle.
      */
     public function add(CurlHandle $handle, callable $onComplete): void
     {
@@ -73,14 +76,22 @@ final class CurlMultiExecutor
             \CURLOPT_HEADERFUNCTION,
             function (CurlHandle $h, string $line): int {
                 $trimmed = trim($line);
-                if ($trimmed !== '') {
-                    $this->headerLines[spl_object_id($h)][] = $trimmed;
+                $id = spl_object_id($h);
+                if ($trimmed !== '' && isset($this->headerLines[$id])) {
+                    $this->headerLines[$id][] = $trimmed;
                 }
 
                 return strlen($line);
             },
         );
-        curl_multi_add_handle($this->multiHandle, $handle);
+        $code = curl_multi_add_handle($this->multiHandle, $handle);
+        if ($code !== \CURLM_OK) {
+            unset($this->callbacks[$id], $this->handles[$id], $this->headerLines[$id]);
+
+            throw new ClientException(
+                sprintf('cURL multi error %d: %s', $code, curl_multi_strerror($code) ?? 'unknown error'),
+            );
+        }
     }
 
     /**
@@ -94,7 +105,9 @@ final class CurlMultiExecutor
         $stillRunning = 0;
         curl_multi_exec($this->multiHandle, $stillRunning);
         if ($stillRunning > 0 && $maxWait > 0) {
-            curl_multi_select($this->multiHandle, $maxWait);
+            if (curl_multi_select($this->multiHandle, $maxWait) === -1) {
+                usleep(1000);
+            }
             curl_multi_exec($this->multiHandle, $stillRunning);
         }
 
@@ -151,9 +164,14 @@ final class CurlMultiExecutor
 
         $callback = $this->callbacks[$id];
         $lines = $this->headerLines[$id];
-        $error = $errno === \CURLE_OK
-            ? ''
-            : sprintf('cURL error %d: %s', $errno, curl_strerror($errno) ?? 'unknown error');
+        $error = '';
+        if ($errno !== \CURLE_OK) {
+            $detail = curl_error($handle);
+            if ($detail === '') {
+                $detail = curl_strerror($errno) ?? 'unknown error';
+            }
+            $error = sprintf('cURL error %d: %s', $errno, $detail);
+        }
         $body = curl_multi_getcontent($handle) ?? '';
         $this->remove($handle);
         $callback($errno, $error, $lines, $body);
