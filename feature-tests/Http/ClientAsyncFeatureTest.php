@@ -6,6 +6,7 @@ namespace Manychois\PhpStrongFeatureTests\Http;
 
 use Manychois\PhpStrong\Http\Client;
 use Manychois\PhpStrong\Http\NetworkException;
+use Manychois\PhpStrong\Http\PendingRequest;
 use Manychois\PhpStrong\Http\Request;
 use Manychois\PhpStrong\Http\RequestOptions;
 use PHPUnit\Framework\Attributes\Test;
@@ -146,5 +147,50 @@ final class ClientAsyncFeatureTest extends TestCase
         self::assertSame(500, $serverError->response()->getStatusCode());
         $this->expectException(NetworkException::class);
         $failed->response();
+    }
+
+    #[Test]
+    public function waitAny_returns_the_fastest_of_a_batch(): void
+    {
+        $client = new Client();
+
+        $slow = $client->sendAsync(new Request('GET', self::url('/slow?ms=500')));
+        $fast = $client->sendAsync(new Request('GET', self::url('/hello')));
+
+        $winner = PendingRequest::waitAny([$slow, $fast]);
+        self::assertSame($fast, $winner);
+        self::assertSame('Hello, world!', (string) $winner->response()->getBody());
+
+        self::assertSame($slow, PendingRequest::waitAny([$slow]));
+        self::assertSame('slow', (string) $slow->response()->getBody());
+    }
+
+    #[Test]
+    public function waitAny_spans_multiple_clients(): void
+    {
+        $clientA = new Client();
+        $clientB = new Client();
+
+        $slow = $clientA->sendAsync(new Request('GET', self::url('/slow?ms=400')));
+        $fast = $clientB->sendAsync(new Request('GET', self::url('/hello')));
+
+        self::assertSame($fast, PendingRequest::waitAny([$slow, $fast]));
+        self::assertSame('slow', (string) $slow->response()->getBody());
+    }
+
+    #[Test]
+    public function waitAny_returns_a_failed_transfer_as_completed(): void
+    {
+        $client = new Client();
+
+        $failing = $client->sendAsync(
+            new Request('GET', sprintf('http://127.0.0.1:%d/', self::findFreePort())),
+        );
+        $slow = $client->sendAsync(new Request('GET', self::url('/slow?ms=600')));
+
+        $winner = PendingRequest::waitAny([$failing, $slow]);
+        self::assertSame($failing, $winner);
+        $this->expectException(NetworkException::class);
+        $winner->response();
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Manychois\PhpStrong\Http;
 
 use CurlHandle;
+use InvalidArgumentException;
 use Manychois\PhpStrong\Http\Internal\CurlMultiExecutor;
 use Manychois\PhpStrong\Http\Internal\RawResponse;
 use Psr\Http\Message\RequestInterface as IRequest;
@@ -39,6 +40,50 @@ final class PendingRequest
                 $weak->get()?->settle($errno, $error, $headerLines, $body);
             },
         );
+    }
+
+    /**
+     * Waits until at least one of the given pending requests completes and returns it.
+     * A transfer that failed counts as completed; read the outcome — response or
+     * exception — via the returned handle's {@see response()}. Call again with the
+     * remaining handles to process completions in arrival order.
+     *
+     * @param iterable $requests The pending requests to wait on.
+     *
+     * @return self The first request to complete.
+     *
+     * @throws InvalidArgumentException if the input is empty or contains a value that
+     * is not a PendingRequest.
+     *
+     * @phpstan-param iterable<mixed> $requests
+     */
+    public static function waitAny(iterable $requests): self
+    {
+        $items = [];
+        foreach ($requests as $request) {
+            if (!$request instanceof self) {
+                throw new InvalidArgumentException('waitAny() accepts PendingRequest instances only.');
+            }
+
+            $items[] = $request;
+        }
+        if ($items === []) {
+            throw new InvalidArgumentException('waitAny() requires at least one PendingRequest.');
+        }
+
+        while (true) {
+            $executors = [];
+            foreach ($items as $pending) {
+                if ($pending->settled) {
+                    return $pending;
+                }
+
+                $executors[spl_object_id($pending->executor)] = $pending->executor;
+            }
+            foreach ($executors as $executor) {
+                $executor->pump(0.01);
+            }
+        }
     }
 
     /**

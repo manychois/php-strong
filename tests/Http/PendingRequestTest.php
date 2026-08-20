@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrongTests\Http;
 
+use InvalidArgumentException;
 use Manychois\PhpStrong\Http\ClientException;
 use Manychois\PhpStrong\Http\Internal\CurlMultiExecutor;
 use Manychois\PhpStrong\Http\PendingRequest;
@@ -40,6 +41,33 @@ final class PendingRequestTest extends TestCase
         $response = $pending->response();
         self::assertSame(204, $response->getStatusCode());
         self::assertSame($response, $pending->response());
+    }
+
+    #[Test]
+    public function waitAny_rejects_empty_input(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('at least one');
+
+        PendingRequest::waitAny([]);
+    }
+
+    #[Test]
+    public function waitAny_rejects_non_PendingRequest_items(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('PendingRequest');
+
+        PendingRequest::waitAny(['not a pending request']);
+    }
+
+    #[Test]
+    public function waitAny_returns_an_already_settled_request_immediately(): void
+    {
+        $pending = $this->makePending();
+        $pending->settle(\CURLE_OK, '', ['HTTP/1.1 200 OK'], 'ok');
+
+        self::assertSame($pending, PendingRequest::waitAny([$pending]));
     }
 
     private function makePending(): PendingRequest
