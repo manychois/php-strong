@@ -1,0 +1,110 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Manychois\PhpStrongTests\Http;
+
+use InvalidArgumentException;
+use Manychois\PhpStrong\Http\Client;
+use Manychois\PhpStrong\Http\Internal\RawResponse;
+use Manychois\PhpStrong\Http\Internal\TransportInterface as ITransport;
+use Manychois\PhpStrong\Http\Request;
+use Manychois\PhpStrong\Http\RequestException;
+use Manychois\PhpStrong\Http\Uri;
+use Override;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface as IRequest;
+
+/**
+ * Unit tests for {@see Client}.
+ */
+final class ClientTest extends TestCase
+{
+    #[Test]
+    public function sendRequest_builds_a_response_from_the_transport_result(): void
+    {
+        $raw = new RawResponse('1.1', 201, 'Created', ['X-Trace' => ['9']], 'stored');
+        $transport = $this->fakeTransport($raw);
+        $client = new Client(timeout: 5.0, transport: $transport);
+        $request = new Request('POST', 'http://example.com/things');
+
+        $response = $client->sendRequest($request);
+
+        self::assertSame(201, $response->getStatusCode());
+        self::assertSame('Created', $response->getReasonPhrase());
+        self::assertSame(['9'], $response->getHeader('X-Trace'));
+        self::assertSame('stored', (string) $response->getBody());
+        self::assertSame('1.1', $response->getProtocolVersion());
+        self::assertSame($request, $transport->lastRequest);
+        self::assertSame(5.0, $transport->lastTimeout);
+    }
+
+    #[Test]
+    public function sendRequest_throws_RequestException_for_unsupported_scheme(): void
+    {
+        $client = new Client(transport: $this->fakeTransport());
+        $request = new Request('GET', 'ftp://example.com/file');
+
+        try {
+            $client->sendRequest($request);
+            self::fail('Expected RequestException.');
+        } catch (RequestException $ex) {
+            self::assertStringContainsString('ftp', $ex->getMessage());
+            self::assertSame($request, $ex->getRequest());
+        }
+    }
+
+    #[Test]
+    public function sendRequest_throws_RequestException_when_uri_has_no_host(): void
+    {
+        $client = new Client(transport: $this->fakeTransport());
+        $uri = Uri::fromString('/relative/path')->withScheme('http');
+        $request = new Request('GET', $uri);
+
+        try {
+            $client->sendRequest($request);
+            self::fail('Expected RequestException.');
+        } catch (RequestException $ex) {
+            self::assertStringContainsString('host', $ex->getMessage());
+            self::assertSame($request, $ex->getRequest());
+        }
+    }
+
+    #[Test]
+    public function constructor_throws_when_timeout_is_not_positive(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Timeout must be greater than 0');
+
+        new Client(timeout: 0.0);
+    }
+
+    /**
+     * Creates a transport stub that records its arguments.
+     *
+     * @return ITransport&object{lastRequest: ?IRequest, lastTimeout: ?float}
+     */
+    private function fakeTransport(?RawResponse $raw = null): ITransport
+    {
+        $raw ??= new RawResponse('1.1', 200, 'OK', [], '');
+
+        return new class ($raw) implements ITransport {
+            public ?IRequest $lastRequest = null;
+            public ?float $lastTimeout = null;
+
+            public function __construct(private readonly RawResponse $raw)
+            {
+            }
+
+            #[Override]
+            public function send(IRequest $request, float $timeout): RawResponse
+            {
+                $this->lastRequest = $request;
+                $this->lastTimeout = $timeout;
+
+                return $this->raw;
+            }
+        };
+    }
+}

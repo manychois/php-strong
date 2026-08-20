@@ -45,3 +45,22 @@ echo $response->getReasonPhrase(); // Created
 | `UriFactory` | `UriFactoryInterface` | `Uri` (parse failures are rethrown as `InvalidArgumentException`) |
 
 Header names are case-insensitive for lookup and preserve the casing of the last `withHeader()`/constructor entry.
+
+## HTTP Client (PSR-18)
+
+`Client` implements `Psr\Http\Client\ClientInterface`, backed by cURL.
+
+```php
+use Manychois\PhpStrong\Http\Client;
+use Manychois\PhpStrong\Http\Request;
+
+$client = new Client(timeout: 10.0);
+$response = $client->sendRequest(new Request('GET', 'https://api.example.com/items'));
+```
+
+| Class | Implements | Notes |
+| ----- | ---------- | ----- |
+| `Client` | `ClientInterface` | `new Client($timeout = 30.0)`; `$timeout` (seconds) applies to both connecting and receiving, values ≤ 0 throw `InvalidArgumentException`. `sendRequest()` returns the concrete `Response`. Responses are returned whatever their status code; redirects are never followed. Protocol versions `1.0`, `1.1` (default), and `2` are supported. |
+| `ClientException` | `ClientExceptionInterface` | Base class of the two exceptions below; extends `RuntimeException`. |
+| `RequestException` | `RequestExceptionInterface` | Thrown before sending when the request URI has a scheme other than `http`/`https` or lacks a host; `getRequest()` returns the offending request. |
+| `NetworkException` | `NetworkExceptionInterface` | Thrown when the request cannot complete: DNS failure, connection refused, or timeout. The message carries the underlying cURL error. |

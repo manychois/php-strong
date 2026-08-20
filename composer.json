@@ -9,11 +9,13 @@
     "psr-7",
     "psr-11",
     "psr-17",
+    "psr-18",
     "psr-20",
     "logger",
     "container",
     "http-message",
     "http-factory",
+    "http-client",
     "clock",
     "strong-typing"
   ],
@@ -38,7 +40,8 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "Manychois\\PhpStrongTests\\": "tests/"
+      "Manychois\\PhpStrongTests\\": "tests/",
+      "Manychois\\PhpStrongFeatureTests\\": "feature-tests/"
     }
   },
   "require": {
@@ -47,7 +50,9 @@
     "psr/clock": "^1",
     "psr/http-message": "^2.0",
     "psr/http-factory": "^1.1",
-    "psr/log": "^3.0"
+    "psr/log": "^3.0",
+    "psr/http-client": "^1.0",
+    "ext-curl": "*"
   },
   "require-dev": {
     "phpstan/extension-installer": "^1.4.3",
@@ -77,5 +82,5 @@
       "@phpcs",
       "@phpstan"
     ]
-  }  
+  }
 }
