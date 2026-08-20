@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Http;
 
+use Manychois\PhpStrong\Http\Internal\CurlMultiExecutor;
 use Manychois\PhpStrong\Http\Internal\CurlTransport;
 use Manychois\PhpStrong\Http\Internal\TransportInterface as ITransport;
 use Override;
@@ -19,6 +20,7 @@ class Client implements IClient
 {
     private readonly RequestOptions $options;
     private readonly ITransport $transport;
+    private ?CurlMultiExecutor $executor = null;
 
     /**
      * @param ?RequestOptions $options The options applied to every request; defaults to `new RequestOptions()`.
@@ -30,6 +32,31 @@ class Client implements IClient
     ) {
         $this->options = $options ?? new RequestOptions();
         $this->transport = $transport ?? new CurlTransport();
+    }
+
+    /**
+     * Dispatches the request without waiting for the response and returns a handle to
+     * collect it later. Transfers of the same client run concurrently. This method is
+     * an extension beyond PSR-18.
+     *
+     * @param IRequest $request The request to send.
+     *
+     * @return PendingRequest The handle for collecting the response.
+     *
+     * @throws RequestException if the request method is empty, the request URI has an
+     * unsupported scheme or no host, or the request body cannot be read.
+     */
+    public function sendAsync(IRequest $request): PendingRequest
+    {
+        $this->assertSendable($request);
+
+        $this->executor ??= new CurlMultiExecutor();
+        $handle = curl_init();
+        curl_setopt_array($handle, CurlTransport::buildOptions($request, $this->options));
+        $pending = new PendingRequest($this->executor, $handle, $request);
+        $this->executor->pump(0.0);
+
+        return $pending;
     }
 
     /**
