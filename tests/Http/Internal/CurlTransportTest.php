@@ -6,9 +6,12 @@ namespace Manychois\PhpStrongTests\Http\Internal;
 
 use Manychois\PhpStrong\Http\Internal\CurlTransport;
 use Manychois\PhpStrong\Http\Request;
+use Manychois\PhpStrong\Http\RequestException;
 use Manychois\PhpStrong\Http\RequestOptions;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\StreamInterface as IStream;
+use RuntimeException;
 
 /**
  * Unit tests for {@see CurlTransport}.
@@ -108,6 +111,24 @@ final class CurlTransportTest extends TestCase
         $withHeader = $bare->withHeader('User-Agent', 'custom/2.0');
         $options = CurlTransport::buildOptions($withHeader, $requestOptions);
         self::assertArrayNotHasKey(\CURLOPT_USERAGENT, $options);
+    }
+
+    #[Test]
+    public function buildOptions_wraps_body_read_failures_in_RequestException(): void
+    {
+        $cause = new RuntimeException('Stream is not readable.');
+        $body = $this->createStub(IStream::class);
+        $body->method('__toString')->willThrowException($cause);
+        $request = new Request('POST', 'http://example.com/', [], $body);
+
+        try {
+            CurlTransport::buildOptions($request, new RequestOptions());
+            self::fail('Expected RequestException.');
+        } catch (RequestException $ex) {
+            self::assertStringContainsString('body', $ex->getMessage());
+            self::assertSame($request, $ex->getRequest());
+            self::assertSame($cause, $ex->getPrevious());
+        }
     }
 
     #[Test]

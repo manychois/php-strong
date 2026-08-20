@@ -41,12 +41,17 @@ class Client implements IClient
      *
      * @return Response The response received.
      *
-     * @throws RequestException if the request URI has an unsupported scheme or no host.
+     * @throws RequestException if the request method is empty, the request URI has an
+     * unsupported scheme or no host, or the request body cannot be read.
      * @throws NetworkException if the request cannot be completed due to a network failure.
      */
     #[Override]
     public function sendRequest(IRequest $request): Response
     {
+        if ($request->getMethod() === '') {
+            throw new RequestException('Request method must not be empty.', $request);
+        }
+
         $uri = $request->getUri();
         $scheme = $uri->getScheme();
         if (!in_array($scheme, ['http', 'https'], true)) {

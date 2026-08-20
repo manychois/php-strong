@@ -6,9 +6,11 @@ namespace Manychois\PhpStrong\Http\Internal;
 
 use CurlHandle;
 use Manychois\PhpStrong\Http\NetworkException;
+use Manychois\PhpStrong\Http\RequestException;
 use Manychois\PhpStrong\Http\RequestOptions;
 use Override;
 use Psr\Http\Message\RequestInterface as IRequest;
+use Throwable;
 
 /**
  * A transport backed by the cURL extension.
@@ -24,6 +26,8 @@ final class CurlTransport implements TransportInterface
      * @param RequestOptions $options The transport-level options to apply.
      *
      * @return array<int,mixed> The cURL options, keyed by CURLOPT_* constants.
+     *
+     * @throws RequestException if the request body cannot be read.
      */
     public static function buildOptions(IRequest $request, RequestOptions $options): array
     {
@@ -71,7 +75,11 @@ final class CurlTransport implements TransportInterface
             $curlOptions[\CURLOPT_HTTPHEADER] = $headerLines;
         }
 
-        $body = (string) $request->getBody();
+        try {
+            $body = (string) $request->getBody();
+        } catch (Throwable $ex) {
+            throw new RequestException('Failed to read the request body.', $request, $ex);
+        }
         if ($body !== '') {
             $curlOptions[\CURLOPT_POSTFIELDS] = $body;
         }

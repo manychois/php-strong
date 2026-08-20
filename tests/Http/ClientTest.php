@@ -69,6 +69,21 @@ final class ClientTest extends TestCase
     }
 
     #[Test]
+    public function sendRequest_throws_RequestException_when_method_is_empty(): void
+    {
+        $client = new Client(transport: $this->fakeTransport());
+        $request = new Request('', 'http://example.com/');
+
+        try {
+            $client->sendRequest($request);
+            self::fail('Expected RequestException.');
+        } catch (RequestException $ex) {
+            self::assertStringContainsString('method', $ex->getMessage());
+            self::assertSame($request, $ex->getRequest());
+        }
+    }
+
+    #[Test]
     public function sendRequest_throws_RequestException_when_uri_has_no_host(): void
     {
         $client = new Client(transport: $this->fakeTransport());
