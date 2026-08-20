@@ -110,4 +110,8 @@ change with no public API impact.
 
 Fibers/`concurrently()` (multi-step flows overlapping), an explicit
 cancellation API (dropping the handle is the only cancel), promise
-combinators, HTTP/2 multiplexing tuning, connection-pool configuration.
+combinators, HTTP/2 multiplexing tuning, connection-pool configuration,
+and concurrency caps (`CURLMOPT_MAX_TOTAL_CONNECTIONS` etc.) — throttling is
+the caller's responsibility, done as a sliding window over `waitAny()`
+(keep N handles in flight; each time `waitAny()` yields one, start the next);
+the docs will include this pattern.
