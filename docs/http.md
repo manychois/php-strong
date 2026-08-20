@@ -53,14 +53,16 @@ Header names are case-insensitive for lookup and preserve the casing of the last
 ```php
 use Manychois\PhpStrong\Http\Client;
 use Manychois\PhpStrong\Http\Request;
+use Manychois\PhpStrong\Http\RequestOptions;
 
-$client = new Client(timeout: 10.0);
+$client = new Client(new RequestOptions(timeout: 10.0, followRedirects: true));
 $response = $client->sendRequest(new Request('GET', 'https://api.example.com/items'));
 ```
 
 | Class | Implements | Notes |
 | ----- | ---------- | ----- |
-| `Client` | `ClientInterface` | `new Client($timeout = 30.0)`; `$timeout` (seconds) applies to both connecting and receiving, values ≤ 0 throw `InvalidArgumentException`. `sendRequest()` returns the concrete `Response`. Responses are returned whatever their status code; redirects are never followed. Protocol versions `1.0`, `1.1` (default), and `2` are supported. |
+| `Client` | `ClientInterface` | `new Client($options = null)`; `$options` is a `RequestOptions` (defaults apply when `null`). `sendRequest()` returns the concrete `Response`. Responses are returned whatever their status code. Protocol versions `1.0`, `1.1` (default), and `2` are supported. |
+| `RequestOptions` | — | Immutable transport options applied to every request: `timeout` (30.0 s total), `connectTimeout` (10.0 s), `followRedirects` (`false`) + `maxRedirects` (10), `verifyTls` (`true`), `proxy`, `userAgent` (sent only when the request has no `User-Agent` header), `caFile`, `caPath`. Non-positive timeouts, a negative `maxRedirects`, or empty strings throw `InvalidArgumentException`. |
 | `ClientException` | `ClientExceptionInterface` | Base class of the two exceptions below; extends `RuntimeException`. |
 | `RequestException` | `RequestExceptionInterface` | Thrown before sending when the request URI has a scheme other than `http`/`https` or lacks a host; `getRequest()` returns the offending request. |
 | `NetworkException` | `NetworkExceptionInterface` | Thrown when the request cannot complete: DNS failure, connection refused, or timeout. The message carries the underlying cURL error. |

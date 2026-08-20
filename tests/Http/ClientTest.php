@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrongTests\Http;
 
-use InvalidArgumentException;
 use Manychois\PhpStrong\Http\Client;
 use Manychois\PhpStrong\Http\Internal\RawResponse;
 use Manychois\PhpStrong\Http\Internal\TransportInterface as ITransport;
 use Manychois\PhpStrong\Http\Request;
 use Manychois\PhpStrong\Http\RequestException;
+use Manychois\PhpStrong\Http\RequestOptions;
 use Manychois\PhpStrong\Http\Uri;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
@@ -26,7 +26,8 @@ final class ClientTest extends TestCase
     {
         $raw = new RawResponse('1.1', 201, 'Created', ['X-Trace' => ['9']], 'stored');
         $transport = $this->fakeTransport($raw);
-        $client = new Client(timeout: 5.0, transport: $transport);
+        $requestOptions = new RequestOptions(timeout: 5.0);
+        $client = new Client($requestOptions, $transport);
         $request = new Request('POST', 'http://example.com/things');
 
         $response = $client->sendRequest($request);
@@ -37,7 +38,19 @@ final class ClientTest extends TestCase
         self::assertSame('stored', (string) $response->getBody());
         self::assertSame('1.1', $response->getProtocolVersion());
         self::assertSame($request, $transport->lastRequest);
-        self::assertSame(5.0, $transport->lastTimeout);
+        self::assertSame($requestOptions, $transport->lastOptions);
+    }
+
+    #[Test]
+    public function constructor_defaults_to_default_request_options(): void
+    {
+        $transport = $this->fakeTransport();
+        $client = new Client(transport: $transport);
+
+        $client->sendRequest(new Request('GET', 'http://example.com/'));
+
+        self::assertNotNull($transport->lastOptions);
+        self::assertSame(30.0, $transport->lastOptions->timeout);
     }
 
     #[Test]
@@ -71,19 +84,10 @@ final class ClientTest extends TestCase
         }
     }
 
-    #[Test]
-    public function constructor_throws_when_timeout_is_not_positive(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Timeout must be greater than 0');
-
-        new Client(timeout: 0.0);
-    }
-
     /**
      * Creates a transport stub that records its arguments.
      *
-     * @return ITransport&object{lastRequest: ?IRequest, lastTimeout: ?float}
+     * @return ITransport&object{lastRequest: ?IRequest, lastOptions: ?RequestOptions}
      */
     private function fakeTransport(?RawResponse $raw = null): ITransport
     {
@@ -91,17 +95,17 @@ final class ClientTest extends TestCase
 
         return new class ($raw) implements ITransport {
             public ?IRequest $lastRequest = null;
-            public ?float $lastTimeout = null;
+            public ?RequestOptions $lastOptions = null;
 
             public function __construct(private readonly RawResponse $raw)
             {
             }
 
             #[Override]
-            public function send(IRequest $request, float $timeout): RawResponse
+            public function send(IRequest $request, RequestOptions $options): RawResponse
             {
                 $this->lastRequest = $request;
-                $this->lastTimeout = $timeout;
+                $this->lastOptions = $options;
 
                 return $this->raw;
             }

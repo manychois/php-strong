@@ -7,6 +7,7 @@ namespace Manychois\PhpStrongFeatureTests\Http;
 use Manychois\PhpStrong\Http\Client;
 use Manychois\PhpStrong\Http\NetworkException;
 use Manychois\PhpStrong\Http\Request;
+use Manychois\PhpStrong\Http\RequestOptions;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -121,9 +122,30 @@ final class ClientFeatureTest extends TestCase
     }
 
     #[Test]
+    public function redirects_are_followed_when_enabled(): void
+    {
+        $client = new Client(new RequestOptions(followRedirects: true));
+
+        $response = $client->sendRequest(new Request('GET', self::url('/redirect')));
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame('Hello, world!', (string) $response->getBody());
+    }
+
+    #[Test]
+    public function default_user_agent_is_sent_when_request_has_none(): void
+    {
+        $client = new Client(new RequestOptions(userAgent: 'php-strong/1.0'));
+
+        $response = $client->sendRequest(new Request('GET', self::url('/ua')));
+
+        self::assertSame('php-strong/1.0', (string) $response->getBody());
+    }
+
+    #[Test]
     public function connection_to_a_closed_port_throws_NetworkException(): void
     {
-        $client = new Client(timeout: 1.0);
+        $client = new Client(new RequestOptions(timeout: 1.0));
         $request = new Request('GET', sprintf('http://127.0.0.1:%d/', self::findFreePort()));
 
         try {
@@ -138,7 +160,7 @@ final class ClientFeatureTest extends TestCase
     #[Test]
     public function slow_response_throws_NetworkException_on_timeout(): void
     {
-        $client = new Client(timeout: 0.2);
+        $client = new Client(new RequestOptions(timeout: 0.2));
 
         $this->expectException(NetworkException::class);
 

@@ -28,6 +28,9 @@ switch ($path) {
         header('Set-Cookie: a=1', false);
         header('Set-Cookie: b=2', false);
         break;
+    case '/ua':
+        echo $_SERVER['HTTP_USER_AGENT'] ?? '';
+        break;
     case '/slow':
         usleep(700_000);
         echo 'slow';
