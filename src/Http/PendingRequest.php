@@ -86,6 +86,14 @@ final class PendingRequest
         }
     }
 
+    /** Aborts the transfer if it has not completed. */
+    public function __destruct()
+    {
+        if (!$this->settled) {
+            $this->executor->remove($this->handle);
+        }
+    }
+
     /**
      * Waits until this transfer completes and returns its response.
      * While waiting, every transfer on the same executor makes progress.

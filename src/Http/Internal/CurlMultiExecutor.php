@@ -103,6 +103,10 @@ final class CurlMultiExecutor
             }
 
             $id = spl_object_id($handle);
+            if (!isset($this->callbacks[$id])) {
+                continue;
+            }
+
             $callback = $this->callbacks[$id];
             $lines = $this->headerLines[$id];
             $error = $errno === \CURLE_OK

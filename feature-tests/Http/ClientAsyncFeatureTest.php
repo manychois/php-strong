@@ -193,4 +193,19 @@ final class ClientAsyncFeatureTest extends TestCase
         $this->expectException(NetworkException::class);
         $winner->response();
     }
+
+    #[Test]
+    public function discarding_a_pending_request_aborts_it_without_disturbing_others(): void
+    {
+        $client = new Client();
+
+        $discarded = $client->sendAsync(new Request('GET', self::url('/slow?ms=600')));
+        $kept = $client->sendAsync(new Request('GET', self::url('/hello')));
+
+        unset($discarded);
+
+        $start = microtime(true);
+        self::assertSame('Hello, world!', (string) $kept->response()->getBody());
+        self::assertLessThan(0.5, microtime(true) - $start, 'Aborted transfer must not delay the kept one.');
+    }
 }
