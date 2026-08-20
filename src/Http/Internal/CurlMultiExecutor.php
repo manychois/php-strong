@@ -42,6 +42,18 @@ final class CurlMultiExecutor
     }
 
     /**
+     * Counts the number of active transfers currently attached to this executor.
+     *
+     * @return int The number of transfers awaiting completion or collection.
+     *
+     * @internal
+     */
+    public function activeCount(): int
+    {
+        return count($this->handles);
+    }
+
+    /**
      * Attaches a transfer to this executor.
      *
      * @param CurlHandle $handle The fully configured easy handle.

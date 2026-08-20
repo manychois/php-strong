@@ -70,6 +70,37 @@ final class PendingRequestTest extends TestCase
         self::assertSame($pending, PendingRequest::waitAny([$pending]));
     }
 
+    #[Test]
+    public function destructor_aborts_unsettled_transfer(): void
+    {
+        $executor = new CurlMultiExecutor();
+        $handle = curl_init();
+        assert($handle !== false);
+
+        $pending = new PendingRequest($executor, $handle, new Request('GET', 'http://example.com/'));
+        self::assertSame(1, $executor->activeCount());
+
+        unset($pending);
+
+        self::assertSame(0, $executor->activeCount());
+    }
+
+    #[Test]
+    public function destructor_preserves_settled_transfer_registration(): void
+    {
+        $executor = new CurlMultiExecutor();
+        $handle = curl_init();
+        assert($handle !== false);
+
+        $pending = new PendingRequest($executor, $handle, new Request('GET', 'http://example.com/'));
+        $pending->settle(\CURLE_OK, '', ['HTTP/1.1 200 OK'], 'ok');
+        self::assertSame(1, $executor->activeCount());
+
+        unset($pending);
+
+        self::assertSame(1, $executor->activeCount());
+    }
+
     private function makePending(): PendingRequest
     {
         $handle = curl_init();

@@ -195,7 +195,7 @@ final class ClientAsyncFeatureTest extends TestCase
     }
 
     #[Test]
-    public function discarding_a_pending_request_aborts_it_without_disturbing_others(): void
+    public function discarded_pending_request_does_not_disturb_others(): void
     {
         $client = new Client();
 
@@ -206,6 +206,6 @@ final class ClientAsyncFeatureTest extends TestCase
 
         $start = microtime(true);
         self::assertSame('Hello, world!', (string) $kept->response()->getBody());
-        self::assertLessThan(0.5, microtime(true) - $start, 'Aborted transfer must not delay the kept one.');
+        self::assertLessThan(0.5, microtime(true) - $start);
     }
 }
