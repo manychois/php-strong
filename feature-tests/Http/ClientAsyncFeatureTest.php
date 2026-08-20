@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Manychois\PhpStrongFeatureTests\Http;
 
 use Manychois\PhpStrong\Http\Client;
+use Manychois\PhpStrong\Http\NetworkException;
 use Manychois\PhpStrong\Http\Request;
+use Manychois\PhpStrong\Http\RequestOptions;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -74,5 +76,75 @@ final class ClientAsyncFeatureTest extends TestCase
         $pending = $client->sendAsync(new Request('GET', self::url('/status?code=503')));
 
         self::assertSame(503, $pending->response()->getStatusCode());
+    }
+
+    #[Test]
+    public function transfer_failure_throws_NetworkException_from_response(): void
+    {
+        $client = new Client();
+        $request = new Request('GET', sprintf('http://127.0.0.1:%d/', self::findFreePort()));
+
+        $pending = $client->sendAsync($request);
+
+        try {
+            $pending->response();
+            self::fail('Expected NetworkException.');
+        } catch (NetworkException $ex) {
+            self::assertSame($request, $ex->getRequest());
+            self::assertStringContainsString('cURL error', $ex->getMessage());
+        }
+    }
+
+    #[Test]
+    public function timeout_throws_NetworkException_from_response(): void
+    {
+        $client = new Client(new RequestOptions(timeout: 0.2));
+
+        $pending = $client->sendAsync(new Request('GET', self::url('/slow?ms=800')));
+
+        $this->expectException(NetworkException::class);
+        $pending->response();
+    }
+
+    #[Test]
+    public function response_is_idempotent_for_success_and_failure(): void
+    {
+        $client = new Client();
+
+        $ok = $client->sendAsync(new Request('GET', self::url('/hello')));
+        self::assertSame($ok->response(), $ok->response());
+
+        $bad = $client->sendAsync(
+            new Request('GET', sprintf('http://127.0.0.1:%d/', self::findFreePort())),
+        );
+        $first = null;
+        try {
+            $bad->response();
+        } catch (NetworkException $ex) {
+            $first = $ex;
+        }
+        try {
+            $bad->response();
+            self::fail('Expected NetworkException on second call.');
+        } catch (NetworkException $ex) {
+            self::assertSame($first, $ex);
+        }
+    }
+
+    #[Test]
+    public function mixed_batch_delivers_each_outcome_to_its_own_handle(): void
+    {
+        $client = new Client();
+
+        $ok = $client->sendAsync(new Request('GET', self::url('/hello')));
+        $serverError = $client->sendAsync(new Request('GET', self::url('/status?code=500')));
+        $failed = $client->sendAsync(
+            new Request('GET', sprintf('http://127.0.0.1:%d/', self::findFreePort())),
+        );
+
+        self::assertSame(200, $ok->response()->getStatusCode());
+        self::assertSame(500, $serverError->response()->getStatusCode());
+        $this->expectException(NetworkException::class);
+        $failed->response();
     }
 }

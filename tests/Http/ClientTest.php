@@ -99,6 +99,26 @@ final class ClientTest extends TestCase
         }
     }
 
+    #[Test]
+    public function sendAsync_throws_RequestException_synchronously_for_invalid_requests(): void
+    {
+        $client = new Client(transport: $this->fakeTransport());
+
+        foreach (
+            [
+                new Request('', 'http://example.com/'),
+                new Request('GET', 'ftp://example.com/file'),
+            ] as $request
+        ) {
+            try {
+                $client->sendAsync($request);
+                self::fail('Expected RequestException.');
+            } catch (RequestException $ex) {
+                self::assertSame($request, $ex->getRequest());
+            }
+        }
+    }
+
     /**
      * Creates a transport stub that records its arguments.
      *
