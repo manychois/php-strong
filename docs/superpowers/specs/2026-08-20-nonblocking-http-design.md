@@ -33,7 +33,7 @@ covering multi-step flows (dependent request chains overlapping each other).
 | Member | Behaviour |
 | ------ | --------- |
 | `response(): Response` | Drives the executor until this transfer completes; returns the `Response`. On transfer failure throws `NetworkException`; on unparseable response throws `ClientException` (same classification rules as `sendRequest()`). Idempotent: repeated calls return the same `Response` or rethrow the same exception. While waiting, **all** transfers on the same executor progress. |
-| `static firstCompleted(iterable $requests): PendingRequest` | Pumps the executors involved until at least one input transfer settles (success **or** failure both count as completed), and returns that `PendingRequest`; the caller reads the outcome via its idempotent `response()`. Returns immediately when an input is already settled. Inputs may span multiple `Client` instances (each distinct executor is pumped in turn with bounded waits). Non-`PendingRequest` items or empty input throw `InvalidArgumentException`. Call again with the remaining items to process completions in arrival order. |
+| `static waitAny(iterable $requests): PendingRequest` | Pumps the executors involved until at least one input transfer settles (success **or** failure both count as completed), and returns that `PendingRequest`; the caller reads the outcome via its idempotent `response()`. Returns immediately when an input is already settled. Inputs may span multiple `Client` instances (each distinct executor is pumped in turn with bounded waits). Non-`PendingRequest` items or empty input throw `InvalidArgumentException`. Call again with the remaining items to process completions in arrival order. |
 | `__destruct()` | Aborts the transfer when the handle is discarded unsettled: the easy handle is removed from the executor and closed. A discarded `PendingRequest` is a cancelled request — whether the server saw any of it is undefined; call `response()` if the outcome matters. |
 
 Not publicly constructible (created by `Client::sendAsync()`). No explicit
@@ -79,13 +79,13 @@ change with no public API impact.
 - Exceptions in the wait-first scenario, by source:
   - `RequestException` cannot occur there — it is thrown synchronously by
     `sendAsync()`, before a `PendingRequest` exists.
-  - Transfer/parse failures never propagate from `firstCompleted()` itself; the
+  - Transfer/parse failures never propagate from `waitAny()` itself; the
     failed handle is returned as the completed one and its `response()` throws.
     Rationale: a transfer's failure is a *result*, delivered through the same
     channel as any other result, so callers keep one uniform loop (take winner,
     remove from set, `try { response() } catch`), always know which handle
     failed, and failures arrive in completion order.
-  - `InvalidArgumentException` from `firstCompleted()` is thrown directly: it
+  - `InvalidArgumentException` from `waitAny()` is thrown directly: it
     signals a misused wait call (empty input, non-`PendingRequest` item), not a
     transfer outcome.
 - Redirect following, TLS, proxy, user agent: all `RequestOptions` behaviours
@@ -101,7 +101,7 @@ change with no public API impact.
 - Feature tests (`feature-tests/Http/`): two `/slow` requests overlap (elapsed
   ≈ max, not sum — asserted with a generous margin); mixed success/failure
   batches; `response()` called in reverse completion order; timeout inside
-  `response()`; `firstCompleted()` returns the fast one of a fast/slow pair
+  `response()`; `waitAny()` returns the fast one of a fast/slow pair
   (and immediately for an already-settled input); discarding a
   `PendingRequest` aborts its transfer without disturbing others.
 - Standard gates: phpcbf, phpcs, phpstan max, 100% statement coverage.
