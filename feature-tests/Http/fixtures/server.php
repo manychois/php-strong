@@ -32,7 +32,7 @@ switch ($path) {
         echo $_SERVER['HTTP_USER_AGENT'] ?? '';
         break;
     case '/slow':
-        usleep(700_000);
+        usleep((int) ($_GET['ms'] ?? 700) * 1000);
         echo 'slow';
         break;
     default:
