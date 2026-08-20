@@ -11,11 +11,12 @@ use Manychois\PhpStrong\Http\PendingRequest;
 use Manychois\PhpStrong\Http\Request;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 
 /**
- * Unit tests for {@see PendingRequest}. Transfer-level behaviour is covered by
- * feature tests; here settle() is driven directly for branches a well-behaved
- * HTTP server cannot produce.
+ * Unit tests for {@see PendingRequest} and its {@see CurlMultiExecutor}. Transfer-level
+ * behaviour is covered by feature tests; here settle()/pump()/remove() are driven
+ * directly for branches a well-behaved HTTP server cannot produce.
  */
 final class PendingRequestTest extends TestCase
 {
@@ -99,6 +100,70 @@ final class PendingRequestTest extends TestCase
         unset($pending);
 
         self::assertSame(1, $executor->activeCount());
+    }
+
+    #[Test]
+    public function executor_pump_with_no_transfers_does_nothing(): void
+    {
+        $executor = new CurlMultiExecutor();
+
+        $executor->pump(0.0);
+
+        self::assertSame(0, $executor->activeCount());
+    }
+
+    #[Test]
+    public function executor_remove_is_safe_to_call_twice(): void
+    {
+        $executor = new CurlMultiExecutor();
+        $handle = curl_init();
+        assert($handle !== false);
+        $executor->add($handle, static function (): void {
+        });
+        self::assertSame(1, $executor->activeCount());
+
+        $executor->remove($handle);
+        self::assertSame(0, $executor->activeCount());
+
+        $executor->remove($handle);
+        self::assertSame(0, $executor->activeCount());
+    }
+
+    #[Test]
+    public function executor_deliverCompletion_ignores_a_non_CurlHandle_entry(): void
+    {
+        $executor = new CurlMultiExecutor();
+        $method = new ReflectionMethod($executor, 'deliverCompletion');
+
+        $method->invoke($executor, ['handle' => 'not a handle', 'result' => \CURLE_OK]);
+
+        self::assertSame(0, $executor->activeCount());
+    }
+
+    #[Test]
+    public function executor_deliverCompletion_ignores_a_non_int_result(): void
+    {
+        $executor = new CurlMultiExecutor();
+        $handle = curl_init();
+        assert($handle !== false);
+        $method = new ReflectionMethod($executor, 'deliverCompletion');
+
+        $method->invoke($executor, ['handle' => $handle, 'result' => 'not an int']);
+
+        self::assertSame(0, $executor->activeCount());
+    }
+
+    #[Test]
+    public function executor_deliverCompletion_ignores_an_untracked_handle(): void
+    {
+        $executor = new CurlMultiExecutor();
+        $handle = curl_init();
+        assert($handle !== false);
+        $method = new ReflectionMethod($executor, 'deliverCompletion');
+
+        $method->invoke($executor, ['handle' => $handle, 'result' => \CURLE_OK]);
+
+        self::assertSame(0, $executor->activeCount());
     }
 
     private function makePending(): PendingRequest

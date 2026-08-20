@@ -66,3 +66,10 @@ $response = $client->sendRequest(new Request('GET', 'https://api.example.com/ite
 | `ClientException` | `ClientExceptionInterface` | Base class of the two exceptions below; extends `RuntimeException`. |
 | `RequestException` | `RequestExceptionInterface` | Thrown before sending when the request method is empty, the URI has a scheme other than `http`/`https` or lacks a host, or the request body cannot be read; `getRequest()` returns the offending request. |
 | `NetworkException` | `NetworkExceptionInterface` | Thrown when the request cannot complete: DNS failure, connection refused, or timeout. The message carries the underlying cURL error. |
+| `PendingRequest` | — | Handle returned by `sendAsync()`. `response(): Response` waits for and returns this transfer's response (all transfers of the same client progress while waiting; repeated calls return the same result or rethrow the same exception). `static waitAny(iterable $requests): PendingRequest` returns the first handle to complete — failed transfers count as completed and throw from the winner's `response()`. Discarding a handle (`unset`) aborts its transfer. |
+| `Client::sendAsync()` | — | `sendAsync(RequestInterface $request): PendingRequest` — dispatches immediately and returns a handle; transfers of one client run concurrently over `curl_multi`. Same validation and exception rules as `sendRequest()`. Not part of PSR-18. |
+
+`sendAsync()` places no cap on concurrency. To throttle, keep a sliding window:
+start N transfers, then each time `PendingRequest::waitAny($window)` yields a
+completed handle, remove it from the window, process it, and start the next
+request.

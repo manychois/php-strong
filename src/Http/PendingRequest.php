@@ -6,6 +6,7 @@ namespace Manychois\PhpStrong\Http;
 
 use CurlHandle;
 use InvalidArgumentException;
+use LogicException;
 use Manychois\PhpStrong\Http\Internal\CurlMultiExecutor;
 use Manychois\PhpStrong\Http\Internal\RawResponse;
 use Psr\Http\Message\RequestInterface as IRequest;
@@ -114,9 +115,7 @@ final class PendingRequest
             throw $this->error;
         }
 
-        assert($this->response !== null);
-
-        return $this->response;
+        return $this->response ?? throw new LogicException('Unreachable: settled without a response or error.');
     }
 
     /**

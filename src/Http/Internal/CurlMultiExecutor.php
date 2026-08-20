@@ -104,29 +104,7 @@ final class CurlMultiExecutor
                 break;
             }
 
-            $handle = $info['handle'];
-            if (!$handle instanceof CurlHandle) {
-                continue;
-            }
-
-            $errno = $info['result'];
-            if (!is_int($errno)) {
-                continue;
-            }
-
-            $id = spl_object_id($handle);
-            if (!isset($this->callbacks[$id])) {
-                continue;
-            }
-
-            $callback = $this->callbacks[$id];
-            $lines = $this->headerLines[$id];
-            $error = $errno === \CURLE_OK
-                ? ''
-                : sprintf('cURL error %d: %s', $errno, curl_strerror($errno) ?? 'unknown error');
-            $body = curl_multi_getcontent($handle) ?? '';
-            $this->remove($handle);
-            $callback($errno, $error, $lines, $body);
+            $this->deliverCompletion($info);
         }
     }
 
@@ -144,5 +122,40 @@ final class CurlMultiExecutor
 
         curl_multi_remove_handle($this->multiHandle, $handle);
         unset($this->callbacks[$id], $this->handles[$id], $this->headerLines[$id]);
+    }
+
+    /**
+     * Reports one finished transfer described by a `curl_multi_info_read()` entry to its
+     * completion callback, ignoring entries that do not describe a tracked transfer.
+     *
+     * @param array $info One entry as returned by `curl_multi_info_read()`.
+     *
+     * @phpstan-param array<array-key,mixed> $info
+     */
+    private function deliverCompletion(array $info): void
+    {
+        $handle = $info['handle'];
+        if (!$handle instanceof CurlHandle) {
+            return;
+        }
+
+        $errno = $info['result'];
+        if (!is_int($errno)) {
+            return;
+        }
+
+        $id = spl_object_id($handle);
+        if (!isset($this->callbacks[$id])) {
+            return;
+        }
+
+        $callback = $this->callbacks[$id];
+        $lines = $this->headerLines[$id];
+        $error = $errno === \CURLE_OK
+            ? ''
+            : sprintf('cURL error %d: %s', $errno, curl_strerror($errno) ?? 'unknown error');
+        $body = curl_multi_getcontent($handle) ?? '';
+        $this->remove($handle);
+        $callback($errno, $error, $lines, $body);
     }
 }

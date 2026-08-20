@@ -37,7 +37,8 @@ class Client implements IClient
     /**
      * Dispatches the request without waiting for the response and returns a handle to
      * collect it later. Transfers of the same client run concurrently. This method is
-     * an extension beyond PSR-18.
+     * an extension beyond PSR-18. It always transfers directly over cURL, bypassing any
+     * custom `$transport` given to the constructor — that seam only applies to `sendRequest()`.
      *
      * @param IRequest $request The request to send.
      *
