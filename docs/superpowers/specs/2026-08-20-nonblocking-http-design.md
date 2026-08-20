@@ -76,6 +76,18 @@ change with no public API impact.
   error-handling rules): `RequestException` before sending, `NetworkException`
   for transfer failures including timeouts, `ClientException` for unparseable
   responses; non-2xx responses are returned, never thrown.
+- Exceptions in the wait-first scenario, by source:
+  - `RequestException` cannot occur there — it is thrown synchronously by
+    `sendAsync()`, before a `PendingRequest` exists.
+  - Transfer/parse failures never propagate from `firstCompleted()` itself; the
+    failed handle is returned as the completed one and its `response()` throws.
+    Rationale: a transfer's failure is a *result*, delivered through the same
+    channel as any other result, so callers keep one uniform loop (take winner,
+    remove from set, `try { response() } catch`), always know which handle
+    failed, and failures arrive in completion order.
+  - `InvalidArgumentException` from `firstCompleted()` is thrown directly: it
+    signals a misused wait call (empty input, non-`PendingRequest` item), not a
+    transfer outcome.
 - Redirect following, TLS, proxy, user agent: all `RequestOptions` behaviours
   apply per transfer unchanged.
 
