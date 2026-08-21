@@ -82,6 +82,13 @@ Registration:
   not match the event type fails static analysis. `:mixed` rather than `:void` because the dispatcher discards
   return values; requiring `void` would reject a listener that merely returns what it delegates to.
 
+Array listeners are classified by their first element:
+
+- `array{object, string}` — an ordinary `[$instance, 'method']` callable. Passed straight through and called
+  directly; it is not a service reference and needs no container. Rejected with `InvalidArgumentException` at
+  registration if the method does not exist or is not public (`is_callable()`).
+- `array{string, string}` — a service reference, per the rules below.
+
 Deferred (container-resolved) listeners:
 
 - An `array{string, string}` argument is a service reference `[$serviceId, $method]`, resolved on dispatch as
@@ -91,8 +98,8 @@ Deferred (container-resolved) listeners:
   the listener stays spec-compatible with any PSR-14 dispatcher.
 - Without a container, an array argument must still be a genuine PHP callable (a static method); if it is not,
   `on()` throws `InvalidArgumentException`.
-- A malformed array (not exactly two elements, elements not strings, or an empty service id) throws
-  `InvalidArgumentException` at registration.
+- A malformed array (not exactly two elements, a first element that is neither object nor string, a non-string
+  method, or an empty service id) throws `InvalidArgumentException` at registration.
 - The service id is *not* checked against `$container->has()` at registration: a mutable PSR-11 container may be
   populated later. An unknown id surfaces as the container's own `NotFoundExceptionInterface` at dispatch.
 - A service that resolves to a non-object, or to an object without that public method, throws `RuntimeException` at
@@ -182,6 +189,9 @@ Unit tests only; no HTTP fixtures or external processes. Target 100% coverage, m
   re-resolves on a second dispatch.
 - An array listener without a container: a static method is accepted and called directly; a non-static one throws
   `InvalidArgumentException`.
+- An `[$instance, 'method']` listener is called directly, with and without a container present, and is never
+  resolved through the container.
+- An `[$instance, 'noSuchMethod']` listener throws `InvalidArgumentException` at registration.
 - Malformed array listeners (wrong length, non-string elements, empty id) throw `InvalidArgumentException`.
 - An unknown service id surfaces the container's `NotFoundExceptionInterface` at dispatch.
 - A service resolving to a non-object, or lacking the method, throws `RuntimeException` at dispatch.
