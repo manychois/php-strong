@@ -1,0 +1,408 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Manychois\PhpStrongTests\Cache;
+
+use DateInterval;
+use DateTimeInterface;
+use FilesystemIterator;
+use Manychois\PhpStrong\Cache\CacheException;
+use Manychois\PhpStrong\Cache\CacheItem;
+use Manychois\PhpStrong\Cache\FileCachePool;
+use Manychois\PhpStrong\Cache\InvalidArgumentException;
+use Manychois\PhpStrong\Clock\TestClock;
+use Override;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+use Psr\Cache\CacheItemInterface as IForeignItem;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
+
+final class FileCachePoolTest extends TestCase
+{
+    private string $dir = '';
+    private TestClock $clock;
+
+    /**
+     * @return list<array{string}>
+     */
+    public static function provideInvalidKeys(): array
+    {
+        return [[''], ['a{b'], ['a}b'], ['a(b'], ['a)b'], ['a/b'], ['a\\b'], ['a@b'], ['a:b']];
+    }
+
+    private static function removeTree(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($it as $entry) {
+            assert($entry instanceof SplFileInfo);
+            if ($entry->isDir()) {
+                rmdir($entry->getPathname());
+            } else {
+                unlink($entry->getPathname());
+            }
+        }
+
+        rmdir($dir);
+    }
+
+    #[Test]
+    public function construct_createsTheDirectoryWhenItIsMissing(): void
+    {
+        self::assertDirectoryDoesNotExist($this->dir);
+
+        $this->pool();
+
+        self::assertDirectoryExists($this->dir);
+    }
+
+    #[Test]
+    public function construct_throwsWhenThePathIsAFile(): void
+    {
+        file_put_contents($this->dir, 'not a directory');
+
+        try {
+            $this->expectException(CacheException::class);
+            new FileCachePool($this->dir, $this->clock);
+        } finally {
+            unlink($this->dir);
+        }
+    }
+
+    #[Test]
+    public function construct_defaultsToAUtcClock(): void
+    {
+        $pool = new FileCachePool($this->dir);
+        $item = $pool->getItem('k')->set('v')->expiresAfter(60);
+
+        self::assertTrue($pool->save($item));
+        self::assertTrue($pool->hasItem('k'));
+    }
+
+    #[Test]
+    #[DataProvider('provideInvalidKeys')]
+    public function getItem_rejectsAnInvalidKey(string $key): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->pool()->getItem($key);
+    }
+
+    #[Test]
+    #[DataProvider('provideInvalidKeys')]
+    public function hasItem_rejectsAnInvalidKey(string $key): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->pool()->hasItem($key);
+    }
+
+    #[Test]
+    #[DataProvider('provideInvalidKeys')]
+    public function deleteItem_rejectsAnInvalidKey(string $key): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->pool()->deleteItem($key);
+    }
+
+    #[Test]
+    public function getItem_returnsAMissForAnUnknownKey(): void
+    {
+        $item = $this->pool()->getItem('nope');
+
+        self::assertInstanceOf(CacheItem::class, $item);
+        self::assertSame('nope', $item->getKey());
+        self::assertFalse($item->isHit());
+        self::assertNull($item->get());
+    }
+
+    #[Test]
+    public function save_thenGetItem_returnsTheStoredValue(): void
+    {
+        $pool = $this->pool();
+        self::assertTrue($pool->save($pool->getItem('user.1')->set(['name' => 'Ada'])));
+
+        $reread = $this->pool()->getItem('user.1');
+
+        self::assertTrue($reread->isHit());
+        self::assertSame(['name' => 'Ada'], $reread->get());
+        self::assertCount(1, $this->cacheFiles());
+    }
+
+    #[Test]
+    public function save_storesFalseAsAValueWithoutTreatingItAsCorruption(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('flag')->set(false));
+
+        $reread = $this->pool()->getItem('flag');
+
+        self::assertTrue($reread->isHit());
+        self::assertFalse($reread->get());
+    }
+
+    #[Test]
+    public function save_writesTheExpiryTimestampAsTheFirstLine(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('k')->set('v')->expiresAfter(60));
+
+        $files = $this->cacheFiles();
+        self::assertCount(1, $files);
+        $raw = file_get_contents($files[0]);
+        self::assertIsString($raw);
+        $stamp = strstr($raw, "\n", true);
+        self::assertIsString($stamp);
+        self::assertSame($this->clock->now()->getTimestamp() + 60, (int) $stamp);
+    }
+
+    #[Test]
+    public function save_withoutExpiryWritesAZeroTimestamp(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('k')->set('v'));
+
+        $files = $this->cacheFiles();
+        self::assertSame('0', strstr((string) file_get_contents($files[0]), "\n", true));
+    }
+
+    #[Test]
+    public function getItem_missesOnceTheItemHasExpiredAndRemovesTheFile(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('k')->set('v')->expiresAfter(60));
+
+        $this->clock->advance('PT61S');
+        $fresh = $this->pool();
+
+        self::assertFalse($fresh->getItem('k')->isHit());
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Test]
+    public function getItem_stillHitsOneSecondBeforeExpiry(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('k')->set('v')->expiresAfter(60));
+
+        $this->clock->advance('PT59S');
+
+        self::assertTrue($this->pool()->getItem('k')->isHit());
+    }
+
+    #[Test]
+    public function getItem_missesExactlyAtTheExpiryMoment(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('k')->set('v')->expiresAfter(60));
+
+        $this->clock->advance('PT60S');
+
+        self::assertFalse($this->pool()->getItem('k')->isHit());
+    }
+
+    #[Test]
+    public function save_withAnAlreadyExpiredItemStoresNothingAndRemovesTheOldFile(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('k')->set('old'));
+        self::assertCount(1, $this->cacheFiles());
+
+        self::assertTrue($pool->save($pool->getItem('k')->set('new')->expiresAfter(-1)));
+
+        self::assertSame([], $this->cacheFiles());
+        self::assertFalse($this->pool()->getItem('k')->isHit());
+    }
+
+    #[Test]
+    public function save_acceptsAForeignCacheItemAndStoresItWithoutExpiry(): void
+    {
+        $pool = $this->pool();
+
+        self::assertTrue($pool->save(new ForeignCacheItem('foreign', 'value')));
+
+        $reread = $this->pool()->getItem('foreign');
+        self::assertTrue($reread->isHit());
+        self::assertSame('value', $reread->get());
+        self::assertNull($reread->getExpiry());
+    }
+
+    #[Test]
+    public function getItem_returnsAFreshItemEachTimeSoMutationDoesNotLeak(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('k')->set('stored'));
+
+        $first = $pool->getItem('k');
+        $first->set('mutated');
+        $second = $pool->getItem('k');
+
+        self::assertNotSame($first, $second);
+        self::assertSame('stored', $second->get());
+    }
+
+    #[Test]
+    public function getItem_readsTheFileOnlyOnceForTheSameKey(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('k')->set('stored'));
+        self::assertTrue($pool->getItem('k')->isHit());
+
+        foreach ($this->cacheFiles() as $file) {
+            unlink($file);
+        }
+
+        self::assertTrue($pool->getItem('k')->isHit());
+        self::assertFalse($this->pool()->getItem('k')->isHit());
+    }
+
+    #[Test]
+    public function hasItem_reflectsWhetherALiveEntryExists(): void
+    {
+        $pool = $this->pool();
+
+        self::assertFalse($pool->hasItem('k'));
+        $pool->save($pool->getItem('k')->set('v')->expiresAfter(60));
+        self::assertTrue($this->pool()->hasItem('k'));
+
+        $this->clock->advance('PT61S');
+        self::assertFalse($this->pool()->hasItem('k'));
+    }
+
+    #[Test]
+    public function deleteItem_removesTheFileAndReturnsTrueForAMissingKey(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('k')->set('v'));
+
+        self::assertTrue($pool->deleteItem('k'));
+        self::assertSame([], $this->cacheFiles());
+        self::assertFalse($pool->getItem('k')->isHit());
+        self::assertTrue($pool->deleteItem('k'));
+    }
+
+    #[Test]
+    public function getItem_treatsAFileWithoutANewlineAsAMissAndDeletesIt(): void
+    {
+        $this->writeRawFile('k', 'garbage-without-newline');
+
+        self::assertFalse($this->pool()->getItem('k')->isHit());
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Test]
+    public function getItem_treatsANonNumericExpiryAsAMissAndDeletesIt(): void
+    {
+        $this->writeRawFile('k', "later\n" . serialize('v'));
+
+        self::assertFalse($this->pool()->getItem('k')->isHit());
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Test]
+    public function getItem_treatsAnUnserializableBodyAsAMissAndDeletesIt(): void
+    {
+        $this->writeRawFile('k', "0\nnot-serialized");
+
+        self::assertFalse($this->pool()->getItem('k')->isHit());
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Override]
+    protected function setUp(): void
+    {
+        $this->dir = sys_get_temp_dir() . '/php-strong-cache-' . bin2hex(random_bytes(8));
+        $this->clock = new TestClock('2026-08-21 00:00:00');
+    }
+
+    #[Override]
+    protected function tearDown(): void
+    {
+        self::removeTree($this->dir);
+    }
+
+    /**
+     * @return list<string> Every `.cache` file under the pool directory.
+     */
+    private function cacheFiles(): array
+    {
+        $found = glob($this->dir . '/*/*/*.cache');
+
+        return $found === false ? [] : array_values($found);
+    }
+
+    private function pool(): FileCachePool
+    {
+        return new FileCachePool($this->dir, $this->clock);
+    }
+
+    private function writeRawFile(string $key, string $body): void
+    {
+        $this->pool();
+        $hash = hash('sha256', $key);
+        $dir = sprintf('%s/%s/%s', $this->dir, substr($hash, 0, 2), substr($hash, 2, 2));
+        mkdir($dir, 0o777, true);
+        file_put_contents($dir . '/' . $hash . '.cache', $body);
+    }
+}
+
+final class ForeignCacheItem implements IForeignItem
+{
+    private readonly string $key;
+    private mixed $value;
+
+    public function __construct(string $key, mixed $value)
+    {
+        $this->key = $key;
+        $this->value = $value;
+    }
+
+    #[Override]
+    public function expiresAfter(DateInterval|int|null $time): static
+    {
+        return $this;
+    }
+
+    #[Override]
+    public function expiresAt(?DateTimeInterface $expiration): static
+    {
+        return $this;
+    }
+
+    #[Override]
+    public function get(): mixed
+    {
+        return $this->value;
+    }
+
+    #[Override]
+    public function getKey(): string
+    {
+        return $this->key;
+    }
+
+    #[Override]
+    public function isHit(): bool
+    {
+        return false;
+    }
+
+    #[Override]
+    public function set(mixed $value): static
+    {
+        $this->value = $value;
+
+        return $this;
+    }
+}
