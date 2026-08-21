@@ -52,11 +52,7 @@ enum DayOfWeek: int
      */
     public function plus(int $days): self
     {
-        // Reduce $days first so that a large value cannot overflow the sum below into a float.
-        $shift = $days % 7;
-        $index = ($this->value - 1 + $shift + 7) % 7;
-
-        return self::from($index + 1);
+        return self::from(($this->value + 6 + $days % 7) % 7 + 1);
     }
 
     /**
