@@ -51,6 +51,39 @@ final class FileCachePool implements ICacheItemPool
         $this->clock = $clock ?? new UtcClock();
     }
 
+    /**
+     * Deletes every stored entry that has expired or become unreadable.
+     *
+     * @return int The number of files deleted.
+     *
+     * @phpstan-return non-negative-int
+     */
+    public function prune(): int
+    {
+        $found = glob($this->directory . '/[0-9a-f][0-9a-f]/[0-9a-f][0-9a-f]/*.cache');
+        $files = $found === false ? [] : $found;
+        $now = $this->clock->now();
+
+        $count = 0;
+        foreach ($files as $path) {
+            $raw = @file_get_contents($path);
+            if ($raw !== false) {
+                $parsed = $this->parse($raw);
+                if ($parsed !== null && ($parsed['expiry'] === null || $parsed['expiry'] > $now)) {
+                    continue;
+                }
+            }
+
+            if (@unlink($path)) {
+                $count++;
+            }
+        }
+
+        $this->memo = [];
+
+        return $count;
+    }
+
     private function assertValidKey(string $key): void
     {
         if ($key === '' || strpbrk($key, self::RESERVED_CHARS) !== false) {
@@ -140,7 +173,7 @@ final class FileCachePool implements ICacheItemPool
 
     private function removeTree(string $dir): bool
     {
-        $entries = scandir($dir);
+        $entries = @scandir($dir);
         if ($entries === false) {
             return false;
         }

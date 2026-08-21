@@ -34,22 +34,32 @@ final class FileCachePoolTest extends TestCase
         return [[''], ['a{b'], ['a}b'], ['a(b'], ['a)b'], ['a/b'], ['a\\b'], ['a@b'], ['a:b']];
     }
 
+    private static function skipWhenRoot(): void
+    {
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            self::markTestSkipped('Permission-based failures cannot be simulated as root.');
+        }
+    }
+
     private static function removeTree(string $dir): void
     {
         if (!is_dir($dir)) {
             return;
         }
 
-        $it = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST
-        );
-        foreach ($it as $entry) {
-            assert($entry instanceof SplFileInfo);
-            if ($entry->isDir()) {
-                rmdir($entry->getPathname());
+        chmod($dir, 0o777);
+        $entries = scandir($dir);
+        foreach ($entries === false ? [] : $entries as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            $path = $dir . '/' . $entry;
+            if (is_dir($path)) {
+                self::removeTree($path);
             } else {
-                unlink($entry->getPathname());
+                chmod($path, 0o777);
+                unlink($path);
             }
         }
 
@@ -503,6 +513,129 @@ final class FileCachePoolTest extends TestCase
 
         self::assertTrue($items['a']->isHit());
         self::assertSame('later', $items['a']->get());
+    }
+
+    #[Test]
+    public function prune_deletesOnlyExpiredEntriesAndReturnsTheCount(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('short')->set(1)->expiresAfter(60));
+        $pool->save($pool->getItem('long')->set(2)->expiresAfter(3600));
+        $pool->save($pool->getItem('forever')->set(3));
+
+        $this->clock->advance('PT61S');
+
+        self::assertSame(1, $pool->prune());
+        self::assertCount(2, $this->cacheFiles());
+        self::assertTrue($this->pool()->hasItem('long'));
+        self::assertTrue($this->pool()->hasItem('forever'));
+        self::assertFalse($this->pool()->hasItem('short'));
+    }
+
+    #[Test]
+    public function prune_deletesMalformedFiles(): void
+    {
+        $this->writeRawFile('broken', 'no newline here');
+
+        self::assertSame(1, $this->pool()->prune());
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Test]
+    public function prune_returnsZeroWhenNothingHasExpired(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set(1)->expiresAfter(3600));
+
+        self::assertSame(0, $pool->prune());
+        self::assertCount(1, $this->cacheFiles());
+    }
+
+    #[Test]
+    public function prune_dropsTheMemoSoLaterReadsSeeTheDeletion(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set(1)->expiresAfter(60));
+        self::assertTrue($pool->hasItem('a'));
+
+        $this->clock->advance('PT61S');
+        self::assertSame(1, $pool->prune());
+
+        self::assertFalse($pool->hasItem('a'));
+    }
+
+    #[Test]
+    public function prune_onAnEmptyPoolReturnsZero(): void
+    {
+        self::assertSame(0, $this->pool()->prune());
+    }
+
+    #[Test]
+    public function construct_throwsWhenTheDirectoryIsNotWritable(): void
+    {
+        self::skipWhenRoot();
+        mkdir($this->dir, 0o555, true);
+
+        $this->expectException(CacheException::class);
+
+        new FileCachePool($this->dir, $this->clock);
+    }
+
+    #[Test]
+    public function save_returnsFalseWhenTheShardDirectoryCannotBeCreated(): void
+    {
+        self::skipWhenRoot();
+        $pool = $this->pool();
+        chmod($this->dir, 0o555);
+
+        self::assertFalse($pool->save($pool->getItem('a')->set(1)));
+    }
+
+    #[Test]
+    public function save_returnsFalseWhenTheTemporaryFileCannotBeWritten(): void
+    {
+        self::skipWhenRoot();
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set(1));
+        chmod(dirname($this->cacheFiles()[0]), 0o555);
+
+        self::assertFalse($pool->save($pool->getItem('a')->set(2)));
+    }
+
+    #[Test]
+    public function save_returnsFalseWhenTheTemporaryFileCannotBeRenamed(): void
+    {
+        $pool = $this->pool();
+        $hash = hash('sha256', 'a');
+        $path = sprintf('%s/%s/%s/%s.cache', $this->dir, substr($hash, 0, 2), substr($hash, 2, 2), $hash);
+        mkdir($path, 0o777, true);
+        file_put_contents($path . '/blocker', 'x');
+
+        self::assertFalse($pool->save($pool->getItem('a')->set(1)));
+        self::assertFileExists($path . '/blocker');
+        self::assertCount(0, (array) glob(dirname($path) . '/*.tmp'));
+    }
+
+    #[Test]
+    public function getItem_missesWhenTheFileCannotBeRead(): void
+    {
+        self::skipWhenRoot();
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set(1));
+        chmod($this->cacheFiles()[0], 0o000);
+
+        self::assertFalse($this->pool()->getItem('a')->isHit());
+    }
+
+    #[Test]
+    public function clear_returnsFalseWhenAShardDirectoryCannotBeRead(): void
+    {
+        self::skipWhenRoot();
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set(1));
+        chmod(dirname(dirname($this->cacheFiles()[0])), 0o000);
+
+        self::assertFalse($pool->clear());
     }
 
     #[Override]
