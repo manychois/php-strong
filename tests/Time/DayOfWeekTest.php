@@ -81,6 +81,15 @@ final class DayOfWeekTest extends TestCase
     }
 
     #[Test]
+    public function plus_staysExactAtIntegerLimits(): void
+    {
+        // PHP_INT_MAX is an exact multiple of 7, so PHP_INT_MAX - 3 shifts by 4 and PHP_INT_MIN shifts by -1.
+        self::assertSame(DayOfWeek::Thursday, DayOfWeek::Sunday->plus(\PHP_INT_MAX - 3));
+        self::assertSame(DayOfWeek::Sunday, DayOfWeek::Sunday->plus(\PHP_INT_MAX));
+        self::assertSame(DayOfWeek::Sunday, DayOfWeek::Monday->plus(\PHP_INT_MIN));
+    }
+
+    #[Test]
     public function plus_agreesWithRepeatedNextCalls(): void
     {
         foreach (DayOfWeek::cases() as $day) {
