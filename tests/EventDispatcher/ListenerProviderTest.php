@@ -231,6 +231,54 @@ final class ListenerProviderTest extends TestCase
 
         (new EventDispatcher($provider))->dispatch(new DogEvent());
     }
+
+    #[Test]
+    public function getListenersForEvent_repeatedCallsReturnTheSameOrder(): void
+    {
+        $provider = new ListenerProvider();
+        $first = static function (DogEvent $e): void {
+        };
+        $second = static function (DogEvent $e): void {
+        };
+        $provider->on(DogEvent::class, $first, 10);
+        $provider->on(DogEvent::class, $second);
+
+        $one = [...$provider->getListenersForEvent(new DogEvent())];
+        $two = [...$provider->getListenersForEvent(new DogEvent())];
+
+        self::assertSame([$first, $second], $one);
+        self::assertSame($one, $two);
+    }
+
+    #[Test]
+    public function on_afterAResolvedDispatchIsVisibleOnTheNextCall(): void
+    {
+        $provider = new ListenerProvider();
+        $provider->on(DogEvent::class, static function (DogEvent $e): void {
+        });
+
+        self::assertCount(1, [...$provider->getListenersForEvent(new DogEvent())]);
+
+        $provider->on(DogEvent::class, static function (DogEvent $e): void {
+        }, 100);
+
+        self::assertCount(2, [...$provider->getListenersForEvent(new DogEvent())]);
+    }
+
+    #[Test]
+    public function on_registeringAnotherTypeInvalidatesAnUnrelatedCachedList(): void
+    {
+        $provider = new ListenerProvider();
+        $provider->on(DogEvent::class, static function (DogEvent $e): void {
+        });
+
+        self::assertCount(1, [...$provider->getListenersForEvent(new DogEvent())]);
+
+        $provider->on(AnimalEventInterface::class, static function (object $e): void {
+        });
+
+        self::assertCount(2, [...$provider->getListenersForEvent(new DogEvent())]);
+    }
 }
 
 final class ListenerSpy
