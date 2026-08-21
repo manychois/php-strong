@@ -13,26 +13,29 @@ listener provider with priorities, and a trait for stoppable events.
 In scope:
 
 - `EventDispatcher` — implements `Psr\EventDispatcher\EventDispatcherInterface`.
-- `ListenerProvider` — implements `Psr\EventDispatcher\ListenerProviderInterface`; mutable, type-based, prioritised.
+- `ListenerProvider` — implements `Psr\EventDispatcher\ListenerProviderInterface`; mutable, type-based, prioritised,
+  optionally backed by a PSR-11 container for deferred listeners.
 - `StoppableEventTrait` — reusable implementation of `Psr\EventDispatcher\StoppableEventInterface` members.
 
 Out of scope (deliberately):
 
-- Container-resolved (lazy) listeners; no coupling to `Manychois\PhpStrong\DependencyInjection`.
 - Aggregate/delegating provider composing several providers.
 - Listener subscriber objects (a class declaring many listeners at once).
 - Once-only listeners, listener removal, error/exception events.
 
 ## Dependencies and layout
 
-- `composer.json`: require `psr/event-dispatcher: ^1.0`; add `psr-14` and `event-dispatcher` keywords.
+- `composer.json`: require `psr/event-dispatcher: ^1.0`; add `psr-14` and `event-dispatcher` keywords. `psr/container`
+  is already required; the module depends on the PSR-11 *interface* only, never on
+  `Manychois\PhpStrong\DependencyInjection`.
 - `src/EventDispatcher/EventDispatcher.php`, `ListenerProvider.php`, `StoppableEventTrait.php`.
 - `tests/EventDispatcher/` mirrors `src/`.
 - `docs/event-dispatcher.md` — reference page in the style of `docs/dependency-injection.md`.
 - `README.md` — add the module to the module list.
 
 Imports follow the project standard: `use Psr\EventDispatcher\EventDispatcherInterface as IEventDispatcher;`,
-`ListenerProviderInterface as IListenerProvider`, `StoppableEventInterface as IStoppableEvent`.
+`ListenerProviderInterface as IListenerProvider`, `StoppableEventInterface as IStoppableEvent`,
+`Psr\Container\ContainerInterface as IContainer`.
 
 ## `EventDispatcher`
 
@@ -52,13 +55,17 @@ final class EventDispatcher implements IEventDispatcher
   ends. The check happens before the first call too, so an event that arrives already stopped invokes no listener.
 - Listener exceptions are not caught. They propagate to the caller, which by the specification ends propagation.
 - Listeners are called as `$listener($event)`; any return value is ignored.
+- The dispatcher holds no container. Which callable represents a listener is the provider's decision, and
+  `getListenersForEvent()` must yield plain callables, so deferred resolution lives entirely in the provider.
 
 ## `ListenerProvider`
 
 ```php
 final class ListenerProvider implements IListenerProvider
 {
-    public function on(string $eventType, callable $listener, int $priority = 0): static;
+    public function __construct(private readonly ?IContainer $container = null) {}
+
+    public function on(string $eventType, callable|array $listener, int $priority = 0): static;
 
     public function getListenersForEvent(object $event): iterable;
 }
@@ -70,8 +77,28 @@ Registration:
 - `$eventType` must name an existing class or interface (`class_exists()` or `interface_exists()`); otherwise
   `InvalidArgumentException`.
 - Duplicate registrations are allowed; the same listener registered twice is called twice.
-- Typing: `@phpstan-param class-string<T> $eventType` with `@phpstan-param callable(T):void $listener` under
-  `@template T of object`, so a listener whose parameter type does not match the event type fails static analysis.
+- Typing for the callable form: `@phpstan-param callable(T):mixed|array{string, string} $listener` under
+  `@template T of object` with `@phpstan-param class-string<T> $eventType`, so a closure whose parameter type does
+  not match the event type fails static analysis. `:mixed` rather than `:void` because the dispatcher discards
+  return values; requiring `void` would reject a listener that merely returns what it delegates to.
+
+Deferred (container-resolved) listeners:
+
+- An `array{string, string}` argument is a service reference `[$serviceId, $method]`, resolved on dispatch as
+  `$container->get($serviceId)->$method($event)`. This lets a caller register an instance method before the
+  instance exists.
+- Resolution happens per dispatch, never at registration. The provider yields a one-parameter wrapper closure, so
+  the listener stays spec-compatible with any PSR-14 dispatcher.
+- Without a container, an array argument must still be a genuine PHP callable (a static method); if it is not,
+  `on()` throws `InvalidArgumentException`.
+- A malformed array (not exactly two elements, elements not strings, or an empty service id) throws
+  `InvalidArgumentException` at registration.
+- The service id is *not* checked against `$container->has()` at registration: a mutable PSR-11 container may be
+  populated later. An unknown id surfaces as the container's own `NotFoundExceptionInterface` at dispatch.
+- A service that resolves to a non-object, or to an object without that public method, throws `RuntimeException` at
+  dispatch — PSR-11 `get()` returns `mixed`, so nothing can be verified earlier.
+- Static analysis cannot check the listener method's parameter type against the event type. That is the price of
+  deferral; the callable form of `on()` remains the type-checked path.
 
 Matching and ordering:
 
@@ -84,7 +111,8 @@ Matching and ordering:
 
 Caching:
 
-- Resolved listener lists are cached keyed by `$event::class`.
+- Resolved listener lists are cached keyed by `$event::class`. The cache holds the wrapper closures, so a deferred
+  listener still resolves its service afresh on every dispatch.
 - `on()` clears the cache entirely. Correctness over cleverness: registration is rare, dispatch is hot.
 
 ## `StoppableEventTrait`
@@ -120,9 +148,9 @@ final class UserRegistered implements StoppableEventInterface
     public function __construct(public readonly string $email) {}
 }
 
-$provider = new ListenerProvider();
+$provider = new ListenerProvider($container);
 $provider->on(UserRegistered::class, $sendWelcomeMail, 10);
-$provider->on(UserRegistered::class, $auditLog);
+$provider->on(UserRegistered::class, [AuditLog::class, 'onUserRegistered']); // resolved on dispatch
 
 $event = (new EventDispatcher($provider))->dispatch(new UserRegistered('a@example.com'));
 ```
@@ -150,6 +178,13 @@ Unit tests only; no HTTP fixtures or external processes. Target 100% coverage, m
 - Repeated calls for the same event class return the same ordering (cache hit path).
 - A non-existent class or interface name throws `InvalidArgumentException`.
 - `on()` returns the provider for chaining.
+- A deferred `[id, method]` listener resolves the service from the container at dispatch, not at registration, and
+  re-resolves on a second dispatch.
+- An array listener without a container: a static method is accepted and called directly; a non-static one throws
+  `InvalidArgumentException`.
+- Malformed array listeners (wrong length, non-string elements, empty id) throw `InvalidArgumentException`.
+- An unknown service id surfaces the container's `NotFoundExceptionInterface` at dispatch.
+- A service resolving to a non-object, or lacking the method, throws `RuntimeException` at dispatch.
 
 `StoppableEventTraitTest`:
 
