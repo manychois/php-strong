@@ -1,7 +1,8 @@
 # PSR-13 Links — `Manychois\PhpStrong\Links`
 
-Implementations of the four `Psr\Link` interfaces: `Link` implements `EvolvableLinkInterface`, and `LinkProvider`
-implements `EvolvableLinkProviderInterface`. Both are immutable — every `with*` method returns a new instance and
+Two classes satisfy all four `Psr\Link` interfaces: `Link` implements `EvolvableLinkInterface` (and therefore
+`LinkInterface`), and `LinkProvider` implements `EvolvableLinkProviderInterface` (and therefore
+`LinkProviderInterface`). Both are immutable — every `with*` method returns a new instance and
 leaves the receiver untouched — and neither serializes anything. Turning links into an HTTP `Link:` header, HTML
 `<link>` elements, or a HAL document is left to the consumer.
 
@@ -31,20 +32,24 @@ $provider->getLinksByRel('search'); // [$search]
 | `getRels(): array` | `list<string>` in first-seen order. |
 | `getAttributes(): array` | `array<string, string\|int\|float\|bool\|list<string>>` in insertion order. |
 | `withHref(string\|Stringable $href): static` | Recomputes `isTemplated()`. |
-| `withRel(string $rel): static` | Returns the same instance when the rel is already present. |
+| `withRel(string $rel): static` | Returns the same instance when the rel is already present. Throws `InvalidArgumentException` for a malformed rel. |
 | `withoutRel(string $rel): static` | Returns the same instance when the rel is absent. |
-| `withAttribute(string $attribute, string\|Stringable\|int\|float\|bool\|array $value): static` | An existing name is overwritten in place, keeping its position. |
+| `withAttribute(string $attribute, string\|Stringable\|int\|float\|bool\|array $value): static` | An existing name is overwritten in place, keeping its position. Throws `InvalidArgumentException` for a malformed name or value. |
 | `withoutAttribute(string $attribute): static` | Returns the same instance when the attribute is absent. |
 
 ### Accepted values
 
-- **Rel** — any non-blank string with no whitespace, so both an IANA keyword (`next`) and a private absolute URI
-  (`https://example.com/rels/invoice`) are accepted. The IANA registry is not consulted; PSR-13 §1.3 states only a
-  `SHOULD`.
-- **Attribute name** — any non-blank string.
+- **Rel** — any non-blank string with no whitespace and no control character (`\x00`–`\x1F`, `\x7F`), so both an
+  IANA keyword (`next`) and a private absolute URI (`https://example.com/rels/invoice`) are accepted. The IANA
+  registry is not consulted; PSR-13 §1.3 states only a `SHOULD`. A non-string entry in the `$rels` array passed to
+  the constructor raises `TypeError`, not `InvalidArgumentException`: the native `array` parameter type does not
+  enforce `list<string>`.
+- **Attribute name** — any non-blank string with no control character (`\x00`–`\x1F`, `\x7F`).
 - **Attribute value** — `string`, `int`, `float`, `bool`, a `Stringable` (cast to `string` on the way in), or a
-  list of strings. Anything else throws `InvalidArgumentException`. Booleans are stored verbatim: the
-  abbreviation and omission rules of PSR-13 §1.2 bind serializers, not link objects.
+  list of strings. A keyed array, a nested array, or a list containing a non-string throws
+  `InvalidArgumentException`. A value outside the declared union (e.g. `stdClass`, `null`) raises `TypeError` from
+  the native parameter type before validation runs. Booleans are stored verbatim: the abbreviation and omission
+  rules of PSR-13 §1.2 bind serializers, not link objects.
 
 ## `LinkProvider`
 

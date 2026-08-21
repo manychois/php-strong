@@ -82,7 +82,10 @@ final class LinkProviderTest extends TestCase
         $link = new Link('/a');
         $provider = new LinkProvider($link);
 
-        self::assertSame([$link], $provider->withLink($link)->getLinks());
+        $evolved = $provider->withLink($link);
+
+        self::assertSame($provider, $evolved);
+        self::assertSame([$link], $evolved->getLinks());
     }
 
     #[Test]
@@ -123,6 +126,9 @@ final class LinkProviderTest extends TestCase
         $link = new Link('/a');
         $provider = new LinkProvider($link);
 
-        self::assertSame([$link], $provider->withoutLink(new Link('/b'))->getLinks());
+        $evolved = $provider->withoutLink(new Link('/b'));
+
+        self::assertSame($provider, $evolved);
+        self::assertSame([$link], $evolved->getLinks());
     }
 }

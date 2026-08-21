@@ -139,6 +139,7 @@ final class LinkTest extends TestCase
 
         $evolved = $link->withRel('next');
 
+        self::assertSame($link, $evolved);
         self::assertSame(['next'], $evolved->getRels());
     }
 
@@ -158,7 +159,10 @@ final class LinkTest extends TestCase
     {
         $link = new Link('/a', ['next']);
 
-        self::assertSame(['next'], $link->withoutRel('prev')->getRels());
+        $evolved = $link->withoutRel('prev');
+
+        self::assertSame($link, $evolved);
+        self::assertSame(['next'], $evolved->getRels());
     }
 
     #[Test]
@@ -186,7 +190,10 @@ final class LinkTest extends TestCase
     {
         $link = new Link('/a', [], ['title' => 'A page']);
 
-        self::assertSame(['title' => 'A page'], $link->withoutAttribute('type')->getAttributes());
+        $evolved = $link->withoutAttribute('type');
+
+        self::assertSame($link, $evolved);
+        self::assertSame(['title' => 'A page'], $evolved->getAttributes());
     }
 
     /**
@@ -199,6 +206,8 @@ final class LinkTest extends TestCase
             'whitespace only' => ["  \t"],
             'contains a space' => ['next prev'],
             'contains a newline' => ["next\nprev"],
+            'contains a NUL byte' => ["next\x00prev"],
+            'contains a CRLF-bearing header injection attempt' => ["next\r\nX-Evil: 1"],
         ];
     }
 
@@ -228,6 +237,8 @@ final class LinkTest extends TestCase
         return [
             'empty' => [''],
             'whitespace only' => ['   '],
+            'contains a NUL byte' => ["ti\x00tle"],
+            'contains a CRLF-bearing header injection attempt' => ["bad\r\nX-Evil: 1"],
         ];
     }
 

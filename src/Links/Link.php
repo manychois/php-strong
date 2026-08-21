@@ -60,17 +60,24 @@ final class Link implements IEvolvableLink
     }
 
     /**
-     * @throws InvalidArgumentException if the name is empty or blank.
+     * @throws InvalidArgumentException if the name is empty, blank, or contains a control character.
      */
     private static function assertAttributeName(string $attribute): void
     {
         if (trim($attribute) === '') {
             throw new InvalidArgumentException('An attribute name must not be empty.');
         }
+
+        if (preg_match('/[\x00-\x1F\x7F]/', $attribute) === 1) {
+            throw new InvalidArgumentException(
+                sprintf('An attribute name must not contain control characters, got "%s".', $attribute)
+            );
+        }
     }
 
     /**
-     * @throws InvalidArgumentException if the relation type is empty, blank, or contains whitespace.
+     * @throws InvalidArgumentException if the relation type is empty, blank, contains whitespace, or contains a
+     *                                   control character.
      */
     private static function assertRel(string $rel): void
     {
@@ -81,6 +88,12 @@ final class Link implements IEvolvableLink
         if (preg_match('/\s/', $rel) === 1) {
             throw new InvalidArgumentException(
                 sprintf('A link relation type must not contain whitespace, got "%s".', $rel)
+            );
+        }
+
+        if (preg_match('/[\x00-\x1F\x7F]/', $rel) === 1) {
+            throw new InvalidArgumentException(
+                sprintf('A link relation type must not contain control characters, got "%s".', $rel)
             );
         }
     }

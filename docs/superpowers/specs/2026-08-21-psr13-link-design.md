@@ -99,11 +99,14 @@ Getter return types are narrowed in PHPDoc: `@return list<string>` for `getRels(
 
 ### Validation
 
-- **Rel**: rejects an empty or whitespace-only string, and any string containing whitespace (a rel is a single
-  token or a single absolute URI; a space-separated list is a serialization concern, not a rel value). Every other
+- **Rel**: rejects an empty or whitespace-only string, any string containing whitespace (a rel is a single
+  token or a single absolute URI; a space-separated list is a serialization concern, not a rel value), and any
+  string containing a control character (`\x00`–`\x1F`, `\x7F`) — a header-injection footgun for downstream
+  serializers, and worth rejecting even though most control characters are already whitespace. Every other
   string is accepted, so both IANA keywords and private absolute URIs pass. §1.3 states only a `SHOULD` for the
   registry, so no registry is bundled.
-- **Attribute name**: rejects an empty or whitespace-only string. Any other string is accepted — §1.2 explicitly
+- **Attribute name**: rejects an empty or whitespace-only string, and any string containing a control character
+  (`\x00`–`\x1F`, `\x7F`), for the same header-injection reason. Any other string is accepted — §1.2 explicitly
   declines to define a registry of names.
 - **Attribute value**: accepts `string`, `int`, `float`, `bool`, a `Stringable` (cast to `string` immediately, as
   `withHref()` does), or a `list<string>`. Everything else throws — a non-`Stringable` object, a nested array, a
@@ -176,9 +179,10 @@ module as with `Cache` and `Events`.
 
 - **Evolvability round-trips**: every `with*`/`without*` returns a new instance whose single change took effect,
   and the receiver is verifiably unmutated (assert the original's getters afterwards).
-- **Idempotence**: `withRel()` with a rel already present, `withoutRel()` with one absent, `withAttribute()`
-  overwriting an existing name in place, `withoutAttribute()` with one absent, `withLink()` with an identical
-  instance, `withoutLink()` with one absent — each returns without error and leaves the value set unchanged.
+- **Idempotence**: `withRel()` with a rel already present, `withoutRel()` with one absent, `withoutAttribute()`
+  with one absent, `withLink()` with an identical instance, `withoutLink()` with one absent — each returns the
+  same instance (`assertSame`), not merely an equal one. `withAttribute()` overwriting an existing name in place
+  returns a new instance whose value set is otherwise unchanged.
 - **Identity semantics**: two `Link` instances with equal state are distinct to the provider; adding both keeps
   both, and `withoutLink()` on one leaves the other.
 - **Boundary rejections**: a data-provider table of invalid rels, attribute names, and attribute values, each
