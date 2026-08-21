@@ -1,9 +1,10 @@
 # PSR-6 Cache — `Manychois\PhpStrong\Cache`
 
-An implementation of `Psr\Cache\CacheItemPoolInterface` that stores one file per key under a directory you choose.
-`FileCachePool` measures expiry against an injected `Psr\Clock\ClockInterface`, so a test can move time with
-`Manychois\PhpStrong\Clock\TestClock` instead of sleeping. `CacheItem` is the pool's item type; the pool creates it
-for you.
+Two implementations of `Psr\Cache\CacheItemPoolInterface`: `FileCachePool`, which stores one file per key under a
+directory you choose, and `MemoryCachePool`, which keeps its entries in memory for the lifetime of the pool object.
+Both measure expiry against an injected `Psr\Clock\ClockInterface`, so a test can move time with
+`Manychois\PhpStrong\Clock\TestClock` instead of sleeping. `CacheItem` is the item type of both pools; the pool
+creates it for you.
 
 ```php
 use Manychois\PhpStrong\Cache\FileCachePool;
@@ -36,6 +37,35 @@ $user = $item->get();
 | `saveDeferred(CacheItemInterface $item): bool` | Queues the item for `commit()`. Always returns `true`. |
 
 Every method that takes a key throws `InvalidArgumentException` before doing any work when the key is invalid.
+
+## `MemoryCachePool`
+
+The same surface as `FileCachePool`, minus the directory: `__construct(?ClockInterface $clock = null)`. Keys, expiry,
+deferred items and `prune()` behave identically, and `CacheException` never fires because there is no filesystem to
+fail.
+
+```php
+use Manychois\PhpStrong\Cache\MemoryCachePool;
+
+$pool = new MemoryCachePool();
+```
+
+One behavioural difference is worth knowing. `FileCachePool` round-trips every value through `serialize()`, so what
+you read back is a copy. `MemoryCachePool` stores the value as given, so an object you save and later retrieve is the
+same instance — mutating it also mutates what is cached:
+
+```php
+$object = new stdClass();
+$pool->save($pool->getItem('k')->set($object));
+$object->n = 1;
+
+$pool->getItem('k')->get()->n; // 1 — the very same object
+```
+
+That also means `MemoryCachePool` accepts values `FileCachePool` cannot store, such as a closure or an open resource.
+Where the two pools must behave alike — swapping one for the other in a test — keep to serialisable, immutable values.
+
+Nothing is shared between pool objects and nothing survives the request.
 
 ## `CacheItem`
 
@@ -83,9 +113,10 @@ explicitly.
 
 ## Limitations
 
-The pool keeps a per-instance memo of the decoded state of every key it has read, so a second `getItem()` for the same
+`FileCachePool` keeps a per-instance memo of the decoded state of every key it has read, so a second `getItem()` for the same
 key costs nothing. The memo is refreshed by `save()`/`commit()` and dropped by `deleteItem()`, `clear()` and
 `prune()`, but it is not shared between pool objects: a long-lived `FileCachePool` will not observe another process's
-write to a key it has already read. Create a new pool when that matters.
+write to a key it has already read. Create a new pool when that matters. `MemoryCachePool` has no such memo — its
+store *is* the memo — but by the same token it never sees anything another process wrote.
 
 Each `getItem()` returns a fresh item, so mutating one item never affects an item handed out by another call.

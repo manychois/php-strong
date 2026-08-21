@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrongTests\Cache;
 
-use DateInterval;
-use DateTimeInterface;
 use FilesystemIterator;
 use Manychois\PhpStrong\Cache\CacheException;
 use Manychois\PhpStrong\Cache\CacheItem;
@@ -16,7 +14,6 @@ use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemInterface as IForeignItem;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
@@ -673,55 +670,5 @@ final class FileCachePoolTest extends TestCase
         $dir = sprintf('%s/%s/%s', $this->dir, substr($hash, 0, 2), substr($hash, 2, 2));
         mkdir($dir, 0o777, true);
         file_put_contents($dir . '/' . $hash . '.cache', $body);
-    }
-}
-
-final class ForeignCacheItem implements IForeignItem
-{
-    private readonly string $key;
-    private mixed $value;
-
-    public function __construct(string $key, mixed $value)
-    {
-        $this->key = $key;
-        $this->value = $value;
-    }
-
-    #[Override]
-    public function expiresAfter(DateInterval|int|null $time): static
-    {
-        return $this;
-    }
-
-    #[Override]
-    public function expiresAt(?DateTimeInterface $expiration): static
-    {
-        return $this;
-    }
-
-    #[Override]
-    public function get(): mixed
-    {
-        return $this->value;
-    }
-
-    #[Override]
-    public function getKey(): string
-    {
-        return $this->key;
-    }
-
-    #[Override]
-    public function isHit(): bool
-    {
-        return false;
-    }
-
-    #[Override]
-    public function set(mixed $value): static
-    {
-        $this->value = $value;
-
-        return $this;
     }
 }

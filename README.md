@@ -15,14 +15,14 @@ composer require manychois/php-strong
 | PSR | Namespace | Summary | Docs |
 | --- | --------- | ------- | ---- |
 | PSR-3 Logger | `Manychois\PhpStrong\Logging` | `Logger` dispatching immutable `Log` objects to handlers (stream, console, in-memory) with pluggable formatters and `{placeholder}` interpolation. | [docs/logging.md](docs/logging.md) |
-| PSR-6 Cache | `Manychois\PhpStrong\Cache` | `FileCachePool` storing one file per key under a directory, with sha-256 sharded paths, atomic writes, deferred items, a request-scoped read memo, and `prune()`; expiry is driven by an injected PSR-20 clock. | [docs/cache.md](docs/cache.md) |
+| PSR-6 Cache | `Manychois\PhpStrong\Cache` | `FileCachePool` storing one file per key under a directory (sha-256 sharded paths, atomic writes, a request-scoped read memo) and `MemoryCachePool` keeping entries in memory; both support deferred items and `prune()`, with expiry driven by an injected PSR-20 clock. | [docs/cache.md](docs/cache.md) |
 | PSR-7 HTTP Message + PSR-17 Factories | `Manychois\PhpStrong\Http` | Immutable `Request`, `ServerRequest` (with `fromGlobals()`), `Response`, `Stream`, `UploadedFile`, `Uri`, `Method`/`StatusCode` enums, and the five PSR-17 factories. | [docs/http.md](docs/http.md) |
 | PSR-18 HTTP Client | `Manychois\PhpStrong\Http` | cURL-backed `Client` configured via `RequestOptions` (timeouts, redirects, TLS verification, proxy, user agent, CA bundle); returns responses for every status code and throws `RequestException`/`NetworkException` per the PSR-18 contract, plus a non-PSR `sendAsync()` returning `PendingRequest` handles for concurrent requests over `curl_multi`. | [docs/http.md](docs/http.md) |
 | PSR-11 Container | `Manychois\PhpStrong\DependencyInjection` | `ContainerBuilder` (`singleton`/`factory`/`alias`/opt-in `autowire`/`aware` setter hooks) producing an immutable, lazily-resolving `Container` with circular-dependency detection. | [docs/dependency-injection.md](docs/container.md) |
 | PSR-20 Clock | `Manychois\PhpStrong\Clock` | `UtcClock` (always UTC) and `TestClock` (frozen/advanceable instant for deterministic tests). | [docs/clock.md](docs/clock.md) |
 | PSR-14 Event Dispatcher | `Manychois\PhpStrong\Events` | `EventDispatcher` calling listeners returned by any PSR-14 provider; `ListenerProvider` matches listeners by type (including parents/interfaces), orders by priority, and supports deferred `[$serviceId, $method]` listeners resolved from an optional container. | [docs/events.md](docs/events.md) |
 
-More PSRs (6, 13, 15, 16) are planned.
+More PSRs (13, 15, 16) are planned.
 
 ## Development
 
