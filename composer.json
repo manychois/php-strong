@@ -9,6 +9,7 @@
     "psr-6",
     "psr-7",
     "psr-11",
+    "psr-13",
     "psr-14",
     "psr-16",
     "psr-17",
@@ -19,6 +20,7 @@
     "logger",
     "container",
     "event-dispatcher",
+    "link",
     "http-message",
     "http-factory",
     "http-client",
@@ -61,7 +63,8 @@
     "ext-curl": "*",
     "psr/event-dispatcher": "^1.0",
     "psr/cache": "^3",
-    "psr/simple-cache": "^3"
+    "psr/simple-cache": "^3",
+    "psr/link": "^2"
   },
   "require-dev": {
     "phpstan/extension-installer": "^1.4.3",
