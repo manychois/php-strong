@@ -138,6 +138,36 @@ final class FileCachePool implements ICacheItemPool
         return ['hit' => true, 'value' => $parsed['value'], 'expiry' => $parsed['expiry']];
     }
 
+    private function removeTree(string $dir): bool
+    {
+        $entries = scandir($dir);
+        if ($entries === false) {
+            return false;
+        }
+
+        $ok = true;
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            $path = $dir . '/' . $entry;
+            $ok = (is_dir($path) ? $this->removeTree($path) : @unlink($path)) && $ok;
+        }
+
+        return @rmdir($dir) && $ok;
+    }
+
+    /**
+     * @return list<string> The two-hex-character shard directories directly under the root.
+     */
+    private function shardDirs(): array
+    {
+        $found = glob($this->directory . '/[0-9a-f][0-9a-f]', \GLOB_ONLYDIR);
+
+        return $found === false ? [] : $found;
+    }
+
     private function write(string $key, mixed $value, ?DateTimeImmutable $expiry): bool
     {
         $path = $this->pathOf($key);
@@ -171,7 +201,15 @@ final class FileCachePool implements ICacheItemPool
     #[Override]
     public function clear(): bool
     {
-        return true;
+        $this->memo = [];
+        $this->deferred = [];
+
+        $ok = true;
+        foreach ($this->shardDirs() as $dir) {
+            $ok = $this->removeTree($dir) && $ok;
+        }
+
+        return $ok;
     }
 
     /**
@@ -180,7 +218,15 @@ final class FileCachePool implements ICacheItemPool
     #[Override]
     public function commit(): bool
     {
-        return true;
+        $pending = $this->deferred;
+        $this->deferred = [];
+
+        $ok = true;
+        foreach ($pending as $item) {
+            $ok = $this->save($item) && $ok;
+        }
+
+        return $ok;
     }
 
     /**
@@ -202,7 +248,16 @@ final class FileCachePool implements ICacheItemPool
     #[Override]
     public function deleteItems(array $keys): bool
     {
-        return true;
+        foreach ($keys as $key) {
+            $this->assertValidKey($key);
+        }
+
+        $ok = true;
+        foreach ($keys as $key) {
+            $ok = $this->deleteItem($key) && $ok;
+        }
+
+        return $ok;
     }
 
     /**
@@ -236,12 +291,23 @@ final class FileCachePool implements ICacheItemPool
      *
      * @param array<string> $keys The cache keys.
      *
-     * @return array<string, CacheItem> The items, keyed by cache key.
+     * @return array<string, CacheItem> The items, keyed by cache key, in the order the keys were given.
+     *
+     * @throws InvalidArgumentException if any key is empty or contains a reserved character.
      */
     #[Override]
     public function getItems(array $keys = []): array
     {
-        return [];
+        foreach ($keys as $key) {
+            $this->assertValidKey($key);
+        }
+
+        $items = [];
+        foreach ($keys as $key) {
+            $items[$key] = $this->getItem($key);
+        }
+
+        return $items;
     }
 
     /**
@@ -279,6 +345,10 @@ final class FileCachePool implements ICacheItemPool
     #[Override]
     public function saveDeferred(ICacheItem $item): bool
     {
+        $key = $item->getKey();
+        $this->assertValidKey($key);
+        $this->deferred[$key] = $item;
+
         return true;
     }
 

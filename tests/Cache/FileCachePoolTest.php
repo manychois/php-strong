@@ -319,6 +319,192 @@ final class FileCachePoolTest extends TestCase
         self::assertSame([], $this->cacheFiles());
     }
 
+    #[Test]
+    public function getItems_returnsAnItemPerRequestedKeyInOrder(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set(1));
+        $pool->save($pool->getItem('c')->set(3));
+
+        $items = $this->pool()->getItems(['a', 'b', 'c']);
+
+        self::assertSame(['a', 'b', 'c'], array_keys($items));
+        self::assertSame(1, $items['a']->get());
+        self::assertTrue($items['a']->isHit());
+        self::assertFalse($items['b']->isHit());
+        self::assertSame(3, $items['c']->get());
+    }
+
+    #[Test]
+    public function getItems_withNoKeysReturnsAnEmptyArray(): void
+    {
+        self::assertSame([], $this->pool()->getItems());
+    }
+
+    #[Test]
+    public function getItems_rejectsTheWholeCallWhenAnyKeyIsInvalid(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set(1));
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $pool->getItems(['a', 'bad:key']);
+    }
+
+    #[Test]
+    public function deleteItems_removesEveryKey(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set(1));
+        $pool->save($pool->getItem('b')->set(2));
+
+        self::assertTrue($pool->deleteItems(['a', 'b', 'missing']));
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Test]
+    public function deleteItems_rejectsTheWholeCallWhenAnyKeyIsInvalid(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set(1));
+
+        try {
+            $pool->deleteItems(['a', 'bad@key']);
+            self::fail('Expected an InvalidArgumentException.');
+        } catch (InvalidArgumentException) {
+            self::assertCount(1, $this->cacheFiles());
+        }
+    }
+
+    #[Test]
+    public function clear_removesEveryStoredItemButKeepsTheRootDirectory(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set(1));
+        $pool->save($pool->getItem('b')->set(2));
+
+        self::assertTrue($pool->clear());
+
+        self::assertDirectoryExists($this->dir);
+        self::assertSame([], $this->cacheFiles());
+        self::assertFalse($pool->getItem('a')->isHit());
+    }
+
+    #[Test]
+    public function clear_leavesUnrelatedFilesInTheRootDirectoryAlone(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set(1));
+        file_put_contents($this->dir . '/README.txt', 'keep me');
+
+        self::assertTrue($pool->clear());
+
+        self::assertFileExists($this->dir . '/README.txt');
+    }
+
+    #[Test]
+    public function clear_dropsPendingDeferredItems(): void
+    {
+        $pool = $this->pool();
+        $pool->saveDeferred($pool->getItem('a')->set(1));
+
+        self::assertTrue($pool->clear());
+        self::assertFalse($pool->hasItem('a'));
+
+        self::assertTrue($pool->commit());
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Test]
+    public function saveDeferred_makesTheItemVisibleBeforeCommitWithoutWritingAFile(): void
+    {
+        $pool = $this->pool();
+
+        self::assertTrue($pool->saveDeferred($pool->getItem('a')->set('later')));
+
+        self::assertTrue($pool->hasItem('a'));
+        self::assertTrue($pool->getItem('a')->isHit());
+        self::assertSame('later', $pool->getItem('a')->get());
+        self::assertSame([], $this->cacheFiles());
+        self::assertFalse($this->pool()->hasItem('a'));
+    }
+
+    #[Test]
+    public function commit_writesEveryDeferredItemAndEmptiesTheQueue(): void
+    {
+        $pool = $this->pool();
+        $pool->saveDeferred($pool->getItem('a')->set(1));
+        $pool->saveDeferred($pool->getItem('b')->set(2));
+
+        self::assertTrue($pool->commit());
+
+        $fresh = $this->pool();
+        self::assertSame(1, $fresh->getItem('a')->get());
+        self::assertSame(2, $fresh->getItem('b')->get());
+
+        self::assertTrue($pool->commit());
+        self::assertCount(2, $this->cacheFiles());
+    }
+
+    #[Test]
+    public function commit_deletesADeferredItemThatIsAlreadyExpired(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('a')->set('old'));
+        $pool->saveDeferred($pool->getItem('a')->set('new')->expiresAfter(-1));
+
+        self::assertTrue($pool->commit());
+
+        self::assertSame([], $this->cacheFiles());
+        self::assertFalse($this->pool()->hasItem('a'));
+    }
+
+    #[Test]
+    public function deleteItem_dropsAPendingDeferredItem(): void
+    {
+        $pool = $this->pool();
+        $pool->saveDeferred($pool->getItem('a')->set(1));
+
+        self::assertTrue($pool->deleteItem('a'));
+        self::assertFalse($pool->hasItem('a'));
+
+        self::assertTrue($pool->commit());
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Test]
+    public function save_replacesAPendingDeferredItemForTheSameKey(): void
+    {
+        $pool = $this->pool();
+        $pool->saveDeferred($pool->getItem('a')->set('deferred'));
+
+        self::assertTrue($pool->save($pool->getItem('a')->set('immediate')));
+        self::assertTrue($pool->commit());
+
+        self::assertSame('immediate', $this->pool()->getItem('a')->get());
+    }
+
+    #[Test]
+    public function saveDeferred_rejectsAnInvalidKey(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->pool()->saveDeferred(new ForeignCacheItem('bad/key', 'v'));
+    }
+
+    #[Test]
+    public function getItems_seesPendingDeferredItems(): void
+    {
+        $pool = $this->pool();
+        $pool->saveDeferred($pool->getItem('a')->set('later'));
+
+        $items = $pool->getItems(['a']);
+
+        self::assertTrue($items['a']->isHit());
+        self::assertSame('later', $items['a']->get());
+    }
+
     #[Override]
     protected function setUp(): void
     {
