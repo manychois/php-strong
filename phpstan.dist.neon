@@ -7,4 +7,4 @@ parameters:
         -
             # Public API for consumers of this library; no class inside src/ uses it.
             identifier: trait.unused
-            path: src/EventDispatcher/StoppableEventTrait.php
+            path: src/Events/StoppableEventTrait.php

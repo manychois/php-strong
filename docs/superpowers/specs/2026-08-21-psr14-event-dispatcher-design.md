@@ -1,7 +1,7 @@
 # PSR-14 Event Dispatcher — Design
 
 Date: 2026-08-21
-Module: `Manychois\PhpStrong\EventDispatcher`
+Module: `Manychois\PhpStrong\Events`
 
 ## Goal
 
@@ -28,9 +28,9 @@ Out of scope (deliberately):
 - `composer.json`: require `psr/event-dispatcher: ^1.0`; add `psr-14` and `event-dispatcher` keywords. `psr/container`
   is already required; the module depends on the PSR-11 *interface* only, never on
   `Manychois\PhpStrong\DependencyInjection`.
-- `src/EventDispatcher/EventDispatcher.php`, `ListenerProvider.php`, `StoppableEventTrait.php`.
-- `tests/EventDispatcher/` mirrors `src/`.
-- `docs/event-dispatcher.md` — reference page in the style of `docs/dependency-injection.md`.
+- `src/Events/EventDispatcher.php`, `ListenerProvider.php`, `StoppableEventTrait.php`.
+- `tests/Events/` mirrors `src/`.
+- `docs/events.md` — reference page in the style of `docs/dependency-injection.md`.
 - `README.md` — add the module to the module list.
 
 Imports follow the project standard: `use Psr\EventDispatcher\EventDispatcherInterface as IEventDispatcher;`,
@@ -143,9 +143,9 @@ trait StoppableEventTrait
 ## Usage
 
 ```php
-use Manychois\PhpStrong\EventDispatcher\EventDispatcher;
-use Manychois\PhpStrong\EventDispatcher\ListenerProvider;
-use Manychois\PhpStrong\EventDispatcher\StoppableEventTrait;
+use Manychois\PhpStrong\Events\EventDispatcher;
+use Manychois\PhpStrong\Events\ListenerProvider;
+use Manychois\PhpStrong\Events\StoppableEventTrait;
 use Psr\EventDispatcher\StoppableEventInterface;
 
 final class UserRegistered implements StoppableEventInterface

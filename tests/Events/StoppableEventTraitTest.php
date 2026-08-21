@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrongTests\EventDispatcher;
+namespace Manychois\PhpStrongTests\Events;
 
-use Manychois\PhpStrong\EventDispatcher\StoppableEventTrait;
+use Manychois\PhpStrong\Events\StoppableEventTrait;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\StoppableEventInterface as IStoppableEvent;

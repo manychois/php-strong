@@ -1,4 +1,4 @@
-# PSR-14 Event Dispatcher — `Manychois\PhpStrong\EventDispatcher`
+# PSR-14 Event Dispatcher — `Manychois\PhpStrong\Events`
 
 An implementation of `Psr\EventDispatcher\EventDispatcherInterface` that dispatches an event to every listener
 returned by a `Psr\EventDispatcher\ListenerProviderInterface`. `EventDispatcher` accepts any PSR-14 listener
@@ -7,9 +7,9 @@ listener registered against a parent class or an interface also matches its subc
 container passed to `ListenerProvider` is only consulted to resolve deferred `[$serviceId, $method]` listeners.
 
 ```php
-use Manychois\PhpStrong\EventDispatcher\EventDispatcher;
-use Manychois\PhpStrong\EventDispatcher\ListenerProvider;
-use Manychois\PhpStrong\EventDispatcher\StoppableEventTrait;
+use Manychois\PhpStrong\Events\EventDispatcher;
+use Manychois\PhpStrong\Events\ListenerProvider;
+use Manychois\PhpStrong\Events\StoppableEventTrait;
 use Psr\EventDispatcher\StoppableEventInterface;
 
 final class UserRegistered implements StoppableEventInterface

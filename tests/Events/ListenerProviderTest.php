@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrongTests\EventDispatcher;
+namespace Manychois\PhpStrongTests\Events;
 
 use InvalidArgumentException;
-use Manychois\PhpStrong\EventDispatcher\EventDispatcher;
-use Manychois\PhpStrong\EventDispatcher\ListenerProvider;
+use Manychois\PhpStrong\Events\EventDispatcher;
+use Manychois\PhpStrong\Events\ListenerProvider;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;

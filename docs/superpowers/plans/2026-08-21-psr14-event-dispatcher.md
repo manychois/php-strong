@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship `Manychois\PhpStrong\EventDispatcher` — a PSR-14 dispatcher, a prioritised type-based listener provider that can defer instance-method listeners to a PSR-11 container, and a trait for stoppable events.
+**Goal:** Ship `Manychois\PhpStrong\Events` — a PSR-14 dispatcher, a prioritised type-based listener provider that can defer instance-method listeners to a PSR-11 container, and a trait for stoppable events.
 
 **Architecture:** `EventDispatcher` holds only a `ListenerProviderInterface` and calls `$listener($event)` over whatever it yields, stopping early on a stopped `StoppableEventInterface`. `ListenerProvider` keeps a registry keyed by event type, matched with `instanceof` so parent classes and interfaces match too, merged and sorted by priority (ties by registration order) and cached per event class. Array listeners are normalised to callables at registration: `[$instance, 'method']` passes through, `[$serviceId, 'method']` becomes a closure that resolves the service from the container on every call. `StoppableEventTrait` supplies the two interface methods without imposing inheritance.
 
@@ -12,9 +12,9 @@
 
 ## Global Constraints
 
-- PHP >= 8.5; library code under `Manychois\PhpStrong\EventDispatcher` (PSR-4 `src/EventDispatcher/`), tests under `Manychois\PhpStrongTests\EventDispatcher` (`tests/EventDispatcher/`).
+- PHP >= 8.5; library code under `Manychois\PhpStrong\Events` (PSR-4 `src/Events/`), tests under `Manychois\PhpStrongTests\Events` (`tests/Events/`).
 - Quality gates after every task: `composer phpcbf` → `composer phpcs` → `composer phpstan` → `composer test` — all must pass. `composer phpstan` and `composer phpcbf` end with `|| true`, so read their output rather than trusting the exit code.
-- 100% statement coverage of `src/EventDispatcher/` at the end of Task 6 (check `coverage/clover.xml`).
+- 100% statement coverage of `src/Events/` at the end of Task 6 (check `coverage/clover.xml`).
 - No dependency on `Manychois\PhpStrong\DependencyInjection`. The container is used through `Psr\Container\ContainerInterface` only.
 - `phpcs` only scans `./src`; test files are not style-checked, but keep them in the same house style anyway.
 - Global PHP functions are called unqualified (matching existing `src/`); only global *constants* take a leading backslash. `@template` comes first in a docblock, before `@param`.
@@ -33,13 +33,13 @@ Claude-Session: https://claude.ai/code/session_01D7cq6B6pJ8BaHJQFKYFtUd
 
 | File | Responsibility |
 | ---- | -------------- |
-| `src/EventDispatcher/StoppableEventTrait.php` | The two `StoppableEventInterface` members, reusable by any event class. |
-| `src/EventDispatcher/EventDispatcher.php` | PSR-14 dispatcher: iterate the provider's listeners, honour propagation stop, return the event. |
-| `src/EventDispatcher/ListenerProvider.php` | Registration (`on()`), array-listener normalisation, `instanceof` matching, priority sort, per-event-class cache. |
-| `tests/EventDispatcher/StoppableEventTraitTest.php` | Trait behaviour, via a local test event class. |
-| `tests/EventDispatcher/EventDispatcherTest.php` | Dispatch order, stop semantics, exception propagation, foreign providers. |
-| `tests/EventDispatcher/ListenerProviderTest.php` | Ordering, inheritance matching, cache invalidation, array/service listeners, all error paths. |
-| `docs/event-dispatcher.md` | Reference page in the style of `docs/dependency-injection.md`. |
+| `src/Events/StoppableEventTrait.php` | The two `StoppableEventInterface` members, reusable by any event class. |
+| `src/Events/EventDispatcher.php` | PSR-14 dispatcher: iterate the provider's listeners, honour propagation stop, return the event. |
+| `src/Events/ListenerProvider.php` | Registration (`on()`), array-listener normalisation, `instanceof` matching, priority sort, per-event-class cache. |
+| `tests/Events/StoppableEventTraitTest.php` | Trait behaviour, via a local test event class. |
+| `tests/Events/EventDispatcherTest.php` | Dispatch order, stop semantics, exception propagation, foreign providers. |
+| `tests/Events/ListenerProviderTest.php` | Ordering, inheritance matching, cache invalidation, array/service listeners, all error paths. |
+| `docs/events.md` | Reference page in the style of `docs/dependency-injection.md`. |
 | `composer.json`, `README.md` | Dependency, keywords, module listing. |
 
 ---
@@ -48,12 +48,12 @@ Claude-Session: https://claude.ai/code/session_01D7cq6B6pJ8BaHJQFKYFtUd
 
 **Files:**
 - Modify: `composer.json`
-- Create: `src/EventDispatcher/StoppableEventTrait.php`
-- Test: `tests/EventDispatcher/StoppableEventTraitTest.php`
+- Create: `src/Events/StoppableEventTrait.php`
+- Test: `tests/Events/StoppableEventTraitTest.php`
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `Manychois\PhpStrong\EventDispatcher\StoppableEventTrait` with `private bool $propagationStopped`, `public function isPropagationStopped(): bool`, `public function stopPropagation(): void`. Tasks 2 and 3 use it in their test event classes. Also makes `Psr\EventDispatcher\*` autoloadable for every later task.
+- Produces: `Manychois\PhpStrong\Events\StoppableEventTrait` with `private bool $propagationStopped`, `public function isPropagationStopped(): bool`, `public function stopPropagation(): void`. Tasks 2 and 3 use it in their test event classes. Also makes `Psr\EventDispatcher\*` autoloadable for every later task.
 
 - [ ] **Step 1: Add the dependency**
 
@@ -67,16 +67,16 @@ In `composer.json`, extend the `keywords` array with `"psr-14"` and `"event-disp
 
 - [ ] **Step 3: Write the failing test**
 
-Create `tests/EventDispatcher/StoppableEventTraitTest.php`:
+Create `tests/Events/StoppableEventTraitTest.php`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrongTests\EventDispatcher;
+namespace Manychois\PhpStrongTests\Events;
 
-use Manychois\PhpStrong\EventDispatcher\StoppableEventTrait;
+use Manychois\PhpStrong\Events\StoppableEventTrait;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\StoppableEventInterface as IStoppableEvent;
@@ -111,20 +111,20 @@ final class StoppableEventTraitTest extends TestCase
 
 - [ ] **Step 4: Run the test to verify it fails**
 
-Run: `./vendor/bin/phpunit --no-coverage tests/EventDispatcher/StoppableEventTraitTest.php`
+Run: `./vendor/bin/phpunit --no-coverage tests/Events/StoppableEventTraitTest.php`
 
-Expected: FAIL — `Trait "Manychois\PhpStrong\EventDispatcher\StoppableEventTrait" not found`.
+Expected: FAIL — `Trait "Manychois\PhpStrong\Events\StoppableEventTrait" not found`.
 
 - [ ] **Step 5: Write the trait**
 
-Create `src/EventDispatcher/StoppableEventTrait.php`:
+Create `src/Events/StoppableEventTrait.php`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\EventDispatcher;
+namespace Manychois\PhpStrong\Events;
 
 /**
  * Implements the members of `Psr\EventDispatcher\StoppableEventInterface`.
@@ -157,7 +157,7 @@ trait StoppableEventTrait
 
 - [ ] **Step 6: Run the test to verify it passes**
 
-Run: `./vendor/bin/phpunit --no-coverage tests/EventDispatcher/StoppableEventTraitTest.php`
+Run: `./vendor/bin/phpunit --no-coverage tests/Events/StoppableEventTraitTest.php`
 
 Expected: `OK (2 tests, 3 assertions)`.
 
@@ -170,7 +170,7 @@ Expected: no `phpcs` violations; PHPStan reports `[OK] No errors`; the full suit
 - [ ] **Step 8: Commit**
 
 ```bash
-git add composer.json composer.lock src/EventDispatcher/StoppableEventTrait.php tests/EventDispatcher/StoppableEventTraitTest.php
+git add composer.json composer.lock src/Events/StoppableEventTrait.php tests/Events/StoppableEventTraitTest.php
 git commit -m "feat(event-dispatcher): add psr/event-dispatcher and StoppableEventTrait"
 ```
 
@@ -179,8 +179,8 @@ git commit -m "feat(event-dispatcher): add psr/event-dispatcher and StoppableEve
 ### Task 2: EventDispatcher
 
 **Files:**
-- Create: `src/EventDispatcher/EventDispatcher.php`
-- Test: `tests/EventDispatcher/EventDispatcherTest.php`
+- Create: `src/Events/EventDispatcher.php`
+- Test: `tests/Events/EventDispatcherTest.php`
 
 **Interfaces:**
 - Consumes: `StoppableEventTrait` from Task 1 (test events only).
@@ -190,18 +190,18 @@ This task uses a hand-written fake provider, so it does not depend on Task 3.
 
 - [ ] **Step 1: Write the failing test**
 
-Create `tests/EventDispatcher/EventDispatcherTest.php`:
+Create `tests/Events/EventDispatcherTest.php`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrongTests\EventDispatcher;
+namespace Manychois\PhpStrongTests\Events;
 
 use LogicException;
-use Manychois\PhpStrong\EventDispatcher\EventDispatcher;
-use Manychois\PhpStrong\EventDispatcher\StoppableEventTrait;
+use Manychois\PhpStrong\Events\EventDispatcher;
+use Manychois\PhpStrong\Events\StoppableEventTrait;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -338,20 +338,20 @@ Note: `StoppableTestEvent` and `FakeListenerProvider` are declared in this test 
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `./vendor/bin/phpunit --no-coverage tests/EventDispatcher/EventDispatcherTest.php`
+Run: `./vendor/bin/phpunit --no-coverage tests/Events/EventDispatcherTest.php`
 
-Expected: FAIL — `Class "Manychois\PhpStrong\EventDispatcher\EventDispatcher" not found`.
+Expected: FAIL — `Class "Manychois\PhpStrong\Events\EventDispatcher" not found`.
 
 - [ ] **Step 3: Write the dispatcher**
 
-Create `src/EventDispatcher/EventDispatcher.php`:
+Create `src/Events/EventDispatcher.php`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\EventDispatcher;
+namespace Manychois\PhpStrong\Events;
 
 use Override;
 use Psr\EventDispatcher\EventDispatcherInterface as IEventDispatcher;
@@ -414,7 +414,7 @@ final class EventDispatcher implements IEventDispatcher
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `./vendor/bin/phpunit --no-coverage tests/EventDispatcher/EventDispatcherTest.php`
+Run: `./vendor/bin/phpunit --no-coverage tests/Events/EventDispatcherTest.php`
 
 Expected: `OK (6 tests, ...)`.
 
@@ -427,7 +427,7 @@ Expected: clean. If PHPStan objects to `$listener($event)` because `getListeners
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/EventDispatcher/EventDispatcher.php tests/EventDispatcher/EventDispatcherTest.php
+git add src/Events/EventDispatcher.php tests/Events/EventDispatcherTest.php
 git commit -m "feat(event-dispatcher): add PSR-14 EventDispatcher"
 ```
 
@@ -436,8 +436,8 @@ git commit -m "feat(event-dispatcher): add PSR-14 EventDispatcher"
 ### Task 3: ListenerProvider — callable listeners, matching and ordering
 
 **Files:**
-- Create: `src/EventDispatcher/ListenerProvider.php`
-- Test: `tests/EventDispatcher/ListenerProviderTest.php`
+- Create: `src/Events/ListenerProvider.php`
+- Test: `tests/Events/ListenerProviderTest.php`
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
@@ -445,17 +445,17 @@ git commit -m "feat(event-dispatcher): add PSR-14 EventDispatcher"
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `tests/EventDispatcher/ListenerProviderTest.php`:
+Create `tests/Events/ListenerProviderTest.php`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrongTests\EventDispatcher;
+namespace Manychois\PhpStrongTests\Events;
 
 use InvalidArgumentException;
-use Manychois\PhpStrong\EventDispatcher\ListenerProvider;
+use Manychois\PhpStrong\Events\ListenerProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -550,20 +550,20 @@ final class ListenerProviderTest extends TestCase
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `./vendor/bin/phpunit --no-coverage tests/EventDispatcher/ListenerProviderTest.php`
+Run: `./vendor/bin/phpunit --no-coverage tests/Events/ListenerProviderTest.php`
 
-Expected: FAIL — `Class "Manychois\PhpStrong\EventDispatcher\ListenerProvider" not found`.
+Expected: FAIL — `Class "Manychois\PhpStrong\Events\ListenerProvider" not found`.
 
 - [ ] **Step 3: Write the provider**
 
-Create `src/EventDispatcher/ListenerProvider.php`. `toCallable()` is a deliberate stub here — Task 4 fills it in.
+Create `src/Events/ListenerProvider.php`. `toCallable()` is a deliberate stub here — Task 4 fills it in.
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\EventDispatcher;
+namespace Manychois\PhpStrong\Events;
 
 use InvalidArgumentException;
 use Override;
@@ -708,7 +708,7 @@ Note on member order: `on()` and `toCallable()` sit above the `#region implement
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `./vendor/bin/phpunit --no-coverage tests/EventDispatcher/ListenerProviderTest.php`
+Run: `./vendor/bin/phpunit --no-coverage tests/Events/ListenerProviderTest.php`
 
 Expected: `OK (5 tests, ...)`.
 
@@ -721,7 +721,7 @@ Expected: clean. Two likely PHPStan complaints and their fixes: `usort()` callba
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/EventDispatcher/ListenerProvider.php tests/EventDispatcher/ListenerProviderTest.php
+git add src/Events/ListenerProvider.php tests/Events/ListenerProviderTest.php
 git commit -m "feat(event-dispatcher): add type-based prioritised ListenerProvider"
 ```
 
@@ -730,8 +730,8 @@ git commit -m "feat(event-dispatcher): add type-based prioritised ListenerProvid
 ### Task 4: Array and container-resolved listeners
 
 **Files:**
-- Modify: `src/EventDispatcher/ListenerProvider.php` (replace the `toCallable()` stub)
-- Test: `tests/EventDispatcher/ListenerProviderTest.php` (append tests and helper classes)
+- Modify: `src/Events/ListenerProvider.php` (replace the `toCallable()` stub)
+- Test: `tests/Events/ListenerProviderTest.php` (append tests and helper classes)
 
 **Interfaces:**
 - Consumes: `ListenerProvider::toCallable()` from Task 3; `EventDispatcher` and `FakeListenerProvider` from Task 2.
@@ -739,7 +739,7 @@ git commit -m "feat(event-dispatcher): add type-based prioritised ListenerProvid
 
 - [ ] **Step 1: Write the failing tests**
 
-Append to `tests/EventDispatcher/ListenerProviderTest.php` — the helper classes go after the test class, and add `use Manychois\PhpStrong\EventDispatcher\EventDispatcher;`, `use Override;`, `use Psr\Container\ContainerInterface as IContainer;`, `use Psr\Container\NotFoundExceptionInterface as INotFoundException;`, `use RuntimeException;` to the imports:
+Append to `tests/Events/ListenerProviderTest.php` — the helper classes go after the test class, and add `use Manychois\PhpStrong\Events\EventDispatcher;`, `use Override;`, `use Psr\Container\ContainerInterface as IContainer;`, `use Psr\Container\NotFoundExceptionInterface as INotFoundException;`, `use RuntimeException;` to the imports:
 
 ```php
     #[Test]
@@ -929,13 +929,13 @@ final class ServiceNotFoundException extends RuntimeException implements INotFou
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `./vendor/bin/phpunit --no-coverage tests/EventDispatcher/ListenerProviderTest.php`
+Run: `./vendor/bin/phpunit --no-coverage tests/Events/ListenerProviderTest.php`
 
 Expected: the new tests FAIL — the malformed-array test reports the stub's `The array listener is not callable.` message instead of the expected one, and every service-reference test fails because `['spy', 'handle']` is not callable, so registration throws.
 
 - [ ] **Step 3: Replace the `toCallable()` stub**
 
-In `src/EventDispatcher/ListenerProvider.php`, add `use RuntimeException;` to the imports and replace `toCallable()` with:
+In `src/Events/ListenerProvider.php`, add `use RuntimeException;` to the imports and replace `toCallable()` with:
 
 ```php
     /**
@@ -990,7 +990,7 @@ In `src/EventDispatcher/ListenerProvider.php`, add `use RuntimeException;` to th
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `./vendor/bin/phpunit --no-coverage tests/EventDispatcher/ListenerProviderTest.php`
+Run: `./vendor/bin/phpunit --no-coverage tests/Events/ListenerProviderTest.php`
 
 Expected: `OK (15 tests, ...)`.
 
@@ -1003,7 +1003,7 @@ Expected: clean. If PHPStan cannot narrow `$listener[0] ?? null` from `array<mix
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/EventDispatcher/ListenerProvider.php tests/EventDispatcher/ListenerProviderTest.php
+git add src/Events/ListenerProvider.php tests/Events/ListenerProviderTest.php
 git commit -m "feat(event-dispatcher): support instance and container-resolved listeners"
 ```
 
@@ -1012,17 +1012,17 @@ git commit -m "feat(event-dispatcher): support instance and container-resolved l
 ### Task 5: Cache behaviour
 
 **Files:**
-- Test: `tests/EventDispatcher/ListenerProviderTest.php` (append tests)
+- Test: `tests/Events/ListenerProviderTest.php` (append tests)
 
 **Interfaces:**
 - Consumes: `ListenerProvider` from Tasks 3 and 4, `ListenerSpy` and `FakeContainer` from Task 4.
 - Produces: no production API; locks in that the cache is invalidated by `on()` and that a cached deferred listener still re-resolves its service.
 
-If a test in this task fails, the fix belongs in `getListenersForEvent()`/`on()` in `src/EventDispatcher/ListenerProvider.php`; do not weaken the test.
+If a test in this task fails, the fix belongs in `getListenersForEvent()`/`on()` in `src/Events/ListenerProvider.php`; do not weaken the test.
 
 - [ ] **Step 1: Write the tests**
 
-Append to `tests/EventDispatcher/ListenerProviderTest.php`:
+Append to `tests/Events/ListenerProviderTest.php`:
 
 ```php
     #[Test]
@@ -1076,7 +1076,7 @@ Append to `tests/EventDispatcher/ListenerProviderTest.php`:
 
 - [ ] **Step 2: Run the tests**
 
-Run: `./vendor/bin/phpunit --no-coverage tests/EventDispatcher/ListenerProviderTest.php`
+Run: `./vendor/bin/phpunit --no-coverage tests/Events/ListenerProviderTest.php`
 
 Expected: `OK (18 tests, ...)`. These should pass against Task 3's implementation; if one fails, the cache is not being cleared in `on()` — fix the production code.
 
@@ -1089,7 +1089,7 @@ Expected: clean.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add tests/EventDispatcher/ListenerProviderTest.php
+git add tests/Events/ListenerProviderTest.php
 git commit -m "test(event-dispatcher): cover listener cache invalidation"
 ```
 
@@ -1098,7 +1098,7 @@ git commit -m "test(event-dispatcher): cover listener cache invalidation"
 ### Task 6: Documentation and coverage verification
 
 **Files:**
-- Create: `docs/event-dispatcher.md`
+- Create: `docs/events.md`
 - Modify: `README.md`
 
 **Interfaces:**
@@ -1113,16 +1113,16 @@ Expected: the module list / documentation links. Match that formatting exactly w
 
 - [ ] **Step 2: Write the reference page**
 
-Create `docs/event-dispatcher.md`, following the shape of `docs/dependency-injection.md` (title line naming the PSR and namespace, a short intro, a quick-start code block, then one table per class). Required content:
+Create `docs/events.md`, following the shape of `docs/dependency-injection.md` (title line naming the PSR and namespace, a short intro, a quick-start code block, then one table per class). Required content:
 
-- Title: `# PSR-14 Event Dispatcher — \`Manychois\PhpStrong\EventDispatcher\``.
+- Title: `# PSR-14 Event Dispatcher — \`Manychois\PhpStrong\Events\``.
 - Intro: the dispatcher takes any PSR-14 listener provider; `ListenerProvider` matches by type including parents and interfaces; the container is optional and only used for deferred listeners.
 - Quick start:
 
 ```php
-use Manychois\PhpStrong\EventDispatcher\EventDispatcher;
-use Manychois\PhpStrong\EventDispatcher\ListenerProvider;
-use Manychois\PhpStrong\EventDispatcher\StoppableEventTrait;
+use Manychois\PhpStrong\Events\EventDispatcher;
+use Manychois\PhpStrong\Events\ListenerProvider;
+use Manychois\PhpStrong\Events\StoppableEventTrait;
 use Psr\EventDispatcher\StoppableEventInterface;
 
 final class UserRegistered implements StoppableEventInterface
@@ -1149,7 +1149,7 @@ $event = (new EventDispatcher($provider))->dispatch(new UserRegistered('a@exampl
 
 - [ ] **Step 3: Add the module to the README**
 
-Add the new page to the README list in the same format as the existing entries, e.g. a row/bullet naming PSR-14 and linking `docs/event-dispatcher.md`.
+Add the new page to the README list in the same format as the existing entries, e.g. a row/bullet naming PSR-14 and linking `docs/events.md`.
 
 - [ ] **Step 4: Verify coverage**
 
@@ -1157,7 +1157,7 @@ Run: `composer test`
 
 Then run: `php -r '$x = simplexml_load_file("coverage/clover.xml"); foreach ($x->xpath("//file") as $f) { $m = $f->metrics; if (str_contains((string) $f["name"], "EventDispatcher")) { printf("%s %d/%d\n", basename((string) $f["name"]), (int) $m["coveredstatements"], (int) $m["statements"]); } }'`
 
-Expected: every `src/EventDispatcher/*.php` file reports covered == total. If a line is uncovered, add the missing test to the relevant test file rather than excluding the code.
+Expected: every `src/Events/*.php` file reports covered == total. If a line is uncovered, add the missing test to the relevant test file rather than excluding the code.
 
 - [ ] **Step 5: Quality gates**
 
@@ -1168,6 +1168,6 @@ Expected: clean.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add docs/event-dispatcher.md README.md
+git add docs/events.md README.md
 git commit -m "docs: document the PSR-14 event dispatcher module"
 ```

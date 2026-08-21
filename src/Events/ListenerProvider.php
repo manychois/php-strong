@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\EventDispatcher;
+namespace Manychois\PhpStrong\Events;
 
 use InvalidArgumentException;
 use Override;

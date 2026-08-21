@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrongTests\EventDispatcher;
+namespace Manychois\PhpStrongTests\Events;
 
 use LogicException;
-use Manychois\PhpStrong\EventDispatcher\EventDispatcher;
-use Manychois\PhpStrong\EventDispatcher\StoppableEventTrait;
+use Manychois\PhpStrong\Events\EventDispatcher;
+use Manychois\PhpStrong\Events\StoppableEventTrait;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
