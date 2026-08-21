@@ -10,10 +10,12 @@
     "psr-7",
     "psr-11",
     "psr-14",
+    "psr-16",
     "psr-17",
     "psr-18",
     "psr-20",
     "cache",
+    "simple-cache",
     "logger",
     "container",
     "event-dispatcher",
@@ -58,7 +60,8 @@
     "psr/http-client": "^1.0",
     "ext-curl": "*",
     "psr/event-dispatcher": "^1.0",
-    "psr/cache": "^3"
+    "psr/cache": "^3",
+    "psr/simple-cache": "^3"
   },
   "require-dev": {
     "phpstan/extension-installer": "^1.4.3",

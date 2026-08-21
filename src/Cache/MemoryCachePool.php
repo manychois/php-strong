@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Manychois\PhpStrong\Cache;
 
 use DateTimeImmutable;
+use Manychois\PhpStrong\Cache\Internal\CacheKey;
 use Manychois\PhpStrong\Clock\UtcClock;
 use Override;
 use Psr\Cache\CacheItemInterface as ICacheItem;
@@ -18,8 +19,6 @@ use Psr\Clock\ClockInterface as IClock;
  */
 final class MemoryCachePool implements ICacheItemPool
 {
-    private const string RESERVED_CHARS = '{}()/\\@:';
-
     private readonly IClock $clock;
     /**
      * @var array<string, ICacheItem> Items awaiting `commit()`, keyed by cache key.
@@ -62,13 +61,6 @@ final class MemoryCachePool implements ICacheItemPool
         }
 
         return $count;
-    }
-
-    private function assertValidKey(string $key): void
-    {
-        if ($key === '' || strpbrk($key, self::RESERVED_CHARS) !== false) {
-            throw new InvalidArgumentException(sprintf('Invalid cache key "%s".', $key));
-        }
     }
 
     /**
@@ -127,7 +119,7 @@ final class MemoryCachePool implements ICacheItemPool
     #[Override]
     public function deleteItem(string $key): bool
     {
-        $this->assertValidKey($key);
+        CacheKey::assert($key);
         unset($this->deferred[$key], $this->entries[$key]);
 
         return true;
@@ -140,7 +132,7 @@ final class MemoryCachePool implements ICacheItemPool
     public function deleteItems(array $keys): bool
     {
         foreach ($keys as $key) {
-            $this->assertValidKey($key);
+            CacheKey::assert($key);
         }
 
         $ok = true;
@@ -163,7 +155,7 @@ final class MemoryCachePool implements ICacheItemPool
     #[Override]
     public function getItem(string $key): CacheItem
     {
-        $this->assertValidKey($key);
+        CacheKey::assert($key);
 
         $pending = $this->deferred[$key] ?? null;
         if ($pending !== null) {
@@ -194,7 +186,7 @@ final class MemoryCachePool implements ICacheItemPool
     public function getItems(array $keys = []): array
     {
         foreach ($keys as $key) {
-            $this->assertValidKey($key);
+            CacheKey::assert($key);
         }
 
         $items = [];
@@ -211,7 +203,7 @@ final class MemoryCachePool implements ICacheItemPool
     #[Override]
     public function hasItem(string $key): bool
     {
-        $this->assertValidKey($key);
+        CacheKey::assert($key);
 
         return isset($this->deferred[$key]) || $this->liveEntry($key) !== null;
     }
@@ -223,7 +215,7 @@ final class MemoryCachePool implements ICacheItemPool
     public function save(ICacheItem $item): bool
     {
         $key = $item->getKey();
-        $this->assertValidKey($key);
+        CacheKey::assert($key);
         unset($this->deferred[$key]);
         $expiry = $item instanceof CacheItem ? $item->getExpiry() : null;
 
@@ -244,7 +236,7 @@ final class MemoryCachePool implements ICacheItemPool
     public function saveDeferred(ICacheItem $item): bool
     {
         $key = $item->getKey();
-        $this->assertValidKey($key);
+        CacheKey::assert($key);
         $this->deferred[$key] = $item;
 
         return true;
