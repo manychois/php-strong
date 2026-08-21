@@ -8,11 +8,13 @@
     "psr-3",
     "psr-7",
     "psr-11",
+    "psr-14",
     "psr-17",
     "psr-18",
     "psr-20",
     "logger",
     "container",
+    "event-dispatcher",
     "http-message",
     "http-factory",
     "http-client",
@@ -52,7 +54,8 @@
     "psr/http-factory": "^1.1",
     "psr/log": "^3.0",
     "psr/http-client": "^1.0",
-    "ext-curl": "*"
+    "ext-curl": "*",
+    "psr/event-dispatcher": "^1.0"
   },
   "require-dev": {
     "phpstan/extension-installer": "^1.4.3",
