@@ -125,7 +125,9 @@ final class ListenerProvider implements IListenerProvider
                 );
             }
 
-            return call_user_func([$service, $method], $event);
+            $callable = [$service, $method];
+
+            return $callable($event);
         };
     }
 

@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Manychois\PhpStrong\EventDispatcher\EventDispatcher;
 use Manychois\PhpStrong\EventDispatcher\ListenerProvider;
 use Override;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface as IContainer;
@@ -120,6 +121,22 @@ final class ListenerProviderTest extends TestCase
     }
 
     #[Test]
+    public function on_callsAnInstanceMethodListenerDirectlyEvenWithAContainerPresent(): void
+    {
+        $spy = new ListenerSpy();
+        $container = new FakeContainer(['spy' => $spy]);
+        $provider = new ListenerProvider($container);
+        $provider->on(DogEvent::class, [$spy, 'handle']);
+
+        foreach ($provider->getListenersForEvent(new DogEvent()) as $listener) {
+            $listener(new DogEvent());
+        }
+
+        self::assertSame(1, $spy->calls);
+        self::assertSame(0, $container->gets, 'An object listener must never be resolved through the container.');
+    }
+
+    #[Test]
     public function on_rejectsAnInstanceListenerWithoutThatMethod(): void
     {
         $provider = new ListenerProvider();
@@ -130,15 +147,33 @@ final class ListenerProviderTest extends TestCase
         $provider->on(DogEvent::class, [new ListenerSpy(), 'noSuchMethod']);
     }
 
+    /**
+     * @return array<string, array{array<mixed>}>
+     */
+    public static function provideMalformedArrayListeners(): array
+    {
+        return [
+            'wrong length' => [['only-one-element']],
+            'empty method name' => [[new ListenerSpy(), '']],
+            'empty service id' => [['', 'handle']],
+            'non-string method' => [[new ListenerSpy(), 123]],
+            'first element neither object nor string' => [[123, 'handle']],
+        ];
+    }
+
+    /**
+     * @param array<mixed> $listener
+     */
     #[Test]
-    public function on_rejectsAMalformedArrayListener(): void
+    #[DataProvider('provideMalformedArrayListeners')]
+    public function on_rejectsAMalformedArrayListener(array $listener): void
     {
         $provider = new ListenerProvider();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('An array listener must be [$target, $method] with a non-empty method name.');
 
-        $provider->on(DogEvent::class, ['only-one-element']);
+        $provider->on(DogEvent::class, $listener);
     }
 
     #[Test]

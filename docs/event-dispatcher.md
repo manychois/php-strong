@@ -43,19 +43,33 @@ $event = (new EventDispatcher($provider))->dispatch(new UserRegistered('a@exampl
 | `on(string $eventType, callable\|array $listener, int $priority = 0): static` | Registers a listener for an event type, its subclasses, and its implementors. Higher priority runs first. Returns `$this` for chaining. |
 | `getListenersForEvent(object $event): iterable` | Returns the listeners matching the event, most important first. |
 
+## `StoppableEventTrait`
+
+Implements the members of `Psr\EventDispatcher\StoppableEventInterface`. The using class must still declare
+`implements StoppableEventInterface` itself; the trait carries no `#[Override]` attributes so it stays usable by a
+class that only wants the two methods.
+
+| Method | Notes |
+| ------ | ----- |
+| `isPropagationStopped(): bool` | Returns `true` once `stopPropagation()` has been called, `false` otherwise. |
+| `stopPropagation(): void` | Stops the event from reaching any listener that has not run yet. |
+
 ## Listener forms
 
 `on()` accepts three forms for `$listener`:
 
-- A plain `callable` (closure, first-class callable, function name, `[$object, 'method']` array checked as a
-  static-analysis-friendly `callable`, etc.) — called as-is.
-- `[$instance, $method]` — an object plus a method name; used as a callable as-is, so `$instance` must already
-  exist at registration time.
+- A plain `callable` that is not an `array` (closure, first-class callable, function name, etc.) — called as-is.
+- `[$instance, $method]` — an object plus a method name; passed through `toCallable()`, which recognises the object
+  target and returns the array unchanged. `$instance` must already exist at registration time, and the listener is
+  never resolved through the container even when one is configured.
 - `[$serviceId, $method]` — a string service identifier plus a method name; requires a container to have been
   passed to the constructor. The service is resolved from the container on every dispatch (not cached across
   dispatches, not resolved at registration time), so registering a service listener without a container succeeds
   only if the array is otherwise `callable` on its own; deferred resolution is not checked by static analysis and
-  can fail at dispatch time even though `on()` accepted it.
+  can fail at dispatch time even though `on()` accepted it. When a container is configured, `[SomeClass::class,
+  'staticMethod']` stops meaning "call the static method" and instead means "resolve the service `SomeClass` from
+  the container and call `staticMethod` on it" — the presence of a container changes how a string target is
+  interpreted.
 
 ## Ordering
 

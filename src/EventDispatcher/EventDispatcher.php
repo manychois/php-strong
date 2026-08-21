@@ -8,6 +8,7 @@ use Override;
 use Psr\EventDispatcher\EventDispatcherInterface as IEventDispatcher;
 use Psr\EventDispatcher\ListenerProviderInterface as IListenerProvider;
 use Psr\EventDispatcher\StoppableEventInterface as IStoppableEvent;
+use Throwable;
 
 /**
  * PSR-14 dispatcher that passes an event to every listener the provider yields for it.
@@ -38,6 +39,10 @@ final class EventDispatcher implements IEventDispatcher
      * @param object $event The event to dispatch.
      *
      * @return object The same instance that was passed in, after the listeners have run.
+     *
+     * @throws Throwable if a listener throws, the exception propagates to the caller and no later listener runs,
+     *   including a `RuntimeException` or a PSR-11 `NotFoundExceptionInterface` raised by a container-resolved
+     *   listener.
      *
      * @phpstan-param T $event
      *
