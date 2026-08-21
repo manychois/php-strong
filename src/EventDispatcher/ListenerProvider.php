@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Override;
 use Psr\Container\ContainerInterface as IContainer;
 use Psr\EventDispatcher\ListenerProviderInterface as IListenerProvider;
+use RuntimeException;
 
 /**
  * Listener provider that matches listeners by event type and orders them by priority.
@@ -81,20 +82,51 @@ final class ListenerProvider implements IListenerProvider
 
     /**
      * Normalises an array listener into a callable.
+     * `[$instance, $method]` is used as-is; `[$serviceId, $method]` becomes a closure that resolves the service
+     * from the container each time the listener runs.
      *
      * @param array<mixed> $listener The array form of a listener.
      *
      * @return callable The listener to call with the event.
      *
-     * @throws InvalidArgumentException if the array is not a usable listener.
+     * @throws InvalidArgumentException if the array is malformed, or is not callable and cannot be deferred.
      */
     private function toCallable(array $listener): callable
     {
-        if (!is_callable($listener)) {
-            throw new InvalidArgumentException('The array listener is not callable.');
+        $target = $listener[0] ?? null;
+        $method = $listener[1] ?? null;
+        $malformed = count($listener) !== 2
+            || !is_string($method)
+            || $method === ''
+            || (!is_object($target) && !is_string($target))
+            || $target === '';
+        if ($malformed) {
+            throw new InvalidArgumentException(
+                'An array listener must be [$target, $method] with a non-empty method name.'
+            );
         }
 
-        return $listener;
+        $container = $this->container;
+        if (is_object($target) || $container === null) {
+            if (!is_callable($listener)) {
+                throw new InvalidArgumentException('The array listener is not callable.');
+            }
+
+            return $listener;
+        }
+
+        $serviceId = $target;
+
+        return static function (object $event) use ($container, $serviceId, $method): mixed {
+            $service = $container->get($serviceId);
+            if (!is_object($service) || !is_callable([$service, $method])) {
+                throw new RuntimeException(
+                    sprintf('Service "%s" cannot handle the event with method "%s".', $serviceId, $method)
+                );
+            }
+
+            return call_user_func([$service, $method], $event);
+        };
     }
 
     #region implements IListenerProvider
