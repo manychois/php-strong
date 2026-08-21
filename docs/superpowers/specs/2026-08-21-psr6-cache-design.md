@@ -72,7 +72,11 @@ final class CacheItem implements ICacheItem
 - `$key` is stored read-only; `$value` and `$expiry` are mutable through the setters.
 - `isHit()` reflects retrieval only. It is `true` when the pool found a live entry (or a pending deferred item) for
   the key, and stays whatever it was when the item was created — `set()` does not flip it.
-- `get()` returns `null` when `isHit()` is `false`, per PSR-6.
+- `get()` returns the value the item currently holds: the stored value for a hit, `null` for a miss, or the
+  value most recently passed to `set()`. `set()` does not make `isHit()` true — `isHit()` reports only whether
+  the value came from the cache. (A literal reading of PSR-6 would have `get()` return `null` whenever
+  `isHit()` is `false`, which breaks the spec's own `if (!$item->isHit()) { $item->set(...); $pool->save($item); }`
+  pattern, since the pool reads the value back through `get()`.)
 - `expiresAt(null)` and `expiresAfter(null)` mean "never expires".
 - `expiresAfter(int $seconds)` and `expiresAfter(DateInterval $i)` resolve against `$clock->now()`, which is why the
   item holds the clock. A negative or zero `int` yields an already-expired item, i.e. saving it stores nothing
