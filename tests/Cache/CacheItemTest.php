@@ -8,7 +8,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use Manychois\PhpStrong\Cache\CacheItem;
-use Manychois\PhpStrong\Clock\TestClock;
+use Manychois\PhpStrong\Time\TestClock;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

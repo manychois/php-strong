@@ -3,7 +3,7 @@
 Two implementations of `Psr\Cache\CacheItemPoolInterface`: `FileCachePool`, which stores one file per key under a
 directory you choose, and `MemoryCachePool`, which keeps its entries in memory for the lifetime of the pool object.
 Both measure expiry against an injected `Psr\Clock\ClockInterface`, so a test can move time with
-`Manychois\PhpStrong\Clock\TestClock` instead of sleeping. `CacheItem` is the item type of both pools; the pool
+`Manychois\PhpStrong\Time\TestClock` instead of sleeping. `CacheItem` is the item type of both pools; the pool
 creates it for you. `SimpleCache` puts the PSR-16 interface over either pool.
 
 ```php

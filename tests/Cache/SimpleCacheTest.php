@@ -11,7 +11,7 @@ use Manychois\PhpStrong\Cache\FileCachePool;
 use Manychois\PhpStrong\Cache\InvalidArgumentException;
 use Manychois\PhpStrong\Cache\MemoryCachePool;
 use Manychois\PhpStrong\Cache\SimpleCache;
-use Manychois\PhpStrong\Clock\TestClock;
+use Manychois\PhpStrong\Time\TestClock;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;

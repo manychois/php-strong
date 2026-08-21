@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Logging;
 
-use Manychois\PhpStrong\Clock\UtcClock;
+use Manychois\PhpStrong\Time\UtcClock;
 use Override;
 use Psr\Clock\ClockInterface as IClock;
 use Psr\Log\LoggerInterface as ILogger;

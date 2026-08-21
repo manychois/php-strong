@@ -1,9 +1,13 @@
-# PSR-20 Clock — `Manychois\PhpStrong\Clock`
+# Time — `Manychois\PhpStrong\Time`
+
+Date and time support: PSR-20 clocks, plus calendar types that no PSR covers.
+
+## Clocks (PSR-20)
 
 Two implementations of `Psr\Clock\ClockInterface`. All times are returned in UTC; convert to a user or site timezone
 only at the presentation edge.
 
-## `UtcClock`
+### `UtcClock`
 
 ```php
 $clock = new UtcClock();
@@ -33,3 +37,28 @@ $clock->setNow(new DateTime('2026-06-01T12:00:00+10:00')); // converted to UTC: 
 | `now(): DateTimeImmutable` | Returns the same instance until changed. |
 
 Because it extends `UtcClock`, code type-hinted on `UtcClock` (not only `ClockInterface`) also accepts it.
+
+## `DayOfWeek`
+
+An `int`-backed enum numbered as in ISO-8601, so `Monday` is `1` and `Sunday` is `7` — the same numbering as the
+`N` format character of `DateTimeInterface::format()`.
+
+```php
+use Manychois\PhpStrong\Time\DayOfWeek;
+
+DayOfWeek::fromDate(new DateTimeImmutable('2026-08-21')); // DayOfWeek::Friday
+DayOfWeek::fromString('friday');                          // DayOfWeek::Friday, case-insensitive
+DayOfWeek::Friday->isWeekend();                           // false
+DayOfWeek::Friday->next();                                // DayOfWeek::Saturday
+DayOfWeek::Friday->plus(3);                               // DayOfWeek::Monday, wraps around the week
+```
+
+| Member | Description |
+| ------ | ----------- |
+| `fromDate(DateTimeInterface $date)` | The day on which `$date` falls, read in that date's own timezone. |
+| `fromString(string $day)` | Resolves an English day name, case-insensitively and ignoring surrounding whitespace. Throws `InvalidArgumentException` for anything else. |
+| `isWeekday()` | `true` for `Monday` through `Friday`. |
+| `isWeekend()` | `true` for `Saturday` and `Sunday`. |
+| `next()` | The following day, wrapping `Sunday` to `Monday`. |
+| `plus(int $days)` | The day `$days` later, wrapping around the week. Negative values move backwards. |
+| `previous()` | The preceding day, wrapping `Monday` to `Sunday`. |

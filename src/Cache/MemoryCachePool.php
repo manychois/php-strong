@@ -6,7 +6,7 @@ namespace Manychois\PhpStrong\Cache;
 
 use DateTimeImmutable;
 use Manychois\PhpStrong\Cache\Internal\CacheKey;
-use Manychois\PhpStrong\Clock\UtcClock;
+use Manychois\PhpStrong\Time\UtcClock;
 use Override;
 use Psr\Cache\CacheItemInterface as ICacheItem;
 use Psr\Cache\CacheItemPoolInterface as ICacheItemPool;

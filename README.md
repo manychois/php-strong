@@ -10,7 +10,10 @@ Targets **PHP 8.5+**, namespace `Manychois\PhpStrong`, PSR-4 autoloading.
 composer require manychois/php-strong
 ```
 
-## Implementations
+## Modules
+
+Each module owns one problem area. Where a PSR governs it, the module implements that PSR; some modules also
+ship utilities no PSR covers.
 
 | PSR | Namespace | Summary | Docs |
 | --- | --------- | ------- | ---- |
@@ -20,11 +23,17 @@ composer require manychois/php-strong
 | PSR-7 HTTP Message + PSR-17 Factories | `Manychois\PhpStrong\Http` | Immutable `Request`, `ServerRequest` (with `fromGlobals()`), `Response`, `Stream`, `UploadedFile`, `Uri`, `Method`/`StatusCode` enums, and the five PSR-17 factories. | [docs/http.md](docs/http.md) |
 | PSR-18 HTTP Client | `Manychois\PhpStrong\Http` | cURL-backed `Client` configured via `RequestOptions` (timeouts, redirects, TLS verification, proxy, user agent, CA bundle); returns responses for every status code and throws `RequestException`/`NetworkException` per the PSR-18 contract, plus a non-PSR `sendAsync()` returning `PendingRequest` handles for concurrent requests over `curl_multi`. | [docs/http.md](docs/http.md) |
 | PSR-11 Container | `Manychois\PhpStrong\DependencyInjection` | `ContainerBuilder` (`singleton`/`factory`/`alias`/opt-in `autowire`/`aware` setter hooks) producing an immutable, lazily-resolving `Container` with circular-dependency detection. | [docs/dependency-injection.md](docs/container.md) |
-| PSR-20 Clock | `Manychois\PhpStrong\Clock` | `UtcClock` (always UTC) and `TestClock` (frozen/advanceable instant for deterministic tests). | [docs/clock.md](docs/clock.md) |
+| PSR-20 Clock | `Manychois\PhpStrong\Time` | `UtcClock` (always UTC) and `TestClock` (frozen/advanceable instant for deterministic tests). | [docs/time.md](docs/time.md) |
 | PSR-14 Event Dispatcher | `Manychois\PhpStrong\Events` | `EventDispatcher` calling listeners returned by any PSR-14 provider; `ListenerProvider` matches listeners by type (including parents/interfaces), orders by priority, and supports deferred `[$serviceId, $method]` listeners resolved from an optional container. | [docs/events.md](docs/events.md) |
 | PSR-13 Links | `Manychois\PhpStrong\Links` | Immutable, evolvable `Link` and `LinkProvider`, with `isTemplated()` derived from a strict RFC 6570 check of the href. | [docs/links.md](docs/links.md) |
 
 More PSRs (15) are planned.
+
+### Utilities
+
+| Namespace | Summary | Docs |
+| --------- | ------- | ---- |
+| `Manychois\PhpStrong\Time` | `DayOfWeek`, an ISO-8601-numbered enum with weekend checks and wrapping arithmetic. | [docs/time.md](docs/time.md) |
 
 ## Development
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrong\Clock;
+namespace Manychois\PhpStrong\Time;
 
 use DateInterval;
 use DateTimeImmutable;

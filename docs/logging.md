@@ -32,7 +32,7 @@ new Logger(string $channel = 'app', iterable $handlers = [], ?ClockInterface $cl
 | ------ | ----------- |
 | `$channel` | Name attached to every log (`app`, `db`, `http`, …). |
 | `$handlers` | `HandlerInterface` instances; each receives every log. |
-| `$clock` | PSR-20 clock for timestamps; defaults to [`UtcClock`](clock.md). Use `TestClock` in tests. |
+| `$clock` | PSR-20 clock for timestamps; defaults to [`UtcClock`](time.md). Use `TestClock` in tests. |
 | `pushHandler(HandlerInterface)` | Appends a handler. |
 | `withChannel(string): self` | New logger sharing handlers and clock, different channel. |
 | `log($level, $message, $context)` + the eight PSR-3 level methods | Invalid levels throw `Psr\Log\InvalidArgumentException`. |

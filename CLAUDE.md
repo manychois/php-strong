@@ -41,11 +41,11 @@ For user-facing docs (README, guides, API reference), follow Diátaxis: @docs/in
 
 ## Architecture
 
-Scope: concrete implementations of PSR interfaces. Currently depended on: PSR-7 (`psr/http-message`), PSR-17 (`psr/http-factory`), PSR-11 (`psr/container`), PSR-20 (`psr/clock`). Add the matching `psr/*` package to `composer.json` when implementing a new PSR.
+Scope: solid, strongly-typed building blocks — concrete implementations of PSR interfaces, plus general-purpose utilities in the same problem areas (e.g. calendar types alongside the PSR-20 clocks in `Time/`). PSRs currently depended on: PSR-7 (`psr/http-message`), PSR-17 (`psr/http-factory`), PSR-11 (`psr/container`), PSR-20 (`psr/clock`). Add the matching `psr/*` package to `composer.json` when implementing a new PSR.
 
 Principles:
-- One directory per PSR concern under `src/` (e.g. `Http/`, `DependencyInjection/`, `Clock/`), tests mirror it under `tests/`.
-- Every public class implements a PSR interface (or a small extension of one); no framework coupling beyond `psr/*`.
+- One directory per problem area under `src/` (e.g. `Http/`, `DependencyInjection/`, `Time/`), named after the domain rather than the PSR number so non-PSR utilities can live beside the PSR classes; tests mirror it under `tests/`.
+- Where a PSR governs the concern, implement its interface (or a small extension of one); utilities that no PSR covers still belong to that module. No framework coupling beyond `psr/*`.
 - Immutable value objects where the PSR mandates it (PSR-7 `with*` methods return clones); `readonly` elsewhere.
 - Composition over inheritance; no abstract base classes in the public API.
 - Enums for closed sets (HTTP methods, status codes) with conversion to the string/int the PSR interface expects.

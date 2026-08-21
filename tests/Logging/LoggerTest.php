@@ -13,7 +13,7 @@ use Psr\Log\LogLevel as PsrLogLevel;
 use Manychois\PhpStrong\Logging\ArrayHandler;
 use Manychois\PhpStrong\Logging\LogLevel;
 use Manychois\PhpStrong\Logging\Logger;
-use Manychois\PhpStrong\Clock\TestClock;
+use Manychois\PhpStrong\Time\TestClock;
 
 final class LoggerTest extends TestCase
 {

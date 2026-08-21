@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Manychois\PhpStrongTests\Clock;
+namespace Manychois\PhpStrongTests\Time;
 
 use DateTimeImmutable;
 use DateTimeZone;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Clock\ClockInterface;
-use Manychois\PhpStrong\Clock\UtcClock;
+use Manychois\PhpStrong\Time\UtcClock;
 
 final class UtcClockTest extends TestCase
 {
