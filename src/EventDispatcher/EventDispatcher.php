@@ -62,5 +62,5 @@ final class EventDispatcher implements IEventDispatcher
         return $event;
     }
 
-    #endregion
+    #endregion implements IEventDispatcher
 }

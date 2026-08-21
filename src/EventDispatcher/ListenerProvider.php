@@ -171,5 +171,5 @@ final class ListenerProvider implements IListenerProvider
         return $listeners;
     }
 
-    #endregion
+    #endregion implements IListenerProvider
 }
