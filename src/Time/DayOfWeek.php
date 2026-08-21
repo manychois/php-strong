@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Manychois\PhpStrong\Time;
 
 use DateTimeInterface;
-use InvalidArgumentException;
 
 /**
  * Days of the week, numbered as in ISO-8601: Monday is 1 and Sunday is 7.
@@ -32,47 +31,6 @@ enum DayOfWeek: int
     public static function fromDate(DateTimeInterface $date): self
     {
         return self::from((int) $date->format('N'));
-    }
-
-    /**
-     * Resolves a day by its English name. Matching is case-insensitive.
-     *
-     * @param string $day The day name, e.g. `Monday` or `monday`.
-     *
-     * @return self The day of the week.
-     *
-     * @throws InvalidArgumentException if the name is not an English day name.
-     */
-    public static function fromString(string $day): self
-    {
-        $normalized = ucfirst(strtolower(trim($day)));
-        foreach (self::cases() as $case) {
-            if ($case->name === $normalized) {
-                return $case;
-            }
-        }
-
-        throw new InvalidArgumentException(sprintf('Unknown day of the week: %s', $day));
-    }
-
-    /**
-     * Tells whether the day falls on Monday to Friday.
-     *
-     * @return bool `true` if the day is not `Saturday` or `Sunday`.
-     */
-    public function isWeekday(): bool
-    {
-        return !$this->isWeekend();
-    }
-
-    /**
-     * Tells whether the day falls on Saturday or Sunday.
-     *
-     * @return bool `true` if the day is `Saturday` or `Sunday`.
-     */
-    public function isWeekend(): bool
-    {
-        return $this === self::Saturday || $this === self::Sunday;
     }
 
     /**

@@ -47,8 +47,6 @@ An `int`-backed enum numbered as in ISO-8601, so `Monday` is `1` and `Sunday` is
 use Manychois\PhpStrong\Time\DayOfWeek;
 
 DayOfWeek::fromDate(new DateTimeImmutable('2026-08-21')); // DayOfWeek::Friday
-DayOfWeek::fromString('friday');                          // DayOfWeek::Friday, case-insensitive
-DayOfWeek::Friday->isWeekend();                           // false
 DayOfWeek::Friday->next();                                // DayOfWeek::Saturday
 DayOfWeek::Friday->plus(3);                               // DayOfWeek::Monday, wraps around the week
 ```
@@ -56,9 +54,6 @@ DayOfWeek::Friday->plus(3);                               // DayOfWeek::Monday, 
 | Member | Description |
 | ------ | ----------- |
 | `fromDate(DateTimeInterface $date)` | The day on which `$date` falls, read in that date's own timezone. |
-| `fromString(string $day)` | Resolves an English day name, case-insensitively and ignoring surrounding whitespace. Throws `InvalidArgumentException` for anything else. |
-| `isWeekday()` | `true` for `Monday` through `Friday`. |
-| `isWeekend()` | `true` for `Saturday` and `Sunday`. |
 | `next()` | The following day, wrapping `Sunday` to `Monday`. |
 | `plus(int $days)` | The day `$days` later, wrapping around the week. Negative values move backwards. |
 | `previous()` | The preceding day, wrapping `Monday` to `Sunday`. |

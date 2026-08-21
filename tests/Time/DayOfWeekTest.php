@@ -6,7 +6,6 @@ namespace Manychois\PhpStrongTests\Time;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use InvalidArgumentException;
 use Manychois\PhpStrong\Time\DayOfWeek;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -39,60 +38,6 @@ final class DayOfWeekTest extends TestCase
 
         self::assertSame(DayOfWeek::Friday, DayOfWeek::fromDate($utc));
         self::assertSame(DayOfWeek::Saturday, DayOfWeek::fromDate($sydney));
-    }
-
-    #[Test]
-    #[DataProvider('provideDayNames')]
-    public function fromString_matchesCaseInsensitively(string $input, DayOfWeek $expected): void
-    {
-        self::assertSame($expected, DayOfWeek::fromString($input));
-    }
-
-    /**
-     * @return array<int, array{string, DayOfWeek}>
-     */
-    public static function provideDayNames(): array
-    {
-        return [
-            ['Monday', DayOfWeek::Monday],
-            ['monday', DayOfWeek::Monday],
-            ['SUNDAY', DayOfWeek::Sunday],
-            ['  Wednesday  ', DayOfWeek::Wednesday],
-        ];
-    }
-
-    #[Test]
-    #[DataProvider('provideInvalidDayNames')]
-    public function fromString_throwsOnUnknownName(string $input): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage(sprintf('Unknown day of the week: %s', $input));
-
-        DayOfWeek::fromString($input);
-    }
-
-    /**
-     * @return array<int, array{string}>
-     */
-    public static function provideInvalidDayNames(): array
-    {
-        return [
-            ['Mon'],
-            ['Funday'],
-            [''],
-            ['1'],
-        ];
-    }
-
-    #[Test]
-    public function isWeekend_isTrueForSaturdayAndSunday(): void
-    {
-        foreach (DayOfWeek::cases() as $day) {
-            $expected = $day === DayOfWeek::Saturday || $day === DayOfWeek::Sunday;
-
-            self::assertSame($expected, $day->isWeekend(), $day->name);
-            self::assertSame(!$expected, $day->isWeekday(), $day->name);
-        }
     }
 
     #[Test]
