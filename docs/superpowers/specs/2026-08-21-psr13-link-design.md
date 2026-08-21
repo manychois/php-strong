@@ -1,7 +1,7 @@
 # PSR-13 Link — Design
 
 Date: 2026-08-21
-Module: `Manychois\PhpStrong\Link`
+Module: `Manychois\PhpStrong\Links`
 
 ## Goal
 
@@ -31,9 +31,9 @@ Out of scope (deliberately):
 
 - `composer.json`: require `psr/link: ^2` (v2 carries the parameter and return type hints, so the interface
   methods are natively typed); add `psr-13` and `link` keywords.
-- `src/Link/Link.php`, `LinkProvider.php`, `InvalidArgumentException.php`, `Internal/UriTemplate.php`.
-- `tests/Link/` mirrors `src/Link/`.
-- `docs/link.md` — reference page in the style of `docs/events.md`.
+- `src/Links/Link.php`, `LinkProvider.php`, `InvalidArgumentException.php`, `Internal/UriTemplate.php`.
+- `tests/Links/` mirrors `src/Links/`.
+- `docs/links.md` — reference page in the style of `docs/events.md`.
 - `README.md` — add the module to the module list.
 
 The module has no intra-package dependency; it depends only on `psr/link`.
@@ -43,7 +43,7 @@ Imports follow the project standard: `use Psr\Link\EvolvableLinkInterface as IEv
 
 ## Exceptions
 
-`Manychois\PhpStrong\Link\InvalidArgumentException` extends `\InvalidArgumentException`, mirroring the `Cache`
+`Manychois\PhpStrong\Links\InvalidArgumentException` extends `\InvalidArgumentException`, mirroring the `Cache`
 module's pattern of a module-local exception class. PSR-13 mandates no exception interface, so this class
 implements none. Every validation failure described below throws it with a descriptive message naming the
 offending value.
@@ -167,7 +167,7 @@ hand-rolled character loop, keeping the class small enough to read in one screen
 
 ## Testing
 
-`tests/Link/LinkTest.php`, `LinkProviderTest.php`, `Internal/UriTemplateTest.php`, targeting 100% coverage of the
+`tests/Links/LinkTest.php`, `LinkProviderTest.php`, `Internal/UriTemplateTest.php`, targeting 100% coverage of the
 module as with `Cache` and `Events`.
 
 - **Evolvability round-trips**: every `with*`/`without*` returns a new instance whose single change took effect,
@@ -188,7 +188,7 @@ module as with `Cache` and `Events`.
 
 ## Documentation
 
-`docs/link.md`, following `docs/events.md`: a short intro naming the interfaces implemented, one runnable example
+`docs/links.md`, following `docs/events.md`: a short intro naming the interfaces implemented, one runnable example
 building a link and a provider, then a method table per class with the notes that matter (identity semantics,
 idempotence, derived `isTemplated()`, accepted attribute value types). Reference material only — no tutorial, no
 explanation of RFC 6570 beyond what a caller needs. `README.md` gains the module row.
