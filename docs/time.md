@@ -57,3 +57,25 @@ DayOfWeek::Friday->plus(3);                               // DayOfWeek::Monday, 
 | `next()` | The following day, wrapping `Sunday` to `Monday`. |
 | `plus(int $days)` | The day `$days` later, wrapping around the week. Negative values move backwards. |
 | `previous()` | The preceding day, wrapping `Monday` to `Sunday`. |
+
+## `Month`
+
+An `int`-backed enum numbered `January` = `1` through `December` = `12`, matching the `n` format character of
+`DateTimeInterface::format()`.
+
+```php
+use Manychois\PhpStrong\Time\Month;
+
+Month::fromDate(new DateTimeImmutable('2026-08-21')); // Month::August
+Month::February->length(2024);                        // 29
+Month::December->next();                              // Month::January
+Month::October->plus(5);                              // Month::March, wraps around the year
+```
+
+| Member | Description |
+| ------ | ----------- |
+| `fromDate(DateTimeInterface $date)` | The month in which `$date` falls, read in that date's own timezone. |
+| `length(int $year)` | The number of days in the month, 28 to 31. `$year` decides the length of `February` by the proleptic Gregorian leap rule. |
+| `next()` | The following month, wrapping `December` to `January`. |
+| `plus(int $months)` | The month `$months` later, wrapping around the year. Negative values move backwards. |
+| `previous()` | The preceding month, wrapping `January` to `December`. |

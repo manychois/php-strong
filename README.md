@@ -33,7 +33,7 @@ More PSRs (15) are planned.
 
 | Namespace | Summary | Docs |
 | --------- | ------- | ---- |
-| `Manychois\PhpStrong\Time` | `DayOfWeek`, an ISO-8601-numbered enum with wrapping day arithmetic. | [docs/time.md](docs/time.md) |
+| `Manychois\PhpStrong\Time` | `DayOfWeek` and `Month`, calendar enums numbered to match `DateTimeInterface::format()`, with wrapping arithmetic and leap-aware month lengths. | [docs/time.md](docs/time.md) |
 
 ## Development
 
