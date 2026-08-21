@@ -67,8 +67,10 @@ public function __construct(string|Stringable $href = '', array $rels = [], arra
 
 ### State
 
-Four `readonly` properties: `string $href`, `bool $templated`, `list<string> $rels`,
-`array<string, string|int|float|bool|list<string>> $attributes`.
+Four `private` properties: `string $href`, `bool $templated`, `list<string> $rels`,
+`array<string, string|int|float|bool|list<string>> $attributes`. They are not `readonly`: PHP 8.5 rejects
+`clone $this with { ... }`, so evolution follows the `Http\Uri` pattern already in this package — `$clone = clone
+$this;` then assign. The class is `final` and every property is private, so instances are immutable from outside.
 
 `$templated` is computed in the constructor from `$href` via `UriTemplate::isTemplate()`. There is no
 `withTemplated()` and no way to set it independently — §1.6 requires it to be derived from the href alone.
@@ -79,16 +81,17 @@ All eight interface methods live in a `#region implements IEvolvableLink` block,
 `getAttributes()`, `getHref()`, `getRels()`, `isTemplated()`, `withAttribute()`, `withHref()`, `withoutAttribute()`,
 `withoutRel()`, `withRel()`. Each carries `#[Override]`.
 
-Evolution uses PHP 8.5 `clone $this with { … }`. Returns are declared `static` to honour the interface's `@return
-static` contract.
+Evolution clones and assigns, as `Http\Uri` does. Returns are declared `static` to honour the interface's
+`@return static` contract.
 
 - `withHref(string|Stringable $href): static` — casts immediately and recomputes `$templated`.
 - `withRel(string $rel): static` — validates, then returns `$this` unchanged when the rel is already present
   (§3.2: must return normally, must not add a second time).
 - `withoutRel(string $rel): static` — returns `$this` unchanged when absent; otherwise removes and reindexes so the
   result stays a `list`.
-- `withAttribute(string $attribute, mixed $value): static` — validates name and value; an existing name is
-  overwritten in place, keeping its original position.
+- `withAttribute(string $attribute, string|Stringable|int|float|bool|array $value): static` — the union is fixed
+  by the interface signature in `psr/link` 2.0 and cannot be narrowed. Validates name and value; an existing name
+  is overwritten in place, keeping its original position.
 - `withoutAttribute(string $attribute): static` — returns `$this` unchanged when absent.
 
 Getter return types are narrowed in PHPDoc: `@return list<string>` for `getRels()`,
@@ -102,8 +105,9 @@ Getter return types are narrowed in PHPDoc: `@return list<string>` for `getRels(
   registry, so no registry is bundled.
 - **Attribute name**: rejects an empty or whitespace-only string. Any other string is accepted — §1.2 explicitly
   declines to define a registry of names.
-- **Attribute value**: accepts `string`, `int`, `float`, `bool`, or a `list<string>`. Everything else throws —
-  `null`, objects, nested arrays, a string-keyed array, and a list containing a non-string. This makes the "PHP
+- **Attribute value**: accepts `string`, `int`, `float`, `bool`, a `Stringable` (cast to `string` immediately, as
+  `withHref()` does), or a `list<string>`. Everything else throws — a non-`Stringable` object, a nested array, a
+  string-keyed array, and a list containing a non-string. This makes the "PHP
   primitive or an array of PHP strings" wording of §1.2 enforceable and gives PHPStan a precise type to reason
   about. Note that `bool` values are stored verbatim; the abbreviation and omission rules of §1.2 apply to
   serializers, which are out of scope.
