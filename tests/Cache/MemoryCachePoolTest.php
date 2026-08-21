@@ -421,6 +421,16 @@ final class MemoryCachePoolTest extends TestCase
         self::assertSame(0, $this->pool()->prune());
     }
 
+    #[Test]
+    public function save_acceptsAValueThatCannotBeSerialised(): void
+    {
+        $pool = $this->pool();
+        $closure = static fn (): int => 1;
+
+        self::assertTrue($pool->save($pool->getItem('closure')->set($closure)));
+        self::assertSame($closure, $pool->getItem('closure')->get());
+    }
+
     #[Override]
     protected function setUp(): void
     {

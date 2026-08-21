@@ -168,8 +168,9 @@ final class MemoryCachePool implements ICacheItemPool
         $pending = $this->deferred[$key] ?? null;
         if ($pending !== null) {
             $expiry = $pending instanceof CacheItem ? $pending->getExpiry() : null;
+            $value = $pending instanceof CacheItem ? $pending->getRawValue() : $pending->get();
 
-            return new CacheItem($key, $pending->get(), true, $expiry, $this->clock);
+            return new CacheItem($key, $value, true, $expiry, $this->clock);
         }
 
         $entry = $this->liveEntry($key);
@@ -230,7 +231,8 @@ final class MemoryCachePool implements ICacheItemPool
             return $this->deleteItem($key);
         }
 
-        $this->entries[$key] = ['value' => $item->get(), 'expiry' => $expiry];
+        $value = $item instanceof CacheItem ? $item->getRawValue() : $item->get();
+        $this->entries[$key] = ['value' => $value, 'expiry' => $expiry];
 
         return true;
     }

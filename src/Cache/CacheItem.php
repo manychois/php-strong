@@ -10,6 +10,7 @@ use DateTimeInterface;
 use Override;
 use Psr\Cache\CacheItemInterface as ICacheItem;
 use Psr\Clock\ClockInterface as IClock;
+use Throwable;
 
 /**
  * A single entry of a PSR-6 cache pool.
@@ -56,6 +57,19 @@ final class CacheItem implements ICacheItem
         return $this->expiry;
     }
 
+    /**
+     * Returns the value the item holds, whether or not it came from the cache.
+     *
+     * @return mixed The stored value, or the value last passed to `set()`.
+     *
+     * @internal Read by the pools when storing the item; `get()` cannot serve this because PSR-6 requires it to
+     * return `null` for an item that is not a hit.
+     */
+    public function getRawValue(): mixed
+    {
+        return $this->value;
+    }
+
     #region implements ICacheItem
 
     /**
@@ -77,8 +91,14 @@ final class CacheItem implements ICacheItem
             return $this;
         }
 
-        $interval = new DateInterval('PT' . abs($time) . 'S');
-        $this->expiry = $time < 0 ? $now->sub($interval) : $now->add($interval);
+        $negative = $time < 0;
+        try {
+            $interval = new DateInterval('PT' . ltrim((string) $time, '-') . 'S');
+            $this->expiry = $negative ? $now->sub($interval) : $now->add($interval);
+        } catch (Throwable) {
+            // A second count too large for DateInterval; clamp instead of leaking a non-PSR exception.
+            $this->expiry = $negative ? $now : $now->setDate(9999, 12, 31)->setTime(23, 59, 59);
+        }
 
         return $this;
     }
@@ -95,14 +115,16 @@ final class CacheItem implements ICacheItem
     }
 
     /**
-     * Returns the value the item currently holds.
+     * Returns the value of a cache hit.
      *
-     * @return mixed The cached value for a hit, `null` for a miss, or the value last passed to `set()`.
+     * @return mixed The cached value, or `null` when the item is not a hit. PSR-6 mandates the `null`, so check
+     * `isHit()` to tell a stored `null` from a miss; a value passed to `set()` is readable only after the item has
+     * been saved and fetched again.
      */
     #[Override]
     public function get(): mixed
     {
-        return $this->value;
+        return $this->isHit ? $this->value : null;
     }
 
     /**

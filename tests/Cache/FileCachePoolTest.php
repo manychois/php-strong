@@ -635,6 +635,62 @@ final class FileCachePoolTest extends TestCase
         self::assertFalse($pool->clear());
     }
 
+    #[Test]
+    public function save_returnsFalseForAValueThatCannotBeSerialised(): void
+    {
+        $pool = $this->pool();
+
+        self::assertFalse($pool->save($pool->getItem('closure')->set(static fn (): int => 1)));
+        self::assertFalse($pool->hasItem('closure'));
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Test]
+    public function save_returnsFalseForAResource(): void
+    {
+        $pool = $this->pool();
+        $handle = fopen('php://memory', 'rb');
+
+        try {
+            self::assertFalse($pool->save($pool->getItem('res')->set($handle)));
+            self::assertFalse($pool->hasItem('res'));
+        } finally {
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
+        }
+    }
+
+    #[Test]
+    public function getItem_missesWhenTheStoredObjectClassNoLongerExists(): void
+    {
+        $this->writeRawFile('ghost', "0\n" . 'O:11:"GoneAwayCls":1:{s:1:"n";i:1;}');
+
+        self::assertFalse($this->pool()->getItem('ghost')->isHit());
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Test]
+    public function destruct_swallowsAFailureRaisedByTheDeferredCommit(): void
+    {
+        $pool = $this->pool();
+        $pool->saveDeferred(new ThrowingCacheItem('boom'));
+
+        unset($pool);
+
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Test]
+    public function destruct_commitsPendingDeferredItems(): void
+    {
+        $pool = $this->pool();
+        $pool->saveDeferred($pool->getItem('a')->set('later'));
+        unset($pool);
+
+        self::assertSame('later', $this->pool()->getItem('a')->get());
+    }
+
     #[Override]
     protected function setUp(): void
     {

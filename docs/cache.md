@@ -20,6 +20,9 @@ if (!$item->isHit()) {
 $user = $item->get();
 ```
 
+`get()` returns `null` for an item that is not a hit, as PSR-6 requires — including one you have just called `set()`
+on. Read the value you are caching from your own variable, not back out of a freshly-set item.
+
 ## `FileCachePool`
 
 | Method | Notes |
@@ -33,7 +36,7 @@ $user = $item->get();
 | `getItems(array $keys = []): array` | Returns `array<string, CacheItem>` keyed by the requested key, in the order given. Validates every key first. `getItems()` returns `[]`. |
 | `hasItem(string $key): bool` | `true` when a live entry or a pending deferred item exists for the key. |
 | `prune(): int` | Deletes every expired or unreadable file and returns how many were deleted. |
-| `save(CacheItemInterface $item): bool` | Writes the item immediately. An item that has already expired is not written: any existing file is deleted and `true` is returned. Returns `false` when the file could not be written. |
+| `save(CacheItemInterface $item): bool` | Writes the item immediately. An item that has already expired is not written: any existing file is deleted and `true` is returned. Returns `false` when the value cannot be serialised or the file could not be written. |
 | `saveDeferred(CacheItemInterface $item): bool` | Queues the item for `commit()`. Always returns `true`. |
 
 Every method that takes a key throws `InvalidArgumentException` before doing any work when the key is invalid.
@@ -62,7 +65,7 @@ $object->n = 1;
 $pool->getItem('k')->get()->n; // 1 — the very same object
 ```
 
-That also means `MemoryCachePool` accepts values `FileCachePool` cannot store, such as a closure or an open resource.
+That also means `MemoryCachePool` accepts values `FileCachePool` refuses, such as a closure or an open resource.
 Where the two pools must behave alike — swapping one for the other in a test — keep to serialisable, immutable values.
 
 Nothing is shared between pool objects and nothing survives the request.
@@ -72,16 +75,15 @@ Nothing is shared between pool objects and nothing survives the request.
 | Method | Notes |
 | ------ | ----- |
 | `getKey(): string` | The key the item is stored under. |
-| `get(): mixed` | The value the item currently holds: the stored value for a hit, `null` for a miss, or the value last passed to `set()`. |
+| `get(): mixed` | The stored value when the item is a hit, `null` otherwise — PSR-6 mandates the `null`, so a value you pass to `set()` is readable only after saving and fetching the item again. Use `isHit()` to tell a stored `null` from a miss. |
 | `isHit(): bool` | Whether the value came from the cache. `set()` does **not** make this `true`. |
 | `set(mixed $value): static` | Replaces the value. Returns `$this`. |
 | `expiresAt(?DateTimeInterface $expiration): static` | Sets the expiry moment; `null` means the item never expires. |
 | `expiresAfter(DateInterval\|int\|null $time): static` | Sets the expiry relative to the pool's clock; `null` means the item never expires. A zero or negative number of seconds produces an already-expired item. |
 
-A literal reading of PSR-6 would have `get()` return `null` whenever `isHit()` is `false`. That would break the
-specification's own `if (!$item->isHit()) { $item->set($v); $pool->save($item); }` pattern, because the pool reads the
-value back through `get()`, so `get()` returns whatever the item holds and `isHit()` reports only where the value came
-from.
+`set()` never makes `isHit()` true: an item is a hit only when its value came out of the cache. The pools read the
+value of their own items through an internal accessor rather than `get()`, which is what lets `get()` keep to the
+PSR-6 rule while `$item->set($v); $pool->save($item);` still stores `$v`.
 
 ## Cache keys
 
@@ -102,14 +104,23 @@ Writes go to a temporary file in the same shard directory and are then renamed o
 never sees a half-written file. A file that has expired, or that cannot be parsed, is deleted the moment a read
 touches it; `prune()` deletes the same files without waiting for a read.
 
+A value the pool cannot store faithfully is refused rather than mangled: `save()` returns `false` for a resource and
+for anything `serialize()` rejects, such as a closure. On the way back, an entry whose class no longer exists
+deserialises to `__PHP_Incomplete_Class`, and PSR-6 requires a miss rather than corrupted data, so that entry is
+reported as a miss and deleted.
+
 ## Deferred items
 
 `saveDeferred()` queues an item instead of writing it. Until `commit()` runs, the queued item is visible to
 `getItem()`, `getItems()` and `hasItem()`, and it shadows whatever is on disk for that key. `deleteItem()`,
 `deleteItems()` and `clear()` drop queued items; `save()` for the same key replaces the queued one.
 
-There is no auto-commit on destruction — throwing from a destructor is worse than a missing write — so call `commit()`
-explicitly.
+PSR-6 requires a pool to make sure deferred data is not lost, so `FileCachePool` commits anything still pending when
+it is destroyed. Any failure raised by that commit is swallowed, because a destructor must not throw. Committing
+explicitly is still better: it is the only way to learn whether the writes succeeded.
+
+`MemoryCachePool` has no such destructor. Its store dies with the pool object either way, so there is nothing a
+last-moment commit could preserve.
 
 ## Limitations
 

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Cache;
 
+use __PHP_Incomplete_Class;
 use DateTimeImmutable;
 use Manychois\PhpStrong\Clock\UtcClock;
 use Override;
 use Psr\Cache\CacheItemInterface as ICacheItem;
 use Psr\Cache\CacheItemPoolInterface as ICacheItemPool;
 use Psr\Clock\ClockInterface as IClock;
+use Throwable;
 
 /**
  * PSR-6 cache pool that stores one file per key under a root directory.
@@ -49,6 +51,22 @@ final class FileCachePool implements ICacheItemPool
 
         $this->directory = rtrim($directory, '/\\');
         $this->clock = $clock ?? new UtcClock();
+    }
+
+    /**
+     * Persists any item still awaiting `commit()`, so deferred data is not lost with the pool.
+     */
+    public function __destruct()
+    {
+        if ($this->deferred === []) {
+            return;
+        }
+
+        try {
+            $this->commit();
+        } catch (Throwable) {
+            // A destructor must not throw, and a failed cache write is never worth breaking shutdown over.
+        }
     }
 
     /**
@@ -111,7 +129,7 @@ final class FileCachePool implements ICacheItemPool
             $value = false;
         } else {
             $value = @unserialize($body);
-            if ($value === false) {
+            if ($value === false || $value instanceof __PHP_Incomplete_Class) {
                 return null;
             }
         }
@@ -209,7 +227,16 @@ final class FileCachePool implements ICacheItemPool
             return false;
         }
 
-        $body = ($expiry?->getTimestamp() ?? 0) . "\n" . serialize($value);
+        if (is_resource($value)) {
+            return false;
+        }
+
+        try {
+            $body = ($expiry?->getTimestamp() ?? 0) . "\n" . serialize($value);
+        } catch (Throwable) {
+            return false;
+        }
+
         $temp = $path . '.' . bin2hex(random_bytes(6)) . '.tmp';
         if (@file_put_contents($temp, $body) === false) {
             return false;
@@ -310,8 +337,9 @@ final class FileCachePool implements ICacheItemPool
         $pending = $this->deferred[$key] ?? null;
         if ($pending !== null) {
             $expiry = $pending instanceof CacheItem ? $pending->getExpiry() : null;
+            $value = $pending instanceof CacheItem ? $pending->getRawValue() : $pending->get();
 
-            return new CacheItem($key, $pending->get(), true, $expiry, $this->clock);
+            return new CacheItem($key, $value, true, $expiry, $this->clock);
         }
 
         $state = $this->read($key);
@@ -369,7 +397,9 @@ final class FileCachePool implements ICacheItemPool
             return $this->deleteItem($key);
         }
 
-        return $this->write($key, $item->get(), $expiry);
+        $value = $item instanceof CacheItem ? $item->getRawValue() : $item->get();
+
+        return $this->write($key, $value, $expiry);
     }
 
     /**

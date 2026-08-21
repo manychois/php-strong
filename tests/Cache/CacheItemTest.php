@@ -48,8 +48,42 @@ final class CacheItemTest extends TestCase
         $returned = $item->set('fresh');
 
         self::assertSame($item, $returned);
-        self::assertSame('fresh', $item->get());
         self::assertFalse($item->isHit());
+        self::assertNull($item->get());
+        self::assertSame('fresh', $item->getRawValue());
+    }
+
+    #[Test]
+    public function getRawValue_returnsTheValueEvenWhenTheItemIsNotAHit(): void
+    {
+        $item = new CacheItem('k', 'stored', true, null, new TestClock('2026-08-21 00:00:00'));
+
+        self::assertSame('stored', $item->getRawValue());
+        self::assertSame('replaced', $item->set('replaced')->getRawValue());
+    }
+
+    #[Test]
+    public function expiresAfter_withAnExtremeNegativeSecondCountDoesNotThrow(): void
+    {
+        $clock = new TestClock('2026-08-21 00:00:00');
+        $item = new CacheItem('k', null, false, null, $clock);
+
+        $item->expiresAfter(PHP_INT_MIN);
+
+        self::assertNotNull($item->getExpiry());
+        self::assertLessThanOrEqual($clock->now(), $item->getExpiry());
+    }
+
+    #[Test]
+    public function expiresAfter_withAnExtremePositiveSecondCountDoesNotThrow(): void
+    {
+        $clock = new TestClock('2026-08-21 00:00:00');
+        $item = new CacheItem('k', null, false, null, $clock);
+
+        $item->expiresAfter(PHP_INT_MAX);
+
+        self::assertNotNull($item->getExpiry());
+        self::assertGreaterThan($clock->now(), $item->getExpiry());
     }
 
     #[Test]
