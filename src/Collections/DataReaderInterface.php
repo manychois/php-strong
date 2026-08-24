@@ -315,10 +315,10 @@ interface DataReaderInterface extends Countable
      *
      * @param string $key The key to read, in dot notation for a nested value.
      *
-     * @return ?static The reader over the nested value, or `null` if the key is absent, the value is
+     * @return ?DataReaderInterface The reader over the nested value, or `null` if the key is absent, the value is
      * neither an array nor an object, or the array has a non-string key.
      */
-    public function nullReader(string $key): ?static;
+    public function nullReader(string $key): ?DataReaderInterface;
 
     /**
      * Returns the string value stored under a key, or `null` when it is unavailable.
@@ -353,13 +353,13 @@ interface DataReaderInterface extends Countable
      *
      * @param string $key The key to read, in dot notation for a nested value.
      *
-     * @return static The reader over the nested value.
+     * @return DataReaderInterface The reader over the nested value.
      *
      * @throws OutOfBoundsException if the key is absent.
      * @throws InvalidArgumentException if the value is neither an array nor an object, or the array has a non-string
      * key.
      */
-    public function reader(string $key): static;
+    public function reader(string $key): DataReaderInterface;
 
     /**
      * Returns the string value stored under a key.

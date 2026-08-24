@@ -109,11 +109,13 @@ because converting it would be a conversion, and the strict variants do not conv
 | `bool` / `asBool` / `nullBool` | `bool` | |
 | `dateTime` / `asDateTime` / `nullDateTime` | `DateTimeImmutable` | |
 | `array` / `nullArray` | `array` | Any shape; the value must already be an array. |
-| `reader` / `nullReader` | `static` | Wraps a nested array or object in another reader. |
+| `reader` / `nullReader` | `DataReaderInterface` | Wraps a nested array or object in another reader. |
 | `object(string $key, string $className)` / `nullObject` | `TObject` | Generic over `class-string<TObject>`. |
 | `enum(string $key, string $enumClass)` / `nullEnum` | `TEnum` | Generic over `class-string<TEnum of UnitEnum>`; the value must already be a case. |
 
-`reader()` and `nullReader()` return `static`, so a subclass keeps its own type when descending.
+The reading logic itself lives in `Collections\Internal\AbstractDataReader`, which `DataReader` extends by supplying
+its source and a factory for nested readers. That base is internal — depend on `DataReaderInterface`, not on it — but
+it is what lets another reader with its own storage reuse the whole accessor surface.
 
 ## `Iter` and `Seq`
 
