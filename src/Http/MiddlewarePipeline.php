@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Http;
 
+use InvalidArgumentException;
 use Manychois\PhpStrong\Http\Internal\PipelineStep;
 use Override;
+use Psr\Container\ContainerInterface as IContainer;
 use Psr\Http\Message\ResponseInterface as IResponse;
 use Psr\Http\Message\ServerRequestInterface as IServerRequest;
 use Psr\Http\Server\MiddlewareInterface as IMiddleware;
@@ -28,15 +30,42 @@ final class MiddlewarePipeline implements IRequestHandler
      *
      * @param iterable $middlewares Middleware instances, or container service ids resolved on first dispatch.
      * @param IRequestHandler $fallback The handler producing the response when no middleware short-circuits.
+     * @param ?IContainer $container The container resolving service ids; required when any id is given.
+     *
+     * @throws InvalidArgumentException if an element is neither a middleware nor a string, if a service id is given
+     * without a container, or if the container does not have a given id.
      *
      * @phpstan-param iterable<mixed> $middlewares
      */
-    public function __construct(iterable $middlewares, IRequestHandler $fallback)
+    public function __construct(iterable $middlewares, IRequestHandler $fallback, ?IContainer $container = null)
     {
         $list = [];
+        $i = 0;
         foreach ($middlewares as $middleware) {
-            \assert($middleware instanceof IMiddleware);
+            if (\is_string($middleware)) {
+                if ($container === null) {
+                    throw new InvalidArgumentException(
+                        \sprintf('Middleware %d is the service id "%s" but no container is given.', $i, $middleware)
+                    );
+                }
+
+                if (!$container->has($middleware)) {
+                    throw new InvalidArgumentException(
+                        \sprintf('Middleware %d refers to the unknown service "%s".', $i, $middleware)
+                    );
+                }
+            } elseif (!$middleware instanceof IMiddleware) {
+                throw new InvalidArgumentException(
+                    \sprintf(
+                        'Middleware %d must be a middleware instance or a service id, %s given.',
+                        $i,
+                        \get_debug_type($middleware)
+                    )
+                );
+            }
+
             $list[] = $middleware;
+            $i++;
         }
 
         $this->middlewares = $list;

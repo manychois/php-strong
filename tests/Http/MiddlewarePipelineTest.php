@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Manychois\PhpStrongTests\Http;
 
 use Closure;
+use InvalidArgumentException;
 use Manychois\PhpStrong\Http\MiddlewarePipeline;
 use Manychois\PhpStrong\Http\Response;
 use Manychois\PhpStrong\Http\ServerRequest;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Container\ContainerInterface as IContainer;
 use Psr\Http\Message\ResponseInterface as IResponse;
 use Psr\Http\Message\ServerRequestInterface as IServerRequest;
 use Psr\Http\Server\MiddlewareInterface as IMiddleware;
@@ -160,6 +162,36 @@ final class MiddlewarePipelineTest extends TestCase
         $pipeline->handle(new ServerRequest());
     }
 
+    #[Test]
+    public function construct_rejectsAnElementThatIsNeitherMiddlewareNorString(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Middleware 1 must be a middleware instance or a service id, int given.');
+
+        new MiddlewarePipeline(
+            [new CallbackMiddleware(static fn (): IResponse => new Response(200)), 123],
+            new FixedResponseHandler(new Response(200)),
+        );
+    }
+
+    #[Test]
+    public function construct_rejectsAServiceIdWithoutAContainer(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Middleware 0 is the service id "mw" but no container is given.');
+
+        new MiddlewarePipeline(['mw'], new FixedResponseHandler(new Response(200)));
+    }
+
+    #[Test]
+    public function construct_rejectsAServiceIdTheContainerDoesNotHave(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Middleware 0 refers to the unknown service "missing".');
+
+        new MiddlewarePipeline(['missing'], new FixedResponseHandler(new Response(200)), new FakeContainer());
+    }
+
     /**
      * Creates a middleware that appends `$name` to `$log` and delegates to its handler.
      *
@@ -177,6 +209,35 @@ final class MiddlewarePipelineTest extends TestCase
                 return $handler->handle($request);
             }
         );
+    }
+}
+
+final class FakeContainer implements IContainer
+{
+    /**
+     * @var array<string, int> How many times each id was fetched.
+     */
+    public array $getCalls = [];
+
+    /**
+     * @param array<string, mixed> $services Values returned by `get()`, keyed by id.
+     */
+    public function __construct(private readonly array $services = [])
+    {
+    }
+
+    #[Override]
+    public function get(string $id): mixed
+    {
+        $this->getCalls[$id] = ($this->getCalls[$id] ?? 0) + 1;
+
+        return $this->services[$id];
+    }
+
+    #[Override]
+    public function has(string $id): bool
+    {
+        return \array_key_exists($id, $this->services);
     }
 }
 
