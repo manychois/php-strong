@@ -169,7 +169,8 @@ parses one `Set-Cookie` header value, ignoring unknown or malformed attributes r
 `toSetCookieHeader(): string` formats the cookie back into a header value.
 
 `$value` is always held decoded; `toSetCookieHeader()` writes it with `rawurlencode`, and `parseSetCookie()` reads it
-back with `rawurldecode`.
+back with `rawurldecode`. `expired()` supplies the attributes a cookie prefix demands: a `__Host-` name forces
+`Secure`, `Path=/` and no `Domain`, and a `__Secure-` name forces `Secure`, overriding whatever was passed.
 
 ### Server role: `CookieBag`
 
@@ -207,8 +208,15 @@ $profile = $client->sendRequest(new Request('GET', 'https://api.example.com/prof
 
 `CookieStore` keeps cookies in memory for as long as the instance lives. A cookie a response sets that breaks RFC
 6265 is skipped silently rather than throwing. The `__Secure-` and `__Host-` name prefixes of RFC 6265bis are
-enforced. Without a public suffix list, the store accepts `Domain=co.uk` from a response served by `foo.co.uk`,
+enforced. A response to a request that was not made over `https` can neither set a cookie carrying `Secure` or
+either name prefix, nor overwrite an entry already stored as secure. Outgoing `Cookie` headers carry each value
+exactly as the `Set-Cookie` header delivered it, undecoded and with any surrounding quotes kept, as RFC 6265
+requires. Without a public suffix list, the store accepts `Domain=co.uk` from a response served by `foo.co.uk`,
 where a browser would refuse it.
+
+`CookieAwareClient` is incompatible with `RequestOptions(followRedirects: true)`: the underlying `RawResponse` keeps
+only the final header block, so `Set-Cookie` headers sent on a 3xx are dropped, and a redirect chain crossing hosts
+would attribute the final host's cookies to the original one. Follow redirects manually when cookies matter.
 
 `sendAsync()` requires the wrapped client to be the concrete `Client`; it throws `BadMethodCallException` otherwise.
 With several transfers in flight, cookies are absorbed in completion order — should two concurrent responses set the

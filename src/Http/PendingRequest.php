@@ -106,6 +106,10 @@ final class PendingRequest
      * The callback does not run when the transfer fails, because there is no response to hand it. Registering
      * after the transfer has already settled runs the callback straight away, so no completion can be missed.
      *
+     * A callback must not throw: an exception propagates out of the completion drain of the executor, which delays
+     * the delivery of the other transfers that finished alongside it and can surface one transfer's exception from
+     * another transfer's {@see response()}.
+     *
      * @param callable $callback The callback to run.
      *
      * @phpstan-param callable(Response):void $callback
