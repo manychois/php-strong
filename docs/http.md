@@ -141,6 +141,82 @@ $response = $pipeline->handle(ServerRequest::fromGlobals());
 - The return type is `ResponseInterface`, not the concrete `Response` — middlewares may return any implementation.
 - Exceptions from middlewares, the fallback, or the container propagate unchanged.
 
+## Cookies
+
+Two roles exist, each served by its own class: `CookieBag` reads the cookies on an incoming `ServerRequest` and
+queues the ones to send back on the response, while `CookieStore` remembers the cookies a remote host sets so a
+client can send them back on later requests to that host. Both build on `Cookie`, the immutable value object for one
+`Set-Cookie` entry.
+
+### `Cookie`
+
+| Parameter | Type | Default | Meaning |
+| --------- | ---- | ------- | ------- |
+| `name` | `string` | required | Must be a valid RFC 2616 token, or `InvalidArgumentException` is thrown. |
+| `value` | `string` | required | The decoded value. Any string is allowed. |
+| `expires` | `?DateTimeImmutable` | `null` | The `Expires` attribute; `null` omits it. |
+| `maxAge` | `?int` | `null` | The `Max-Age` attribute in seconds; `0` or less expires the cookie immediately. `null` omits it. |
+| `domain` | `?string` | `null` | The `Domain` attribute; `null` omits it, making the cookie host-only. |
+| `path` | `?string` | `null` | The `Path` attribute; `null` omits it. |
+| `secure` | `bool` | `false` | The `Secure` flag. |
+| `httpOnly` | `bool` | `false` | The `HttpOnly` flag. |
+| `sameSite` | `?SameSite` | `null` | The `SameSite` attribute; `null` omits it. `SameSite::None` requires `secure: true`. |
+| `partitioned` | `bool` | `false` | The `Partitioned` flag (CHIPS); requires `secure: true`. |
+
+`Cookie::expired(string $name, ?string $domain = null, ?string $path = null): self` builds a cookie that clears an
+existing one of the same name, setting both `Max-Age` and `Expires`. `Cookie::parseSetCookie(string $header): self`
+parses one `Set-Cookie` header value, ignoring unknown or malformed attributes rather than failing on them.
+`toSetCookieHeader(): string` formats the cookie back into a header value.
+
+`$value` is always held decoded; `toSetCookieHeader()` writes it with `rawurlencode`, and `parseSetCookie()` reads it
+back with `rawurldecode`.
+
+### Server role: `CookieBag`
+
+```php
+use Manychois\PhpStrong\Http\Cookie;
+use Manychois\PhpStrong\Http\CookieBag;
+
+$cookies = CookieBag::fromRequest($request);
+$theme = $cookies->get('theme') ?? 'light';
+
+$cookies->set(new Cookie('theme', 'dark', maxAge: 31536000, path: '/', httpOnly: true));
+$cookies->expire('legacy', path: '/');
+
+return $cookies->applyTo($response);
+```
+
+`get()` returns a `string` because incoming cookies carry no attributes — only the name and value survive the
+`Cookie` header. A cookie queued with `set()` that shares its name, domain and path with one already queued replaces
+it, which is how a browser identifies a cookie. Values read from `getCookieParams()` are not decoded again, because
+PHP has already decoded `$_COOKIE`.
+
+### Client role: `CookieAwareClient`
+
+```php
+use Manychois\PhpStrong\Http\Client;
+use Manychois\PhpStrong\Http\CookieAwareClient;
+use Manychois\PhpStrong\Http\CookieStore;
+use Manychois\PhpStrong\Http\Request;
+
+$client = new CookieAwareClient(new Client(), new CookieStore());
+
+$client->sendRequest(new Request('POST', 'https://api.example.com/login', body: $credentials));
+$profile = $client->sendRequest(new Request('GET', 'https://api.example.com/profile'));
+```
+
+`CookieStore` keeps cookies in memory for as long as the instance lives. A cookie a response sets that breaks RFC
+6265 is skipped silently rather than throwing. The `__Secure-` and `__Host-` name prefixes of RFC 6265bis are
+enforced. Without a public suffix list, the store accepts `Domain=co.uk` from a response served by `foo.co.uk`,
+where a browser would refuse it.
+
+`sendAsync()` requires the wrapped client to be the concrete `Client`; it throws `BadMethodCallException` otherwise.
+With several transfers in flight, cookies are absorbed in completion order — should two concurrent responses set the
+same cookie, the last one to settle wins.
+
+Not yet covered: the library has no response emitter, so `CookieBag::applyTo()` returns a response whose
+`Set-Cookie` headers the application must currently send itself.
+
 ## Session
 
 `NativeSession` reads and writes PHP's own session — the `$_SESSION` superglobal — with the typed accessors of
