@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrongTests\Http;
 
+use BadMethodCallException;
 use InvalidArgumentException;
 use Manychois\PhpStrong\Http\NativeSession;
 use Manychois\PhpStrong\Http\NativeSessionOptions;
@@ -79,6 +80,58 @@ final class NativeSessionTest extends TestCase
         static::assertSame('php_serialize', ini_get('session.serialize_handler'));
         static::assertSame('1', ini_get('session.gc_probability'));
         static::assertSame('1', ini_get('session.use_strict_mode'));
+    }
+
+    #[Test]
+    public function readAndCloseReleasesTheLockAndStillReads(): void
+    {
+        (new NativeSession(new NativeSessionOptions(savePath: sys_get_temp_dir())))->set('a', 'x');
+        $id = session_id();
+        session_write_close();
+
+        $session = new NativeSession(new NativeSessionOptions(
+            savePath: sys_get_temp_dir(),
+            readAndClose: true,
+        ));
+        session_id($id);
+
+        static::assertSame('x', $session->string('a'));
+        static::assertSame('x', $session->string('a'));
+        static::assertFalse($session->isStarted());
+    }
+
+    #[Test]
+    public function readAndCloseRefusesToWrite(): void
+    {
+        $session = new NativeSession(new NativeSessionOptions(
+            savePath: sys_get_temp_dir(),
+            readAndClose: true,
+        ));
+
+        $this->expectException(BadMethodCallException::class);
+
+        $session->set('a', 'x');
+    }
+
+    #[Test]
+    public function readAndCloseRefusesEveryOtherMutation(): void
+    {
+        $options = new NativeSessionOptions(savePath: sys_get_temp_dir(), readAndClose: true);
+        $mutations = [
+            static fn (NativeSession $s): mixed => $s->remove('a'),
+            static fn (NativeSession $s): mixed => $s->clear(),
+            static fn (NativeSession $s): mixed => $s->regenerate(),
+            static fn (NativeSession $s): mixed => $s->destroy(),
+        ];
+
+        foreach ($mutations as $index => $mutation) {
+            try {
+                $mutation(new NativeSession($options));
+                static::fail(sprintf('Mutation %d did not throw.', $index));
+            } catch (BadMethodCallException) {
+                static::assertTrue(true);
+            }
+        }
     }
 
     #[Test]

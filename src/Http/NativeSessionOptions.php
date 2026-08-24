@@ -7,7 +7,7 @@ namespace Manychois\PhpStrong\Http;
 use InvalidArgumentException;
 
 /**
- * Aggregates the settings a {@see NativeSession} applies to PHP before it starts the session.
+ * Aggregates the settings a {@see NativeSession} passes to `session_start()`.
  *
  * The defaults are the secure ones: the cookie is marked secure and HTTP-only, `SameSite` is `Lax`, and strict mode
  * is on, so an id the visitor made up is never adopted.
@@ -31,6 +31,7 @@ final class NativeSessionOptions
         'session.use_only_cookies',
         'session.gc_maxlifetime',
         'session.serialize_handler',
+        'session.read_and_close',
     ];
 
     /**
@@ -58,6 +59,9 @@ final class NativeSessionOptions
      * keeps the value PHP is configured with.
      * @param ?SessionSerializer $serializeHandler The handler which serializes the session data. `null` keeps the
      * handler PHP is configured with.
+     * @param bool $readAndClose Whether the session is read once and closed straight away, releasing its lock so that
+     * concurrent requests of the same visitor are not held up. The session becomes read-only: every member which
+     * would write throws.
      * @param array $ini Any further `session.*` settings, applied verbatim before the session starts. Keys must
      * carry the `session.` prefix, and none may be one a dedicated option above already controls.
      *
@@ -81,6 +85,7 @@ final class NativeSessionOptions
         public readonly bool $useOnlyCookies = true,
         public readonly ?int $gcMaxLifetime = null,
         public readonly ?SessionSerializer $serializeHandler = null,
+        public readonly bool $readAndClose = false,
         array $ini = [],
     ) {
         if ($name !== null) {

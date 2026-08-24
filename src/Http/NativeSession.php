@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Http;
 
+use BadMethodCallException;
 use InvalidArgumentException;
 use Manychois\PhpStrong\Collections\DataReader;
 use Manychois\PhpStrong\Collections\DataReaderInterface as IDataReader;
@@ -15,18 +16,23 @@ use Override;
  * Reads and writes the session of PHP itself, i.e. the `$_SESSION` superglobal.
  *
  * The session starts lazily: constructing this class touches nothing, and `session_start()` is called on the first
- * read or write of a value, applying the {@see NativeSessionOptions} given to the constructor. `id()` and
- * `isStarted()` deliberately do not start it.
+ * read or write of a value, passing the {@see NativeSessionOptions} given to the constructor to `session_start()`.
+ * `id()` and `isStarted()` deliberately do not start it.
+ *
+ * With `readAndClose` the session is read once and closed immediately, so `isStarted()` reports false from then on
+ * and every member which would write throws `BadMethodCallException`.
  *
  * A key may be written in dot notation to reach a value nested inside the session data, e.g. `user.address.city`.
  * Writing to a path whose segments do not exist creates them as arrays.
  */
 final class NativeSession extends AbstractDataReader implements ISession
 {
+    private bool $loaded = false;
+
     /**
      * Initializes a new instance of the NativeSession class.
      *
-     * @param NativeSessionOptions $options The settings applied to PHP right before the session starts.
+     * @param NativeSessionOptions $options The settings passed to `session_start()`.
      */
     public function __construct(private readonly NativeSessionOptions $options = new NativeSessionOptions())
     {
@@ -64,6 +70,7 @@ final class NativeSession extends AbstractDataReader implements ISession
     #[Override]
     public function clear(): void
     {
+        $this->refuseWhenReadOnly();
         $this->start();
         $_SESSION = [];
     }
@@ -74,6 +81,7 @@ final class NativeSession extends AbstractDataReader implements ISession
     #[Override]
     public function destroy(): void
     {
+        $this->refuseWhenReadOnly();
         if (session_status() !== \PHP_SESSION_ACTIVE) {
             return;
         }
@@ -112,6 +120,7 @@ final class NativeSession extends AbstractDataReader implements ISession
     #[Override]
     public function regenerate(bool $deleteOldSession = true): void
     {
+        $this->refuseWhenReadOnly();
         $this->start();
         session_regenerate_id($deleteOldSession);
     }
@@ -122,6 +131,7 @@ final class NativeSession extends AbstractDataReader implements ISession
     #[Override]
     public function remove(string $key): void
     {
+        $this->refuseWhenReadOnly();
         $this->start();
         if (array_key_exists($key, $_SESSION)) {
             unset($_SESSION[$key]);
@@ -157,6 +167,7 @@ final class NativeSession extends AbstractDataReader implements ISession
     #[Override]
     public function set(string $key, mixed $value): void
     {
+        $this->refuseWhenReadOnly();
         $this->start();
         if (array_key_exists($key, $_SESSION)) {
             $_SESSION[$key] = $value;
@@ -195,41 +206,68 @@ final class NativeSession extends AbstractDataReader implements ISession
      */
     private function start(): void
     {
-        if (session_status() === \PHP_SESSION_ACTIVE) {
+        if (session_status() === \PHP_SESSION_ACTIVE || $this->loaded) {
             return;
         }
 
+        session_start($this->startOptions());
+        $this->loaded = true;
+    }
+
+    /**
+     * Builds the options `session_start()` is called with.
+     *
+     * The keys of the array are `session.*` setting names without their prefix, which is the form `session_start()`
+     * accepts; a prefixed key is rejected by PHP.
+     *
+     * @return array The options for `session_start()`.
+     *
+     * @phpstan-return array<string,bool|float|int|string>
+     */
+    private function startOptions(): array
+    {
+        $options = [
+            'cookie_lifetime' => $this->options->cookieLifetime,
+            'cookie_path' => $this->options->cookiePath,
+            'cookie_domain' => $this->options->cookieDomain,
+            'cookie_secure' => $this->options->cookieSecure,
+            'cookie_httponly' => $this->options->cookieHttpOnly,
+            'cookie_samesite' => $this->options->cookieSameSite->value,
+            'cookie_partitioned' => $this->options->cookiePartitioned,
+            'use_strict_mode' => $this->options->useStrictMode,
+            'use_only_cookies' => $this->options->useOnlyCookies,
+        ];
         if ($this->options->name !== null) {
-            session_name($this->options->name);
+            $options['name'] = $this->options->name;
         }
         if ($this->options->savePath !== null) {
-            session_save_path($this->options->savePath);
+            $options['save_path'] = $this->options->savePath;
         }
-
-        session_set_cookie_params([
-            'lifetime' => $this->options->cookieLifetime,
-            'path' => $this->options->cookiePath,
-            'domain' => $this->options->cookieDomain,
-            'secure' => $this->options->cookieSecure,
-            'httponly' => $this->options->cookieHttpOnly,
-            'samesite' => $this->options->cookieSameSite->value,
-            'partitioned' => $this->options->cookiePartitioned,
-        ]);
-
-        $settings = [
-            'session.use_strict_mode' => $this->options->useStrictMode,
-            'session.use_only_cookies' => $this->options->useOnlyCookies,
-        ];
         if ($this->options->gcMaxLifetime !== null) {
-            $settings['session.gc_maxlifetime'] = $this->options->gcMaxLifetime;
+            $options['gc_maxlifetime'] = $this->options->gcMaxLifetime;
         }
         if ($this->options->serializeHandler !== null) {
-            $settings['session.serialize_handler'] = $this->options->serializeHandler->value;
+            $options['serialize_handler'] = $this->options->serializeHandler->value;
         }
-        foreach ($settings + $this->options->ini as $key => $value) {
-            ini_set($key, is_bool($value) ? ($value ? '1' : '0') : (string) $value);
+        if ($this->options->readAndClose) {
+            $options['read_and_close'] = true;
+        }
+        foreach ($this->options->ini as $key => $value) {
+            $options[substr($key, strlen('session.'))] = $value;
         }
 
-        session_start();
+        return $options;
+    }
+
+    /**
+     * Throws when the session was read and closed, and therefore cannot be written to.
+     *
+     * @throws BadMethodCallException if the session is read-only.
+     */
+    private function refuseWhenReadOnly(): void
+    {
+        if ($this->options->readAndClose) {
+            throw new BadMethodCallException('A session read with readAndClose is read-only.');
+        }
     }
 }

@@ -198,10 +198,28 @@ $session = new NativeSession(new NativeSessionOptions(
 | `useOnlyCookies` | `true` | The id never comes from the URL. |
 | `gcMaxLifetime` | `null` | Seconds an idle session survives. `null` keeps PHP's. |
 | `serializeHandler` | `null` | See *Serialization* below. |
+| `readAndClose` | `false` | Read the session once and close it immediately, releasing its lock. See below. |
 | `ini` | `[]` | Further `session.*` settings, applied verbatim. Keys must carry the `session.` prefix, and a key a dedicated option already controls is rejected rather than silently losing to it. |
 
 Every value is validated in the constructor, so a bad setting fails where it is written rather than at
-`session_start()`.
+`session_start()`. The options are handed to `session_start()` as one array — the only way to reach `read_and_close`,
+and the form in which PHP reports an unrecognised setting instead of ignoring it.
+
+### Read-only requests
+
+A started session holds an exclusive lock on its file until the request ends, so a second request from the same
+visitor waits. When a request only reads, `readAndClose` avoids that:
+
+```php
+$session = new NativeSession(new NativeSessionOptions(readAndClose: true));
+
+$session->string('user.name');   // read once, lock already released
+$session->isStarted();           // false — the session is closed again
+$session->set('user.name', 'x'); // BadMethodCallException
+```
+
+The data stays readable for the rest of the request, and every member which would write — `set()`, `remove()`,
+`clear()`, `regenerate()`, `destroy()` — throws `BadMethodCallException` rather than discarding the write silently.
 
 ### Serialization
 
