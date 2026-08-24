@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrongTests\Collections;
 
+use InvalidArgumentException;
 use Manychois\PhpStrong\Collections\Iter;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use UnderflowException;
 
 final class IterTest extends TestCase
 {
@@ -133,7 +135,7 @@ final class IterTest extends TestCase
     #[Test]
     public function takeThrowsForNegativeCount(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         iterator_to_array(Iter::take([1, 2], -1));
     }
@@ -185,7 +187,7 @@ final class IterTest extends TestCase
     #[Test]
     public function skipThrowsForNegativeCount(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         iterator_to_array(Iter::skip([1, 2], -1));
     }
@@ -238,7 +240,7 @@ final class IterTest extends TestCase
     #[Test]
     public function chunkThrowsForNonPositiveSize(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         iterator_to_array(Iter::chunk([1, 2], 0));
     }
@@ -377,7 +379,7 @@ final class IterTest extends TestCase
     #[Test]
     public function firstThrowsWhenSourceIsEmpty(): void
     {
-        $this->expectException(\UnderflowException::class);
+        $this->expectException(UnderflowException::class);
 
         Iter::first([]);
     }
@@ -385,7 +387,7 @@ final class IterTest extends TestCase
     #[Test]
     public function firstThrowsWhenNoElementMatches(): void
     {
-        $this->expectException(\UnderflowException::class);
+        $this->expectException(UnderflowException::class);
 
         Iter::first([1, 3, 5], static fn (int $v): bool => $v % 2 === 0);
     }

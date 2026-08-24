@@ -135,7 +135,7 @@ final class Iter
     /**
      * Lazily filters elements of an iterable, keeping only those matching the predicate.
      *
-     * @param iterable $source    The source iterable.
+     * @param iterable $source The source iterable.
      * @param callable $predicate The predicate to test each element.
      *
      * @return iterable The filtered elements, preserving original keys.
@@ -434,7 +434,7 @@ final class Iter
     /**
      * Lazily invokes a side effect for each element, yielding it unchanged.
      *
-     * @param iterable $source     The source iterable.
+     * @param iterable $source The source iterable.
      * @param callable $sideEffect The side effect invoked with each element.
      *
      * @return iterable The original elements, preserving original keys.
