@@ -19,12 +19,12 @@ use RuntimeException;
  */
 final class MiddlewarePipeline implements IRequestHandler
 {
+    public readonly IRequestHandler $fallback;
     /**
      * @var list<IMiddleware|string> Middleware instances; a string is a container service id resolved (and replaced
      * in place) on first dispatch.
      */
     private array $middlewares;
-    private readonly IRequestHandler $fallback;
     private readonly ?IContainer $container;
 
     /**
@@ -73,18 +73,6 @@ final class MiddlewarePipeline implements IRequestHandler
         $this->middlewares = $list;
         $this->fallback = $fallback;
         $this->container = $container;
-    }
-
-    /**
-     * Returns the handler that produces the response when the middleware list is exhausted.
-     *
-     * @return IRequestHandler The fallback handler.
-     *
-     * @internal
-     */
-    public function fallbackHandler(): IRequestHandler
-    {
-        return $this->fallback;
     }
 
     /**

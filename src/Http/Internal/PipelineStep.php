@@ -39,7 +39,7 @@ final class PipelineStep implements IRequestHandler
     {
         $middleware = $this->pipeline->middlewareAt($this->index);
         if ($middleware === null) {
-            return $this->pipeline->fallbackHandler()->handle($request);
+            return $this->pipeline->fallback->handle($request);
         }
 
         return $middleware->process($request, new PipelineStep($this->pipeline, $this->index + 1));
