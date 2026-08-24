@@ -12,6 +12,7 @@ use Psr\Http\Message\ResponseInterface as IResponse;
 use Psr\Http\Message\ServerRequestInterface as IServerRequest;
 use Psr\Http\Server\MiddlewareInterface as IMiddleware;
 use Psr\Http\Server\RequestHandlerInterface as IRequestHandler;
+use RuntimeException;
 
 /**
  * A PSR-15 request handler that dispatches middleware in order, ending at a fallback handler.
@@ -24,6 +25,7 @@ final class MiddlewarePipeline implements IRequestHandler
      */
     private array $middlewares;
     private readonly IRequestHandler $fallback;
+    private readonly ?IContainer $container;
 
     /**
      * Creates a pipeline over an ordered list of middleware.
@@ -70,6 +72,7 @@ final class MiddlewarePipeline implements IRequestHandler
 
         $this->middlewares = $list;
         $this->fallback = $fallback;
+        $this->container = $container;
     }
 
     /**
@@ -87,9 +90,14 @@ final class MiddlewarePipeline implements IRequestHandler
     /**
      * Returns the middleware at a position, or `null` past the end of the list.
      *
+     * A service id at the position is resolved through the container on the first call and kept, so each id is
+     * resolved at most once per pipeline.
+     *
      * @param int $index The zero-based position.
      *
      * @return ?IMiddleware The middleware, or `null` when `$index` is past the end.
+     *
+     * @throws RuntimeException if a service id resolves to anything but a middleware instance.
      *
      * @internal
      *
@@ -98,9 +106,21 @@ final class MiddlewarePipeline implements IRequestHandler
     public function middlewareAt(int $index): ?IMiddleware
     {
         $middleware = $this->middlewares[$index] ?? null;
-        \assert(!\is_string($middleware));
+        if (!\is_string($middleware)) {
+            return $middleware;
+        }
 
-        return $middleware;
+        // The constructor rejects service ids without a container, so the nullsafe call cannot yield null here.
+        $resolved = $this->container?->get($middleware);
+        if (!$resolved instanceof IMiddleware) {
+            throw new RuntimeException(
+                \sprintf('Service "%s" is not a middleware, %s given.', $middleware, \get_debug_type($resolved))
+            );
+        }
+
+        $this->middlewares[$index] = $resolved;
+
+        return $resolved;
     }
 
     #region implements IRequestHandler

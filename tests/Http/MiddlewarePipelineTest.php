@@ -163,6 +163,51 @@ final class MiddlewarePipelineTest extends TestCase
     }
 
     #[Test]
+    public function handle_resolvesAServiceIdOnFirstDispatchAndOnlyOnce(): void
+    {
+        $log = [];
+        $container = new FakeContainer(['mw' => self::logging('lazy', $log)]);
+        $pipeline = new MiddlewarePipeline(['mw'], new FixedResponseHandler(new Response(200), $log), $container);
+
+        self::assertSame([], $container->getCalls);
+
+        $pipeline->handle(new ServerRequest());
+        $pipeline->handle(new ServerRequest());
+
+        self::assertSame(['mw' => 1], $container->getCalls);
+        self::assertSame(['lazy', 'fallback', 'lazy', 'fallback'], $log);
+    }
+
+    #[Test]
+    public function handle_neverResolvesAServiceIdBehindAShortCircuit(): void
+    {
+        $short = new CallbackMiddleware(
+            static fn (IServerRequest $request, IRequestHandler $handler): IResponse => new Response(403)
+        );
+        $container = new FakeContainer(['mw' => $short]);
+        $pipeline = new MiddlewarePipeline(
+            [$short, 'mw'],
+            new FixedResponseHandler(new Response(200)),
+            $container,
+        );
+
+        $pipeline->handle(new ServerRequest());
+
+        self::assertSame([], $container->getCalls);
+    }
+
+    #[Test]
+    public function handle_throwsWhenAServiceResolvesToANonMiddleware(): void
+    {
+        $container = new FakeContainer(['mw' => 'not a middleware']);
+        $pipeline = new MiddlewarePipeline(['mw'], new FixedResponseHandler(new Response(200)), $container);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Service "mw" is not a middleware, string given.');
+        $pipeline->handle(new ServerRequest());
+    }
+
+    #[Test]
     public function construct_rejectsAnElementThatIsNeitherMiddlewareNorString(): void
     {
         $this->expectException(InvalidArgumentException::class);
