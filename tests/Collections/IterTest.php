@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use Manychois\PhpStrong\Collections\Iter;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 use TypeError;
 use UnderflowException;
 
@@ -63,33 +64,6 @@ final class IterTest extends TestCase
         static::assertSame(0, $calls);
         iterator_to_array($result);
         static::assertSame(3, $calls);
-    }
-
-    #[Test]
-    public function tapCallsSideEffectAndYieldsElementsUnchanged(): void
-    {
-        $seen = [];
-        $source = ['a' => 1, 'b' => 2];
-        $result = Iter::tap($source, static function (int $v, int|string $k) use (&$seen): void {
-            $seen[] = [$k, $v];
-        });
-
-        static::assertSame(['a' => 1, 'b' => 2], iterator_to_array($result));
-        static::assertSame([['a', 1], ['b', 2]], $seen);
-    }
-
-    #[Test]
-    public function tapIsLazy(): void
-    {
-        $calls = 0;
-        $source = [1, 2];
-        $result = Iter::tap($source, static function () use (&$calls): void {
-            $calls++;
-        });
-
-        static::assertSame(0, $calls);
-        iterator_to_array($result);
-        static::assertSame(2, $calls);
     }
 
     #[Test]
@@ -258,43 +232,43 @@ final class IterTest extends TestCase
     }
 
     #[Test]
-    public function zipYieldsTuplesStoppingAtShortestSource(): void
+    public function transposeYieldsTuplesStoppingAtShortestSource(): void
     {
-        $result = Iter::zip([1, 2, 3], ['a', 'b']);
+        $result = Iter::transpose([1, 2, 3], ['a', 'b']);
 
         static::assertSame([[1, 'a'], [2, 'b']], iterator_to_array($result));
     }
 
     #[Test]
-    public function zipYieldsNothingWithNoSources(): void
+    public function transposeYieldsNothingWithNoSources(): void
     {
-        $result = Iter::zip();
+        $result = Iter::transpose();
 
         static::assertSame([], iterator_to_array($result));
     }
 
     #[Test]
-    public function zipAcceptsAnIteratorSource(): void
+    public function transposeAcceptsAnIteratorSource(): void
     {
         $generator = (static function (): Generator {
             yield 1;
             yield 2;
         })();
-        $result = Iter::zip($generator, ['a', 'b']);
+        $result = Iter::transpose($generator, ['a', 'b']);
 
         static::assertSame([[1, 'a'], [2, 'b']], iterator_to_array($result));
     }
 
     #[Test]
-    public function zipAcceptsAnIteratorAggregateSource(): void
+    public function transposeAcceptsAnIteratorAggregateSource(): void
     {
-        $result = Iter::zip(new ArrayObject([1, 2]), ['a', 'b']);
+        $result = Iter::transpose(new ArrayObject([1, 2]), ['a', 'b']);
 
         static::assertSame([[1, 'a'], [2, 'b']], iterator_to_array($result));
     }
 
     #[Test]
-    public function zipAcceptsAPartiallyConsumedGeneratorSource(): void
+    public function transposeAcceptsAPartiallyConsumedGeneratorSource(): void
     {
         $generator = (static function (): Generator {
             yield 1;
@@ -304,7 +278,7 @@ final class IterTest extends TestCase
         $generator->current();
         $generator->next();
 
-        $result = Iter::zip($generator, ['a', 'b']);
+        $result = Iter::transpose($generator, ['a', 'b']);
 
         static::assertSame([[2, 'a'], [3, 'b']], iterator_to_array($result));
     }
@@ -507,5 +481,45 @@ final class IterTest extends TestCase
         });
 
         static::assertSame(2, $calls);
+    }
+
+    #[Test]
+    public function lazyMethodsPreserveNonScalarKeys(): void
+    {
+        $k1 = new stdClass();
+        $k2 = new stdClass();
+        $source = static function () use ($k1, $k2): Generator {
+            yield $k1 => 1;
+            yield $k2 => 2;
+        };
+
+        $seen = [];
+        $result = Iter::filter(
+            Iter::map($source(), static fn (int $v): int => $v * 10),
+            static function (int $v, mixed $key) use (&$seen): bool {
+                $seen[] = $key;
+
+                return true;
+            },
+        );
+
+        $pairs = [];
+        foreach ($result as $key => $value) {
+            $pairs[] = [$key, $value];
+        }
+
+        static::assertSame([[$k1, 10], [$k2, 20]], $pairs);
+        static::assertSame([$k1, $k2], $seen);
+    }
+
+    #[Test]
+    public function toArrayRejectsNonScalarKeys(): void
+    {
+        $source = static function (): Generator {
+            yield new stdClass() => 1;
+        };
+
+        static::expectException(TypeError::class);
+        Iter::toArray($source());
     }
 }

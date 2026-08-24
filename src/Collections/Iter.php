@@ -32,10 +32,11 @@ final class Iter
      *
      * @return bool True if every element matches (including an empty source); false otherwise.
      *
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param callable(T,int|string):bool $predicate
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param callable(TValue,TKey):bool $predicate
      */
     public static function all(iterable $source, callable $predicate): bool
     {
@@ -56,10 +57,11 @@ final class Iter
      *
      * @return bool True if any element matches; false otherwise (including an empty source).
      *
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param callable(T,int|string):bool $predicate
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param callable(TValue,TKey):bool $predicate
      */
     public static function any(iterable $source, callable $predicate): bool
     {
@@ -84,7 +86,7 @@ final class Iter
      *
      * @template T
      *
-     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param iterable<mixed,T> $source
      * @phpstan-param positive-int $size
      *
      * @phpstan-return iterable<int,list<T>>
@@ -116,7 +118,7 @@ final class Iter
         }
 
         $count = 0;
-        foreach ($source as $ignored) {
+        foreach ($source as $_) {
             $count++;
         }
 
@@ -131,12 +133,13 @@ final class Iter
      *
      * @return iterable The filtered elements, preserving original keys.
      *
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param callable(T,int|string):bool $predicate
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param callable(TValue,TKey):bool $predicate
      *
-     * @phpstan-return iterable<int|string,T>
+     * @phpstan-return iterable<TKey,TValue>
      */
     public static function filter(iterable $source, callable $predicate): iterable
     {
@@ -157,12 +160,13 @@ final class Iter
      *
      * @throws UnderflowException if no element matches.
      *
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param ?callable(T,int|string):bool $predicate
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param ?callable(TValue,TKey):bool $predicate
      *
-     * @phpstan-return T
+     * @phpstan-return TValue
      */
     public static function first(iterable $source, ?callable $predicate = null): mixed
     {
@@ -183,12 +187,13 @@ final class Iter
      *
      * @return mixed The first matching element, or null if none is found.
      *
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param ?callable(T,int|string):bool $predicate
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param ?callable(TValue,TKey):bool $predicate
      *
-     * @phpstan-return ?T
+     * @phpstan-return ?TValue
      */
     public static function firstOrNull(iterable $source, ?callable $predicate = null): mixed
     {
@@ -209,11 +214,12 @@ final class Iter
      *
      * @return iterable The concatenated results, reindexed with integer keys.
      *
-     * @template T
+     * @template TKey
      * @template TOut
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param callable(T,int|string):iterable<TOut> $mapper
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param callable(TValue,TKey):iterable<TOut> $mapper
      *
      * @phpstan-return iterable<int,TOut>
      */
@@ -235,7 +241,7 @@ final class Iter
      *
      * @template T
      *
-     * @phpstan-param iterable<int|string,iterable<int|string,T>> $source
+     * @phpstan-param iterable<mixed,iterable<mixed,T>> $source
      *
      * @phpstan-return iterable<int,T>
      */
@@ -256,13 +262,14 @@ final class Iter
      *
      * @return iterable The transformed elements, preserving original keys.
      *
-     * @template T
+     * @template TKey
      * @template TOut
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param callable(T,int|string):TOut $mapper
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param callable(TValue,TKey):TOut $mapper
      *
-     * @phpstan-return iterable<int|string,TOut>
+     * @phpstan-return iterable<TKey,TOut>
      */
     public static function map(iterable $source, callable $mapper): iterable
     {
@@ -280,11 +287,12 @@ final class Iter
      *
      * @return mixed The final accumulated value.
      *
-     * @template T
      * @template TCarry
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param callable(TCarry,T,int|string):TCarry $reducer
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param callable(TCarry,TValue,TKey):TCarry $reducer
      * @phpstan-param TCarry $initial
      *
      * @phpstan-return TCarry
@@ -309,12 +317,13 @@ final class Iter
      *
      * @throws InvalidArgumentException if $count is negative.
      *
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param iterable<TKey,TValue> $source
      * @phpstan-param non-negative-int $count
      *
-     * @phpstan-return iterable<int|string,T>
+     * @phpstan-return iterable<TKey,TValue>
      */
     public static function skip(iterable $source, int $count): iterable
     {
@@ -333,12 +342,13 @@ final class Iter
      *
      * @return iterable The remainder starting from the first non-matching element, preserving keys.
      *
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param callable(T,int|string):bool $predicate
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param callable(TValue,TKey):bool $predicate
      *
-     * @phpstan-return iterable<int|string,T>
+     * @phpstan-return iterable<TKey,TValue>
      */
     public static function skipWhile(iterable $source, callable $predicate): iterable
     {
@@ -363,12 +373,13 @@ final class Iter
      *
      * @throws InvalidArgumentException if $count is negative.
      *
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param iterable<TKey,TValue> $source
      * @phpstan-param non-negative-int $count
      *
-     * @phpstan-return iterable<int|string,T>
+     * @phpstan-return iterable<TKey,TValue>
      */
     public static function take(iterable $source, int $count): iterable
     {
@@ -387,12 +398,13 @@ final class Iter
      *
      * @return iterable The leading matching elements, preserving keys.
      *
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param callable(T,int|string):bool $predicate
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param callable(TValue,TKey):bool $predicate
      *
-     * @phpstan-return iterable<int|string,T>
+     * @phpstan-return iterable<TKey,TValue>
      */
     public static function takeWhile(iterable $source, callable $predicate): iterable
     {
@@ -406,41 +418,23 @@ final class Iter
     }
 
     /**
-     * Lazily invokes a side effect for each element, yielding it unchanged.
-     *
-     * @param iterable $source The source iterable.
-     * @param callable $sideEffect The side effect invoked with each element.
-     *
-     * @return iterable The original elements, preserving original keys.
-     *
-     * @template T
-     *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param callable(T,int|string):void $sideEffect
-     *
-     * @phpstan-return iterable<int|string,T>
-     */
-    public static function tap(iterable $source, callable $sideEffect): iterable
-    {
-        foreach ($source as $key => $value) {
-            $sideEffect($value, $key);
-
-            yield $key => $value;
-        }
-    }
-
-    /**
      * Eagerly materializes an iterable into an array, preserving keys.
      *
      * @param iterable $source The source iterable.
      *
      * @return array The materialized elements. On key collision, the last value wins.
      *
+     * Keys are subject to PHP array-key coercion, so `1`, `'1'`, `1.0` and `true` all collapse to the same entry. A key
+     * which is not a valid array key (e.g. an object, as a Traversable may yield) throws a native TypeError; use
+     * toList() to discard keys instead.
+     *
+     * @throws TypeError if a key is not a valid array key.
+     *
      * @template T
      *
-     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param iterable<array-key,T> $source
      *
-     * @phpstan-return array<int|string,T>
+     * @phpstan-return array<array-key,T>
      */
     public static function toArray(iterable $source): array
     {
@@ -461,7 +455,7 @@ final class Iter
      *
      * @template T
      *
-     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param iterable<mixed,T> $source
      *
      * @phpstan-return list<T>
      */
@@ -476,48 +470,13 @@ final class Iter
     }
 
     /**
-     * Lazily yields only the first occurrence of each distinct element.
+     * Lazily turns the source iterables into tuples, taking one element from each per step.
      *
-     * @param iterable $source The source iterable.
-     * @param ?callable $keySelector The selector deriving a comparison key from each element; defaults to the
-     *                               element itself.
+     * Sources are read in lockstep and their keys are discarded; iteration stops as soon as any source is exhausted,
+     * so the result is as long as the shortest source. An Iterator source is read from its current position without
+     * being rewound, which lets a partially consumed Generator take part.
      *
-     * @return iterable The first-seen elements for each distinct key, preserving original keys.
-     *
-     * When $keySelector is null, elements are compared by PHP array-key coercion (the same rules that apply
-     * when using the element as an array index), not by `==`. For example `1`, `'1'`, `1.0` and `true` all
-     * coerce to the same array key and are treated as duplicates, while `'1.0'` does not. In that case, T must
-     * be `array-key`; a non-`array-key` element (e.g. an array or object) throws a native TypeError. Pass
-     * $keySelector to derive an `array-key` from any element type instead.
-     *
-     * @throws TypeError if an element is not a valid array key and no $keySelector is given.
-     *
-     * @template T
-     *
-     * @phpstan-param iterable<int|string,T> $source
-     * @phpstan-param ?callable(T):array-key $keySelector
-     *
-     * @phpstan-return iterable<int|string,T>
-     */
-    public static function unique(iterable $source, ?callable $keySelector = null): iterable
-    {
-        $seen = [];
-        foreach ($source as $key => $value) {
-            /** @var int|string $uniqueKey */
-            $uniqueKey = $keySelector === null ? $value : $keySelector($value);
-            if (\array_key_exists($uniqueKey, $seen)) {
-                continue;
-            }
-            $seen[$uniqueKey] = true;
-
-            yield $key => $value;
-        }
-    }
-
-    /**
-     * Lazily combines multiple iterables into tuples, stopping at the shortest one.
-     *
-     * @param iterable ...$sources The source iterables to zip together.
+     * @param iterable ...$sources The source iterables to read in lockstep.
      *
      * @return iterable The tuples, each a list with one element per source, with reindexed integer keys.
      *
@@ -525,7 +484,7 @@ final class Iter
      *
      * @phpstan-return iterable<int,list<mixed>>
      */
-    public static function zip(iterable ...$sources): iterable
+    public static function transpose(iterable ...$sources): iterable
     {
         if (\count($sources) === 0) {
             return;
@@ -552,6 +511,45 @@ final class Iter
     }
 
     /**
+     * Lazily yields only the first occurrence of each distinct element.
+     *
+     * @param iterable $source The source iterable.
+     * @param ?callable $keySelector The selector deriving a comparison key; defaults to the element itself.
+     *
+     * @return iterable The first-seen elements for each distinct key, preserving original keys.
+     *
+     * When $keySelector is null, elements are compared by PHP array-key coercion (the same rules that apply when using
+     * the element as an array index), not by `==`. For example `1`, `'1'`, `1.0` and `true` all coerce to the same
+     * array key and are treated as duplicates, while `'1.0'` does not. In that case, TValue must be `array-key`; a
+     * non-`array-key` element (e.g. an array or object) throws a native TypeError. Pass $keySelector to derive an
+     * `array-key` from any element type instead.
+     *
+     * @throws TypeError if an element is not a valid array key and no $keySelector is given.
+     *
+     * @template TKey
+     * @template TValue
+     *
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param ?callable(TValue):array-key $keySelector
+     *
+     * @phpstan-return iterable<TKey,TValue>
+     */
+    public static function unique(iterable $source, ?callable $keySelector = null): iterable
+    {
+        $seen = [];
+        foreach ($source as $key => $value) {
+            /** @var int|string $uniqueKey */
+            $uniqueKey = $keySelector === null ? $value : $keySelector($value);
+            if (\array_key_exists($uniqueKey, $seen)) {
+                continue;
+            }
+            $seen[$uniqueKey] = true;
+
+            yield $key => $value;
+        }
+    }
+
+    /**
      * Lazily groups elements of an iterable into fixed-size lists.
      *
      * @param iterable $source The source iterable.
@@ -561,7 +559,7 @@ final class Iter
      *
      * @template T
      *
-     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param iterable<mixed,T> $source
      * @phpstan-param positive-int $size
      *
      * @phpstan-return iterable<int,list<T>>
@@ -589,12 +587,13 @@ final class Iter
      *
      * @return iterable The remaining elements, preserving original keys.
      *
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param iterable<TKey,TValue> $source
      * @phpstan-param non-negative-int $count
      *
-     * @phpstan-return iterable<int|string,T>
+     * @phpstan-return iterable<TKey,TValue>
      */
     private static function skipGenerator(iterable $source, int $count): iterable
     {
@@ -615,12 +614,13 @@ final class Iter
      *
      * @return iterable At most $count elements, preserving original keys.
      *
-     * @template T
+     * @template TKey
+     * @template TValue
      *
-     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param iterable<TKey,TValue> $source
      * @phpstan-param non-negative-int $count
      *
-     * @phpstan-return iterable<int|string,T>
+     * @phpstan-return iterable<TKey,TValue>
      */
     private static function takeGenerator(iterable $source, int $count): iterable
     {

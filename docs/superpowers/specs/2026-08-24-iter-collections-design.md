@@ -55,7 +55,7 @@ until iterated.
 - `flatten(iterable $source): iterable`
   One level: `$source` is an `iterable<iterable<T>>`, yields `T` reindexed
   with int keys.
-- `zip(iterable ...$sources): iterable`
+- `transpose(iterable ...$sources): iterable`
   Yields `list<mixed>` tuples, one element from each source per tuple, in
   source order. Stops at the shortest source (including immediately if
   `$sources` is empty, in which case it yields nothing). Reindexed int keys.
