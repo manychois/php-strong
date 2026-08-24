@@ -140,3 +140,63 @@ $response = $pipeline->handle(ServerRequest::fromGlobals());
   requests and a middleware may dispatch a sub-request through its own pipeline.
 - The return type is `ResponseInterface`, not the concrete `Response` — middlewares may return any implementation.
 - Exceptions from middlewares, the fallback, or the container propagate unchanged.
+
+## Session
+
+`NativeSession` reads and writes PHP's own session — the `$_SESSION` superglobal — with the typed accessors of
+[`DataReader`](collections.md), because `SessionInterface` extends `DataReaderInterface`.
+
+```php
+use Manychois\PhpStrong\Http\NativeSession;
+
+$session = new NativeSession();          // starts nothing
+
+$session->set('user.name', 'Ann');       // session_start() happens here
+$session->string('user.name');           // 'Ann'
+$session->asInt('cart.count');           // '3' becomes 3
+$session->nullString('user.email');      // null when absent
+
+$session->regenerate();                  // new id, data kept — call this right after sign-in
+$session->destroy();
+```
+
+The session starts lazily: constructing the class touches nothing, and `session_start()` runs on the first read or
+write of a value. `id()` and `isStarted()` deliberately do not start it, so they are safe to call before you have
+decided whether a session is needed.
+
+### Writing
+
+`set()` and `remove()` take keys in the same dot notation as the reads, and `set()` creates missing segments as it
+descends:
+
+```php
+$session->set('cart.items.0.sku', 'B-1');   // creates cart, items and the element
+$session->remove('cart.items');
+$session->clear();                          // empties the data, session stays alive
+```
+
+Two keys are refused rather than written:
+
+- A segment which exists but holds something other than an array. `set('a.b', 1)` when `a` is the string `'x'`
+  throws `InvalidArgumentException` instead of discarding `'x'`.
+- A numeric top-level key. PHP would store `$_SESSION[0]`, and `keys()` promises strings.
+
+### Members beyond the reader
+
+| Member | Notes |
+| ------ | ----- |
+| `set(string $key, mixed $value): void` | Dot notation; creates missing segments. |
+| `remove(string $key): void` | Dot notation; an absent key is ignored. |
+| `clear(): void` | Empties the data; the session stays alive with the same id. |
+| `id(): string` | `''` when the session has not started. |
+| `isStarted(): bool` | Never starts the session. |
+| `regenerate(bool $deleteOldSession = true): void` | New id, same data — the session fixation defence. |
+| `destroy(): void` | Ends the session and drops its data; a no-op when never started. |
+
+### Notes
+
+- `reader('cart')` returns a plain `DataReader` over a *copy* of that subtree. Reads through it are fine; writes do
+  not reach the session, so write with `$session->set('cart.…')`.
+- `entries()`, `keys()` and `count()` describe the top level of the session data only.
+- Since `SessionInterface` extends `DataReaderInterface`, type-hint the narrower `SessionInterface` only where you
+  actually write; code which just reads can accept a `DataReaderInterface` and be tested with a plain `DataReader`.

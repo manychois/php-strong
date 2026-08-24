@@ -35,6 +35,7 @@ Every accepted PSR that defines an interface is now covered.
 | Namespace | Summary | Docs |
 | --------- | ------- | ---- |
 | `Manychois\PhpStrong\Collections` | `DataReader`, strongly typed access to an untyped array or object with dot-notation keys and strict/converting/nullable accessors, plus the `Iter` (lazy) and `Seq` (eager) iterable utilities. | [docs/collections.md](docs/collections.md) |
+| `Manychois\PhpStrong\Http` | `NativeSession`, a lazily started `$_SESSION` wrapper whose `SessionInterface` extends `DataReaderInterface`, so session data is read with the same strongly typed, dot-notation accessors. | [docs/http.md](docs/http.md) |
 | `Manychois\PhpStrong\Time` | `DayOfWeek` and `Month`, calendar enums numbered to match `DateTimeInterface::format()`, with wrapping arithmetic and leap-aware month lengths. | [docs/time.md](docs/time.md) |
 
 ## Development
