@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Manychois\PhpStrongTests\Http;
 
 use Manychois\PhpStrong\Http\CookieStore;
+use Manychois\PhpStrong\Http\Request;
 use Manychois\PhpStrong\Http\Response;
 use Manychois\PhpStrong\Http\Uri;
 use Manychois\PhpStrong\Time\TestClock;
@@ -319,6 +320,129 @@ final class CookieStoreTest extends TestCase
         $store->absorb($this->responseWith('__Host-sid=abc; Secure'), Uri::fromString('https://example.com/'));
 
         static::assertSame([], $store->all());
+    }
+
+    #[Test]
+    public function attachToSendsAMatchingCookie(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $store->absorb($this->responseWith('sid=abc'), Uri::fromString('https://example.com/'));
+
+        $request = $store->attachTo(new Request('GET', 'https://example.com/v1/things'));
+
+        static::assertSame('sid=abc', $request->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function attachToEncodesTheValue(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $store->absorb($this->responseWith('sid=a%20b'), Uri::fromString('https://example.com/'));
+
+        $request = $store->attachTo(new Request('GET', 'https://example.com/'));
+
+        static::assertSame('sid=a%20b', $request->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function attachToLeavesTheRequestUntouchedWhenNothingMatches(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $request = new Request('GET', 'https://example.com/');
+
+        static::assertFalse($store->attachTo($request)->hasHeader('Cookie'));
+    }
+
+    #[Test]
+    public function attachToDoesNotSendAHostOnlyCookieToASubdomain(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $store->absorb($this->responseWith('sid=abc'), Uri::fromString('https://example.com/'));
+
+        $request = $store->attachTo(new Request('GET', 'https://api.example.com/'));
+
+        static::assertFalse($request->hasHeader('Cookie'));
+    }
+
+    #[Test]
+    public function attachToSendsADomainCookieToASubdomain(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $store->absorb(
+            $this->responseWith('sid=abc; Domain=example.com'),
+            Uri::fromString('https://example.com/')
+        );
+
+        $request = $store->attachTo(new Request('GET', 'https://api.example.com/'));
+
+        static::assertSame('sid=abc', $request->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function attachToRespectsThePath(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $store->absorb($this->responseWith('sid=abc; Path=/admin'), Uri::fromString('https://example.com/'));
+
+        static::assertFalse($store->attachTo(new Request('GET', 'https://example.com/public'))->hasHeader('Cookie'));
+        static::assertSame(
+            'sid=abc',
+            $store->attachTo(new Request('GET', 'https://example.com/admin/users'))->getHeaderLine('Cookie')
+        );
+    }
+
+    #[Test]
+    public function attachToDoesNotSendASecureCookieOverPlainHttp(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $store->absorb($this->responseWith('sid=abc; Secure'), Uri::fromString('https://example.com/'));
+
+        static::assertFalse($store->attachTo(new Request('GET', 'http://example.com/'))->hasHeader('Cookie'));
+        static::assertSame(
+            'sid=abc',
+            $store->attachTo(new Request('GET', 'https://example.com/'))->getHeaderLine('Cookie')
+        );
+    }
+
+    #[Test]
+    public function attachToDoesNotSendAnExpiredCookie(): void
+    {
+        $clock = new TestClock('2026-08-25 00:00:00');
+        $store = new CookieStore($clock);
+        $store->absorb($this->responseWith('sid=abc; Max-Age=60'), Uri::fromString('https://example.com/'));
+
+        $clock->advance('PT61S');
+
+        static::assertFalse($store->attachTo(new Request('GET', 'https://example.com/'))->hasHeader('Cookie'));
+    }
+
+    #[Test]
+    public function attachToOrdersByLongestPathThenOldestFirst(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $uri = Uri::fromString('https://example.com/');
+        $store->absorb($this->responseWith('a=1; Path=/'), $uri);
+        $store->absorb($this->responseWith('b=2; Path=/admin'), $uri);
+        $store->absorb($this->responseWith('c=3; Path=/'), $uri);
+
+        $request = $store->attachTo(new Request('GET', 'https://example.com/admin/users'));
+
+        static::assertSame('b=2; a=1; c=3', $request->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function attachToLetsAnExistingCookieHeaderWin(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $uri = Uri::fromString('https://example.com/');
+        $store->absorb($this->responseWith('sid=stored'), $uri);
+        $store->absorb($this->responseWith('other=stored'), $uri);
+
+        $request = $store->attachTo(
+            new Request('GET', 'https://example.com/', ['Cookie' => 'sid=explicit'])
+        );
+
+        static::assertSame('sid=explicit; other=stored', $request->getHeaderLine('Cookie'));
     }
 
     private function responseWith(string $setCookie): Response

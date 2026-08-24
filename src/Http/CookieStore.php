@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use Manychois\PhpStrong\Http\Internal\CookieEntry;
 use Manychois\PhpStrong\Time\UtcClock;
 use Psr\Clock\ClockInterface as IClock;
+use Psr\Http\Message\RequestInterface as IRequest;
 use Psr\Http\Message\ResponseInterface as IResponse;
 use Psr\Http\Message\UriInterface as IUri;
 
@@ -83,6 +84,65 @@ final class CookieStore
     }
 
     /**
+     * Adds a `Cookie` header carrying every stored cookie the request should send.
+     *
+     * Cookies already named in the request's own `Cookie` header are left alone: an explicit header at the call
+     * site is an intent this store should not second-guess. Cookies are ordered longest path first, then oldest
+     * first, as RFC 6265 requires.
+     *
+     * @param IRequest $request The request to attach the cookies to.
+     *
+     * @return IRequest The request carrying the cookies, or the original if none apply.
+     */
+    public function attachTo(IRequest $request): IRequest
+    {
+        $this->prune();
+        $uri = $request->getUri();
+        $host = strtolower($uri->getHost());
+        $secure = strtolower($uri->getScheme()) === 'https';
+        $path = $uri->getPath() === '' ? '/' : $uri->getPath();
+        $existingHeader = $request->getHeaderLine('Cookie');
+        $existing = self::namesIn($existingHeader);
+
+        $matches = [];
+        foreach ($this->entries as $entry) {
+            $cookie = $entry->cookie;
+            if ($cookie->secure && !$secure) {
+                continue;
+            }
+            if (!self::domainMatches($entry, $host)) {
+                continue;
+            }
+            if (!self::pathMatches($path, $cookie->path ?? '/')) {
+                continue;
+            }
+            if (in_array($cookie->name, $existing, true)) {
+                continue;
+            }
+
+            $matches[] = $entry;
+        }
+
+        if ($matches === []) {
+            return $request;
+        }
+
+        usort($matches, static function (CookieEntry $a, CookieEntry $b): int {
+            $byPath = strlen($b->cookie->path ?? '') <=> strlen($a->cookie->path ?? '');
+
+            return $byPath !== 0 ? $byPath : $a->sequence <=> $b->sequence;
+        });
+
+        $pairs = array_map(
+            static fn (CookieEntry $e): string => $e->cookie->name . '=' . rawurlencode($e->cookie->value),
+            $matches
+        );
+        $joined = implode('; ', $pairs);
+
+        return $request->withHeader('Cookie', $existingHeader === '' ? $joined : $existingHeader . '; ' . $joined);
+    }
+
+    /**
      * Forgets every cookie held.
      */
     public function clear(): void
@@ -109,6 +169,71 @@ final class CookieStore
         }
 
         return substr($requestPath, 0, $slash);
+    }
+
+    /**
+     * Tells whether a stored cookie's domain covers the host of a request.
+     *
+     * @param CookieEntry $entry The stored cookie.
+     * @param string $host The lower-cased host of the request.
+     *
+     * @return bool True if the cookie should be sent to that host.
+     */
+    private static function domainMatches(CookieEntry $entry, string $host): bool
+    {
+        $domain = $entry->cookie->domain ?? '';
+        if ($entry->hostOnly) {
+            return $host === $domain;
+        }
+
+        return $host === $domain || str_ends_with($host, '.' . $domain);
+    }
+
+    /**
+     * Reads the cookie names already present in a `Cookie` header.
+     *
+     * @param string $header The header value, which may be empty.
+     *
+     * @return array The names found.
+     *
+     * @phpstan-return list<string>
+     */
+    private static function namesIn(string $header): array
+    {
+        if (trim($header) === '') {
+            return [];
+        }
+
+        $names = [];
+        foreach (explode(';', $header) as $pair) {
+            $equals = strpos($pair, '=');
+            $names[] = $equals === false ? trim($pair) : trim(substr($pair, 0, $equals));
+        }
+
+        return $names;
+    }
+
+    /**
+     * Tells whether a stored cookie's path covers the path of a request, per RFC 6265.
+     *
+     * @param string $requestPath The path of the request.
+     * @param string $cookiePath The path the cookie was stored with.
+     *
+     * @return bool True if the cookie should be sent for that path.
+     */
+    private static function pathMatches(string $requestPath, string $cookiePath): bool
+    {
+        if ($requestPath === $cookiePath) {
+            return true;
+        }
+        if (!str_starts_with($requestPath, $cookiePath)) {
+            return false;
+        }
+        if (str_ends_with($cookiePath, '/')) {
+            return true;
+        }
+
+        return ($requestPath[strlen($cookiePath)] ?? '') === '/';
     }
 
     /**
