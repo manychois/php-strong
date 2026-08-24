@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrongTests\Http;
 
+use BadMethodCallException;
+use Manychois\PhpStrong\Http\Client;
 use Manychois\PhpStrong\Http\CookieAwareClient;
 use Manychois\PhpStrong\Http\CookieStore;
 use Manychois\PhpStrong\Http\Request;
@@ -16,6 +18,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\ClientInterface as IClient;
 use Psr\Http\Message\RequestInterface as IRequest;
 use Psr\Http\Message\ResponseInterface as IResponse;
+use ReflectionMethod;
 
 /**
  * Unit tests for {@see CookieAwareClient}.
@@ -75,6 +78,32 @@ final class CookieAwareClientTest extends TestCase
         $client = new CookieAwareClient($this->fakeClient($expected), new CookieStore());
 
         static::assertSame($expected, $client->sendRequest(new Request('GET', 'https://example.com/')));
+    }
+
+    #[Test]
+    public function sendAsyncRefusesAClientWhichCannotSendAsynchronously(): void
+    {
+        $client = new CookieAwareClient($this->fakeClient(new Response()), new CookieStore());
+
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessage('The wrapped client does not support asynchronous requests.');
+
+        $client->sendAsync(new Request('GET', 'https://example.com/'));
+    }
+
+    #[Test]
+    public function sendAsyncAbsorbsCookiesWhenTheTransferSettles(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $client = new CookieAwareClient(new Client(), $store);
+
+        $pending = $client->sendAsync(new Request('GET', 'https://example.com/login'));
+        $settle = new ReflectionMethod($pending, 'settle');
+        $settle->invoke($pending, \CURLE_OK, '', ['HTTP/1.1 200 OK', 'Set-Cookie: sid=abc'], '');
+
+        static::assertCount(1, $store->all());
+        static::assertSame('sid', $store->all()[0]->name);
+        static::assertSame('abc', $store->all()[0]->value);
     }
 
     /**
