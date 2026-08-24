@@ -15,13 +15,23 @@ use Override;
  * Reads and writes the session of PHP itself, i.e. the `$_SESSION` superglobal.
  *
  * The session starts lazily: constructing this class touches nothing, and `session_start()` is called on the first
- * read or write of a value. `id()` and `isStarted()` deliberately do not start it.
+ * read or write of a value, applying the {@see NativeSessionOptions} given to the constructor. `id()` and
+ * `isStarted()` deliberately do not start it.
  *
  * A key may be written in dot notation to reach a value nested inside the session data, e.g. `user.address.city`.
  * Writing to a path whose segments do not exist creates them as arrays.
  */
 final class NativeSession extends AbstractDataReader implements ISession
 {
+    /**
+     * Initializes a new instance of the NativeSession class.
+     *
+     * @param NativeSessionOptions $options The settings applied to PHP right before the session starts.
+     */
+    public function __construct(private readonly NativeSessionOptions $options = new NativeSessionOptions())
+    {
+    }
+
     #region extends AbstractDataReader
 
     /**
@@ -187,6 +197,37 @@ final class NativeSession extends AbstractDataReader implements ISession
     {
         if (session_status() === \PHP_SESSION_ACTIVE) {
             return;
+        }
+
+        if ($this->options->name !== null) {
+            session_name($this->options->name);
+        }
+        if ($this->options->savePath !== null) {
+            session_save_path($this->options->savePath);
+        }
+
+        session_set_cookie_params([
+            'lifetime' => $this->options->cookieLifetime,
+            'path' => $this->options->cookiePath,
+            'domain' => $this->options->cookieDomain,
+            'secure' => $this->options->cookieSecure,
+            'httponly' => $this->options->cookieHttpOnly,
+            'samesite' => $this->options->cookieSameSite->value,
+            'partitioned' => $this->options->cookiePartitioned,
+        ]);
+
+        $settings = [
+            'session.use_strict_mode' => $this->options->useStrictMode,
+            'session.use_only_cookies' => $this->options->useOnlyCookies,
+        ];
+        if ($this->options->gcMaxLifetime !== null) {
+            $settings['session.gc_maxlifetime'] = $this->options->gcMaxLifetime;
+        }
+        if ($this->options->serializeHandler !== null) {
+            $settings['session.serialize_handler'] = $this->options->serializeHandler->value;
+        }
+        foreach ($settings + $this->options->ini as $key => $value) {
+            ini_set($key, is_bool($value) ? ($value ? '1' : '0') : (string) $value);
         }
 
         session_start();

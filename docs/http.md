@@ -164,6 +164,56 @@ The session starts lazily: constructing the class touches nothing, and `session_
 write of a value. `id()` and `isStarted()` deliberately do not start it, so they are safe to call before you have
 decided whether a session is needed.
 
+### Configuration
+
+`NativeSessionOptions` carries everything applied to PHP right before the session starts. Its defaults are the secure
+ones, so the no-argument constructor is a reasonable production setting.
+
+```php
+use Manychois\PhpStrong\Http\{NativeSession, NativeSessionOptions, SameSite, SessionSerializer};
+
+$session = new NativeSession(new NativeSessionOptions(
+    name: 'app_session',
+    savePath: '/var/lib/app/sessions',
+    cookieLifetime: 0,                              // until the browser closes
+    cookieSameSite: SameSite::Strict,
+    gcMaxLifetime: 1800,
+    serializeHandler: SessionSerializer::PhpSerialize,
+    ini: ['session.gc_probability' => 1],           // anything without a dedicated option
+));
+```
+
+| Option | Default | Notes |
+| ------ | ------- | ----- |
+| `name` | `null` | The session, and cookie, name. `null` keeps PHP's. Letters, digits, dashes and underscores; digits only is rejected, as PHP forbids it. |
+| `savePath` | `null` | Where session files are written. `null` keeps PHP's. |
+| `cookieLifetime` | `0` | Seconds; `0` means until the browser closes. |
+| `cookiePath` | `'/'` | |
+| `cookieDomain` | `''` | Empty means the current host only. |
+| `cookieSecure` | `true` | HTTPS only. |
+| `cookieHttpOnly` | `true` | Hidden from JavaScript. |
+| `cookieSameSite` | `SameSite::Lax` | `None` requires `cookieSecure`, which browsers enforce. |
+| `cookiePartitioned` | `false` | CHIPS; requires `cookieSecure`. |
+| `useStrictMode` | `true` | PHP refuses a session id it did not generate — the fixation defence. |
+| `useOnlyCookies` | `true` | The id never comes from the URL. |
+| `gcMaxLifetime` | `null` | Seconds an idle session survives. `null` keeps PHP's. |
+| `serializeHandler` | `null` | See *Serialization* below. |
+| `ini` | `[]` | Further `session.*` settings, applied verbatim. Keys must carry the `session.` prefix, and a key a dedicated option already controls is rejected rather than silently losing to it. |
+
+Every value is validated in the constructor, so a bad setting fails where it is written rather than at
+`session_start()`.
+
+### Serialization
+
+Everything stored in the session is serialized when the request ends, not when `set()` is called — so an unstorable
+value fails late, during shutdown. Closures throw, and **resources are silently replaced by `int 0`**. Objects are
+fine as long as their class can be loaded when the session is read back.
+
+The default handler of PHP, `session.serialize_handler = php`, stores entries as `key|serialized`, which brings two
+traps at the top level: a numeric key is silently dropped, and a key containing `|` makes the *entire* session write
+fail. `set()` already rejects a numeric top-level key for this reason. Choosing
+`serializeHandler: SessionSerializer::PhpSerialize` serializes the data array as a whole and has neither limitation.
+
 ### Writing
 
 `set()` and `remove()` take keys in the same dot notation as the reads, and `set()` creates missing segments as it

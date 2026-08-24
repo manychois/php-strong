@@ -6,6 +6,9 @@ namespace Manychois\PhpStrongTests\Http;
 
 use InvalidArgumentException;
 use Manychois\PhpStrong\Http\NativeSession;
+use Manychois\PhpStrong\Http\NativeSessionOptions;
+use Manychois\PhpStrong\Http\SameSite;
+use Manychois\PhpStrong\Http\SessionSerializer;
 use Override;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -41,6 +44,41 @@ final class NativeSessionTest extends TestCase
         static::assertFalse($session->isStarted());
         static::assertSame('', $session->id());
         static::assertSame(\PHP_SESSION_NONE, session_status());
+    }
+
+    #[Test]
+    public function optionsAreAppliedWhenTheSessionStarts(): void
+    {
+        $session = new NativeSession(new NativeSessionOptions(
+            name: 'app_session',
+            savePath: sys_get_temp_dir(),
+            cookieLifetime: 3600,
+            cookiePath: '/app',
+            cookieDomain: 'example.com',
+            cookieSecure: true,
+            cookieHttpOnly: true,
+            cookieSameSite: SameSite::Strict,
+            gcMaxLifetime: 1440,
+            serializeHandler: SessionSerializer::PhpSerialize,
+            ini: ['session.gc_probability' => 1],
+        ));
+        $session->set('a', 1);
+
+        static::assertSame('app_session', session_name());
+        static::assertSame(sys_get_temp_dir(), session_save_path());
+        static::assertSame([
+            'lifetime' => 3600,
+            'path' => '/app',
+            'domain' => 'example.com',
+            'secure' => true,
+            'partitioned' => false,
+            'httponly' => true,
+            'samesite' => 'Strict',
+        ], session_get_cookie_params());
+        static::assertSame('1440', ini_get('session.gc_maxlifetime'));
+        static::assertSame('php_serialize', ini_get('session.serialize_handler'));
+        static::assertSame('1', ini_get('session.gc_probability'));
+        static::assertSame('1', ini_get('session.use_strict_mode'));
     }
 
     #[Test]
