@@ -255,6 +255,75 @@ final class Iter
     }
 
     /**
+     * Eagerly returns the last element, optionally matching a predicate.
+     *
+     * Unlike first(), this cannot short-circuit: the whole source is consumed, so it never returns on an endless one.
+     *
+     * @param iterable $source The source iterable.
+     * @param ?callable $predicate The predicate the returned element must match; defaults to matching any element.
+     *
+     * @return mixed The last matching element.
+     *
+     * @throws UnderflowException if no element matches.
+     *
+     * @template TKey
+     * @template TValue
+     *
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param ?callable(TValue,TKey):bool $predicate
+     *
+     * @phpstan-return TValue
+     */
+    public static function last(iterable $source, ?callable $predicate = null): mixed
+    {
+        $found = [];
+        foreach ($source as $key => $value) {
+            if ($predicate !== null && !$predicate($value, $key)) {
+                continue;
+            }
+            $found = [$value];
+        }
+
+        if (\count($found) === 0) {
+            throw new UnderflowException('No matching element found.');
+        }
+
+        return $found[0];
+    }
+
+    /**
+     * Eagerly returns the last element, optionally matching a predicate, or null if none is found.
+     *
+     * Unlike firstOrNull(), this cannot short-circuit: the whole source is consumed, so it never returns on an
+     * endless one.
+     *
+     * @param iterable $source The source iterable.
+     * @param ?callable $predicate The predicate the returned element must match; defaults to matching any element.
+     *
+     * @return mixed The last matching element, or null if none is found.
+     *
+     * @template TKey
+     * @template TValue
+     *
+     * @phpstan-param iterable<TKey,TValue> $source
+     * @phpstan-param ?callable(TValue,TKey):bool $predicate
+     *
+     * @phpstan-return ?TValue
+     */
+    public static function lastOrNull(iterable $source, ?callable $predicate = null): mixed
+    {
+        $last = null;
+        foreach ($source as $key => $value) {
+            if ($predicate !== null && !$predicate($value, $key)) {
+                continue;
+            }
+            $last = $value;
+        }
+
+        return $last;
+    }
+
+    /**
      * Lazily transforms each element of an iterable.
      *
      * @param iterable $source The source iterable.

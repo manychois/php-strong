@@ -88,6 +88,12 @@ until iterated.
   `UnderflowException` if none found.
 - `firstOrNull(iterable $source, ?callable $predicate = null): mixed`
   Same as `first`, returns `null` instead of throwing.
+- `last(iterable $source, ?callable $predicate = null): mixed`
+  Returns the last element (optionally matching `$predicate`). Cannot
+  short-circuit: the whole source is consumed. Throws `UnderflowException` if
+  none found.
+- `lastOrNull(iterable $source, ?callable $predicate = null): mixed`
+  Same as `last`, returns `null` instead of throwing.
 - `any(iterable $source, callable $predicate): bool`
   Short-circuits on first match.
 - `all(iterable $source, callable $predicate): bool`

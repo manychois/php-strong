@@ -426,6 +426,78 @@ final class IterTest extends TestCase
     }
 
     #[Test]
+    public function lastReturnsLastElementWithoutPredicate(): void
+    {
+        static::assertSame(3, Iter::last([1, 2, 3]));
+    }
+
+    #[Test]
+    public function lastReturnsLastMatchingElement(): void
+    {
+        $result = Iter::last([1, 2, 3, 4, 5], static fn (int $v): bool => $v % 2 === 0);
+
+        static::assertSame(4, $result);
+    }
+
+    #[Test]
+    public function lastPassesKeysToThePredicate(): void
+    {
+        $seen = [];
+        $source = ['a' => 1, 'b' => 2];
+        Iter::last($source, static function (int $v, int|string $k) use (&$seen): bool {
+            $seen[] = $k;
+
+            return true;
+        });
+
+        static::assertSame(['a', 'b'], $seen);
+    }
+
+    #[Test]
+    public function lastThrowsWhenSourceIsEmpty(): void
+    {
+        $this->expectException(UnderflowException::class);
+
+        Iter::last([]);
+    }
+
+    #[Test]
+    public function lastThrowsWhenNoElementMatches(): void
+    {
+        $this->expectException(UnderflowException::class);
+
+        Iter::last([1, 3, 5], static fn (int $v): bool => $v % 2 === 0);
+    }
+
+    #[Test]
+    public function lastReturnsANullElementRatherThanThrowing(): void
+    {
+        static::assertNull(Iter::last([1, null]));
+    }
+
+    #[Test]
+    public function lastOrNullReturnsNullWhenSourceIsEmpty(): void
+    {
+        static::assertNull(Iter::lastOrNull([]));
+    }
+
+    #[Test]
+    public function lastOrNullReturnsNullWhenNoElementMatches(): void
+    {
+        $result = Iter::lastOrNull([1, 3, 5], static fn (int $v): bool => $v % 2 === 0);
+
+        static::assertNull($result);
+    }
+
+    #[Test]
+    public function lastOrNullReturnsLastMatchingElement(): void
+    {
+        $result = Iter::lastOrNull([1, 2, 3, 4, 5], static fn (int $v): bool => $v % 2 === 0);
+
+        static::assertSame(4, $result);
+    }
+
+    #[Test]
     public function anyReturnsTrueIfAnyElementMatches(): void
     {
         static::assertTrue(Iter::any([1, 2, 3], static fn (int $v): bool => $v === 2));
