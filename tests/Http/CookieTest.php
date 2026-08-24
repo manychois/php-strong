@@ -193,4 +193,126 @@ final class CookieTest extends TestCase
 
         static::assertSame('t=v', $cookie->toSetCookieHeader());
     }
+
+    #[Test]
+    public function parseSetCookieReadsTheNameAndValue(): void
+    {
+        $cookie = Cookie::parseSetCookie('theme=dark');
+
+        static::assertSame('theme', $cookie->name);
+        static::assertSame('dark', $cookie->value);
+    }
+
+    #[Test]
+    public function parseSetCookieDecodesTheValue(): void
+    {
+        $cookie = Cookie::parseSetCookie('t=a%20b%2Bc%25d');
+
+        static::assertSame('a b+c%d', $cookie->value);
+    }
+
+    #[Test]
+    public function parseSetCookieStripsSurroundingQuotesFromTheValue(): void
+    {
+        $cookie = Cookie::parseSetCookie('t="quoted"');
+
+        static::assertSame('quoted', $cookie->value);
+    }
+
+    #[Test]
+    public function parseSetCookieReadsEveryAttributeCaseInsensitively(): void
+    {
+        $cookie = Cookie::parseSetCookie(
+            'sid=abc; expires=Tue, 25 Aug 2026 10:00:00 GMT; MAX-AGE=600; Domain=example.com; path=/app; '
+            . 'secure; httponly; samesite=lax; PARTITIONED'
+        );
+
+        static::assertSame('sid', $cookie->name);
+        static::assertNotNull($cookie->expires);
+        static::assertSame('2026-08-25T10:00:00+00:00', $cookie->expires->format('c'));
+        static::assertSame(600, $cookie->maxAge);
+        static::assertSame('example.com', $cookie->domain);
+        static::assertSame('/app', $cookie->path);
+        static::assertTrue($cookie->secure);
+        static::assertTrue($cookie->httpOnly);
+        static::assertSame(SameSite::Lax, $cookie->sameSite);
+        static::assertTrue($cookie->partitioned);
+    }
+
+    #[Test]
+    public function parseSetCookieIgnoresUnknownAttributes(): void
+    {
+        $cookie = Cookie::parseSetCookie('t=v; Comment=hello; Version=1; Path=/');
+
+        static::assertSame('/', $cookie->path);
+        static::assertSame('v', $cookie->value);
+    }
+
+    #[Test]
+    public function parseSetCookieKeepsBothExpiresAndMaxAge(): void
+    {
+        $cookie = Cookie::parseSetCookie('t=v; Expires=Tue, 25 Aug 2026 10:00:00 GMT; Max-Age=60');
+
+        static::assertNotNull($cookie->expires);
+        static::assertSame(60, $cookie->maxAge);
+    }
+
+    #[Test]
+    public function parseSetCookieIgnoresAnUnparseableExpires(): void
+    {
+        $cookie = Cookie::parseSetCookie('t=v; Expires=not-a-date');
+
+        static::assertNull($cookie->expires);
+    }
+
+    #[Test]
+    public function parseSetCookieIgnoresANonNumericMaxAge(): void
+    {
+        $cookie = Cookie::parseSetCookie('t=v; Max-Age=soon');
+
+        static::assertNull($cookie->maxAge);
+    }
+
+    #[Test]
+    public function parseSetCookieIgnoresAnUnknownSameSiteValue(): void
+    {
+        $cookie = Cookie::parseSetCookie('t=v; SameSite=sideways');
+
+        static::assertNull($cookie->sameSite);
+    }
+
+    #[Test]
+    public function parseSetCookieRejectsAHeaderWithNoNameValuePair(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Set-Cookie header must begin with a name=value pair, got "nonsense".');
+
+        Cookie::parseSetCookie('nonsense');
+    }
+
+    #[Test]
+    public function parseSetCookieRoundTripsWithToSetCookieHeader(): void
+    {
+        $original = new Cookie(
+            name: 'sid',
+            value: 'a b/c',
+            maxAge: 600,
+            domain: 'example.com',
+            path: '/app',
+            secure: true,
+            httpOnly: true,
+            sameSite: SameSite::Strict,
+        );
+
+        $parsed = Cookie::parseSetCookie($original->toSetCookieHeader());
+
+        static::assertSame($original->name, $parsed->name);
+        static::assertSame($original->value, $parsed->value);
+        static::assertSame($original->maxAge, $parsed->maxAge);
+        static::assertSame($original->domain, $parsed->domain);
+        static::assertSame($original->path, $parsed->path);
+        static::assertTrue($parsed->secure);
+        static::assertTrue($parsed->httpOnly);
+        static::assertSame(SameSite::Strict, $parsed->sameSite);
+    }
 }

@@ -6,6 +6,7 @@ namespace Manychois\PhpStrong\Http;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Exception;
 use InvalidArgumentException;
 
 /**
@@ -63,6 +64,94 @@ final class Cookie
         if ($partitioned && !$secure) {
             throw new InvalidArgumentException('A partitioned cookie must be secure, which browsers enforce.');
         }
+    }
+
+    /**
+     * Parses one `Set-Cookie` header value.
+     *
+     * Attribute names are matched case-insensitively and unknown attributes are ignored, as RFC 6265 requires. An
+     * `Expires` which cannot be parsed, a non-numeric `Max-Age` and an unrecognised `SameSite` are each ignored
+     * rather than treated as errors, since a remote server's malformed attribute should not fail the whole header.
+     *
+     * @param string $header The header value to parse, without the `Set-Cookie:` name.
+     *
+     * @return self The parsed cookie.
+     *
+     * @throws InvalidArgumentException if the header does not begin with a `name=value` pair, or if the attributes
+     * describe a combination browsers reject.
+     */
+    public static function parseSetCookie(string $header): self
+    {
+        $segments = explode(';', $header);
+        $first = array_shift($segments);
+        $equals = strpos($first, '=');
+        if ($equals === false) {
+            throw new InvalidArgumentException(
+                sprintf('Set-Cookie header must begin with a name=value pair, got "%s".', trim($header))
+            );
+        }
+
+        $name = trim(substr($first, 0, $equals));
+        $raw = trim(substr($first, $equals + 1));
+        if (strlen($raw) >= 2 && str_starts_with($raw, '"') && str_ends_with($raw, '"')) {
+            $raw = substr($raw, 1, -1);
+        }
+
+        $expires = null;
+        $maxAge = null;
+        $domain = null;
+        $path = null;
+        $secure = false;
+        $httpOnly = false;
+        $sameSite = null;
+        $partitioned = false;
+
+        foreach ($segments as $segment) {
+            [$key, $attrValue] = self::splitAttribute($segment);
+            switch ($key) {
+                case 'expires':
+                    $expires = self::parseDate($attrValue);
+                    break;
+                case 'max-age':
+                    if (preg_match('/^-?\d+$/', $attrValue) === 1) {
+                        $maxAge = (int) $attrValue;
+                    }
+                    break;
+                case 'domain':
+                    $domain = $attrValue;
+                    break;
+                case 'path':
+                    $path = $attrValue;
+                    break;
+                case 'secure':
+                    $secure = true;
+                    break;
+                case 'httponly':
+                    $httpOnly = true;
+                    break;
+                case 'samesite':
+                    $sameSite = SameSite::tryFrom(ucfirst(strtolower($attrValue)));
+                    break;
+                case 'partitioned':
+                    $partitioned = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        return new self(
+            name: $name,
+            value: rawurldecode($raw),
+            expires: $expires,
+            maxAge: $maxAge,
+            domain: $domain,
+            path: $path,
+            secure: $secure,
+            httpOnly: $httpOnly,
+            sameSite: $sameSite,
+            partitioned: $partitioned,
+        );
     }
 
     /**
@@ -127,5 +216,44 @@ final class Cookie
         }
 
         return implode('; ', $parts);
+    }
+
+    /**
+     * Parses a cookie date, leniently, since browsers accept several formats in practice.
+     *
+     * @param string $value The date to parse.
+     *
+     * @return ?DateTimeImmutable The parsed instant, or `null` if it could not be parsed.
+     */
+    private static function parseDate(string $value): ?DateTimeImmutable
+    {
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            return new DateTimeImmutable($value);
+        } catch (Exception) {
+            return null;
+        }
+    }
+
+    /**
+     * Splits one attribute segment into its lower-cased name and its trimmed value.
+     *
+     * @param string $segment The segment to split.
+     *
+     * @return array The name and the value; the value is `''` for a bare flag.
+     *
+     * @phpstan-return array{string,string}
+     */
+    private static function splitAttribute(string $segment): array
+    {
+        $equals = strpos($segment, '=');
+        if ($equals === false) {
+            return [strtolower(trim($segment)), ''];
+        }
+
+        return [strtolower(trim(substr($segment, 0, $equals))), trim(substr($segment, $equals + 1))];
     }
 }
