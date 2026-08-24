@@ -186,8 +186,8 @@ $cookies->expire('legacy', path: '/');
 return $cookies->applyTo($response);
 ```
 
-`get()` returns a `string` because incoming cookies carry no attributes — only the name and value survive the
-`Cookie` header. A cookie queued with `set()` that shares its name, domain and path with one already queued replaces
+`get()` returns `?string` — `null` when the request carried no such cookie — because incoming cookies carry no
+attributes; only the name and value survive the `Cookie` header. A cookie queued with `set()` that shares its name, domain and path with one already queued replaces
 it, which is how a browser identifies a cookie. Values read from `getCookieParams()` are not decoded again, because
 PHP has already decoded `$_COOKIE`.
 
