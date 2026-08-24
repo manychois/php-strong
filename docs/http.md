@@ -106,3 +106,37 @@ non-`PendingRequest` input. The handles it accepts may span multiple `Client`
 instances. `sendAsync()` always sends over cURL directly; a custom
 `$transport` passed to the `Client` constructor applies only to
 `sendRequest()`.
+
+## Middleware (PSR-15)
+
+`MiddlewarePipeline` implements `Psr\Http\Server\RequestHandlerInterface`, dispatching
+`Psr\Http\Server\MiddlewareInterface` instances in order and ending at a fallback handler.
+
+```php
+use Manychois\PhpStrong\Http\MiddlewarePipeline;
+use Manychois\PhpStrong\Http\ServerRequest;
+
+$pipeline = new MiddlewarePipeline(
+    [
+        new TrimTrailingSlash(),   // MiddlewareInterface instances…
+        AuthMiddleware::class,     // …and container service ids, resolved on first dispatch
+    ],
+    fallback: new NotFoundHandler(),
+    container: $container,
+);
+
+$response = $pipeline->handle(ServerRequest::fromGlobals());
+```
+
+| Member | Notes |
+| ------ | ----- |
+| `__construct(iterable $middlewares, RequestHandlerInterface $fallback, ?ContainerInterface $container = null)` | Each element is a `MiddlewareInterface` instance or a container service id. Anything else, an id without a container, or an id the container's `has()` denies throws `InvalidArgumentException`. An empty list is valid. |
+| `handle(ServerRequestInterface $request): ResponseInterface` | Runs the middleware in registration order; each receives a handler representing the rest of the pipeline, and the fallback produces the response when the list is exhausted. A middleware that returns without calling its handler short-circuits the rest. |
+
+- A service id is resolved on the first dispatch that reaches it — never at construction — and at most once per
+  pipeline; a middleware that always short-circuits keeps everything behind it unresolved. A service that is not a
+  `MiddlewareInterface` throws `RuntimeException` at dispatch.
+- The pipeline keeps no cursor: every `handle()` call starts at the first middleware, so one instance serves many
+  requests and a middleware may dispatch a sub-request through its own pipeline.
+- The return type is `ResponseInterface`, not the concrete `Response` — middlewares may return any implementation.
+- Exceptions from middlewares, the fallback, or the container propagate unchanged.
