@@ -151,7 +151,8 @@ final class SimpleCache implements ISimpleCache
      * @param string $key The cache key.
      * @param mixed $value The value to store.
      * @param DateInterval|int|null $ttl How long the value stays fresh; `null` caches it for as long as the pool
-     * allows, and a zero or negative number of seconds deletes the key instead.
+     * allows, and a zero or negative number of seconds saves an already-expired item, which the pool may turn into
+     * deleting the key.
      *
      * @return bool `true` on success.
      *
@@ -171,7 +172,8 @@ final class SimpleCache implements ISimpleCache
      *
      * @param iterable<mixed, mixed> $values The pairs to store, keyed by cache key.
      * @param DateInterval|int|null $ttl How long the values stay fresh; `null` caches them for as long as the pool
-     * allows, and a zero or negative number of seconds deletes the keys instead.
+     * allows, and a zero or negative number of seconds saves already-expired items, which the pool may turn into
+     * deleting the keys.
      *
      * @return bool `true` when every pair was stored.
      *

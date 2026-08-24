@@ -41,7 +41,7 @@ For user-facing docs (README, guides, API reference), follow Diátaxis: @docs/in
 
 ## Architecture
 
-Scope: solid, strongly-typed building blocks — concrete implementations of PSR interfaces, plus general-purpose utilities in the same problem areas (e.g. calendar types alongside the PSR-20 clocks in `Time/`). PSRs currently depended on: PSR-7 (`psr/http-message`), PSR-17 (`psr/http-factory`), PSR-11 (`psr/container`), PSR-20 (`psr/clock`). Add the matching `psr/*` package to `composer.json` when implementing a new PSR.
+Scope: solid, strongly-typed building blocks — concrete implementations of PSR interfaces, plus general-purpose utilities in the same problem areas (e.g. calendar types alongside the PSR-20 clocks in `Time/`). PSRs currently depended on: PSR-3 (`psr/log`), PSR-6 (`psr/cache`), PSR-7 (`psr/http-message`), PSR-11 (`psr/container`), PSR-13 (`psr/link`), PSR-14 (`psr/event-dispatcher`), PSR-16 (`psr/simple-cache`), PSR-17 (`psr/http-factory`), PSR-18 (`psr/http-client`), PSR-20 (`psr/clock`). Add the matching `psr/*` package to `composer.json` when implementing a new PSR.
 
 Principles:
 - One directory per problem area under `src/` (e.g. `Http/`, `DependencyInjection/`, `Time/`), named after the domain rather than the PSR number so non-PSR utilities can live beside the PSR classes; tests mirror it under `tests/`.

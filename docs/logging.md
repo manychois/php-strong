@@ -58,8 +58,8 @@ All handlers implement `HandlerInterface::handle(Log $log): void` and take a `Lo
 
 | Handler | Behaviour |
 | ------- | --------- |
-| `StreamHandler($stream, $minLevel, ?$formatter)` | `$stream` is an open resource, a file path, or a stream URL (`php://stderr`). Paths are opened lazily in append mode; parent directories are created. Default formatter: `LineFormatter`. |
-| `ConsoleHandler($minLevel, ?bool $colors, ?$formatter, $stdout, $stderr)` | `debug`..`notice` → stdout, `warning`+ → stderr; `$stdout`/`$stderr` accept an open resource or a stream URL (default `php://stdout`/`php://stderr`). `$colors = null` auto-detects: on when stderr is a TTY and `NO_COLOR` is unset. Default formatter: `ConsoleFormatter`. |
+| `StreamHandler($stream, $minLevel, ?$formatter)` | `$stream` is an open resource, a file path, or a stream URL (`php://stderr`). Paths are opened lazily in append mode; parent directories are created for plain file paths (not for `scheme://` URLs). Default formatter: `LineFormatter`. |
+| `ConsoleHandler($minLevel, ?bool $colors, ?$formatter, $stdout, $stderr)` | `debug`..`notice` → stdout, `warning`+ → stderr; `$stdout`/`$stderr` accept an open resource or a stream URL (default `php://stdout`/`php://stderr`). `$colors = null` auto-detects: on when stderr is a TTY and `NO_COLOR` is unset. `$colors` configures the default `ConsoleFormatter` only; it is ignored when `$formatter` is given. |
 | `ArrayHandler($minLevel)` | Keeps logs in `$logs` (`list<Log>`); `clear()` empties it. Handy in tests. |
 
 ## Formatters
@@ -79,7 +79,8 @@ Both formatters:
 
 ### Placeholder rendering
 
-`MessageInterpolator::interpolate(string $message, array $context): string` replaces `{key}` with:
+`MessageInterpolator` is instantiated by the formatters; its `interpolate(string $message, array $context): string`
+instance method replaces `{key}` with:
 
 | Value | Rendered as |
 | ----- | ----------- |

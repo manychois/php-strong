@@ -36,16 +36,16 @@ on. Read the value you are caching from your own variable, not back out of a fre
 | `getItems(array $keys = []): array` | Returns `array<string, CacheItem>` keyed by the requested key, in the order given. Validates every key first. `getItems()` returns `[]`. |
 | `hasItem(string $key): bool` | `true` when a live entry or a pending deferred item exists for the key. |
 | `prune(): int` | Deletes every expired or unreadable file and returns how many were deleted. |
-| `save(CacheItemInterface $item): bool` | Writes the item immediately. An item that has already expired is not written: any existing file is deleted and `true` is returned. Returns `false` when the value cannot be serialised or the file could not be written. |
+| `save(CacheItemInterface $item): bool` | Writes the item immediately. An item that has already expired is not written: any existing file is deleted instead, and the result of that deletion is returned. Returns `false` when the value cannot be serialised or the file could not be written. |
 | `saveDeferred(CacheItemInterface $item): bool` | Queues the item for `commit()`. Always returns `true`. |
 
 Every method that takes a key throws `InvalidArgumentException` before doing any work when the key is invalid.
 
 ## `MemoryCachePool`
 
-The same surface as `FileCachePool`, minus the directory: `__construct(?ClockInterface $clock = null)`. Keys, expiry,
-deferred items and `prune()` behave identically, and `CacheException` never fires because there is no filesystem to
-fail.
+The same surface as `FileCachePool`, minus the directory: `__construct(?ClockInterface $clock = null)`. Keys, expiry
+and deferred items behave identically; `prune()` drops expired entries only, as there are no unreadable files to
+remove. `CacheException` never fires because there is no filesystem to fail.
 
 ```php
 use Manychois\PhpStrong\Cache\MemoryCachePool;
@@ -104,7 +104,7 @@ $user = $cache->get('user.1', $fallback);
 | ------ | ----- |
 | `__construct(CacheItemPoolInterface $pool)` | The pool holding the values. |
 | `get(string $key, mixed $default = null): mixed` | The stored value, or `$default` on a miss. |
-| `set(string $key, mixed $value, DateInterval\|int\|null $ttl = null): bool` | `null` caches for as long as the pool allows; a zero or negative TTL deletes the key instead, as PSR-16 requires. |
+| `set(string $key, mixed $value, DateInterval\|int\|null $ttl = null): bool` | `null` caches for as long as the pool allows; a zero or negative TTL saves an already-expired item, which both bundled pools turn into deleting the key, as PSR-16 requires — a third-party pool decides for itself what an expired save means. |
 | `delete(string $key): bool` | `true` when the key is gone, including when it was never there. |
 | `clear(): bool` | Empties the whole pool. |
 | `getMultiple(iterable $keys, mixed $default = null): array` | Key ⇒ value, with `$default` for each key that holds nothing. |
@@ -123,8 +123,10 @@ apart, but the underlying item knows, so a hit is reported as a hit.
 
 PSR-16 requires an `InvalidArgumentException` when `$keys` or `$values` is neither an array nor a `Traversable`.
 `psr/simple-cache` 3.0 declares those parameters as native `iterable`, so PHP raises a `TypeError` before the adapter
-runs. Nothing else can be done from inside the method. A `Traversable` yielding a non-string key *is* reachable, and
-that does raise `InvalidArgumentException`.
+runs. Nothing else can be done from inside the method. A `Traversable` yielding a non-string key *is* reachable:
+`getMultiple()` and `deleteMultiple()` raise `InvalidArgumentException` for one, while `setMultiple()` accepts an
+integer key by casting it to string — PHP arrays already store `'1'` as `1`, so refusing it would reject ordinary
+array input — and throws for any other non-string key.
 
 `getMultiple()` reads one key at a time instead of calling the pool's `getItems()`, because PSR-6 declares that method
 as a bare `iterable` whose keys and values are untyped. Both of our pools implement `getItems()` as exactly that loop,

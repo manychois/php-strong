@@ -25,7 +25,7 @@ $container->has('uuid');      // true; never invokes the factory
 | `factory(string $id, Closure $factory): static` | Factory runs on every `get()`. |
 | `aware(string $type, Closure $configure): static` | Runs `$configure($object, $container)` on every object produced here that is `instanceof $type`. See [Aware configurers](#aware-configurers). |
 | `alias(string $id, string $target): static` | `get($id)` forwards to `get($target)`; follows the target's lifetime. Target must be registered (here or in the parent) by `build()`. |
-| `autowire(string $class, bool $shared = true): static` | Instantiates `$class` by reflection under id `$class`; cached like `singleton()` unless `$shared` is `false`. See [Autowiring](#autowiring). |
+| `autowire(string $id, bool $shared = true): static` | Instantiates the class named `$id` by reflection under that id; cached like `singleton()` unless `$shared` is `false`. See [Autowiring](#autowiring). |
 | `build(): Container` | Snapshots the definitions; later registrations do not affect the built container. |
 
 `new ContainerBuilder(?ContainerInterface $parent = null)` — identifiers not registered on the builder are delegated
@@ -90,8 +90,9 @@ closure instead. Variadic parameters receive no arguments. Cycles among unregist
 - Several rules may match one object; they run in registration order.
 - Rules apply only to objects produced by the container they are registered on — a child container does not
   reconfigure its parent's services.
-- Exceptions thrown by a configurer are wrapped in `ContainerException`; `get()` calls inside a configurer take part
-  in circular-dependency detection.
+- Exceptions thrown by a configurer are wrapped in `ContainerException`, except one that already is a
+  `ContainerException` (such as a `NotFoundException` from a nested `get()`), which propagates as it is. `get()`
+  calls inside a configurer take part in circular-dependency detection.
 
 ## Long-running processes
 
