@@ -120,6 +120,34 @@ final class Iter
     }
 
     /**
+     * Lazily skips elements while the predicate holds, then yields the remainder.
+     *
+     * @param iterable $source The source iterable.
+     * @param callable $predicate The predicate tested against leading elements.
+     *
+     * @return iterable The remainder starting from the first non-matching element, preserving keys.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param callable(T,int|string):bool $predicate
+     *
+     * @phpstan-return iterable<int|string,T>
+     */
+    public static function skipWhile(iterable $source, callable $predicate): iterable
+    {
+        $skipping = true;
+        foreach ($source as $key => $value) {
+            if ($skipping && $predicate($value, $key)) {
+                continue;
+            }
+            $skipping = false;
+
+            yield $key => $value;
+        }
+    }
+
+    /**
      * Lazily takes at most N elements of an iterable.
      *
      * @param iterable $source The source iterable.
@@ -153,6 +181,32 @@ final class Iter
             if ($index >= $count) {
                 break;
             }
+        }
+    }
+
+    /**
+     * Lazily takes elements while the predicate holds, stopping at the first non-matching element.
+     *
+     * @param iterable $source The source iterable.
+     * @param callable $predicate The predicate tested against each element.
+     *
+     * @return iterable The leading matching elements, preserving keys.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param callable(T,int|string):bool $predicate
+     *
+     * @phpstan-return iterable<int|string,T>
+     */
+    public static function takeWhile(iterable $source, callable $predicate): iterable
+    {
+        foreach ($source as $key => $value) {
+            if (!$predicate($value, $key)) {
+                break;
+            }
+
+            yield $key => $value;
         }
     }
 

@@ -181,4 +181,40 @@ final class IterTest extends TestCase
 
         iterator_to_array(Iter::skip([1, 2], -1));
     }
+
+    #[Test]
+    public function takeWhileStopsBeforeFirstNonMatchingElement(): void
+    {
+        $source = ['a' => 1, 'b' => 2, 'c' => 5, 'd' => 1];
+        $result = Iter::takeWhile($source, static fn (int $v): bool => $v < 3);
+
+        static::assertSame(['a' => 1, 'b' => 2], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function takeWhileYieldsNothingIfFirstElementFails(): void
+    {
+        $source = [5, 1, 2];
+        $result = Iter::takeWhile($source, static fn (int $v): bool => $v < 3);
+
+        static::assertSame([], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function skipWhileSkipsLeadingMatchesThenYieldsRemainder(): void
+    {
+        $source = ['a' => 1, 'b' => 2, 'c' => 5, 'd' => 1];
+        $result = Iter::skipWhile($source, static fn (int $v): bool => $v < 3);
+
+        static::assertSame(['c' => 5, 'd' => 1], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function skipWhileYieldsEverythingIfFirstElementFails(): void
+    {
+        $source = [5, 1, 2];
+        $result = Iter::skipWhile($source, static fn (int $v): bool => $v < 3);
+
+        static::assertSame([5, 1, 2], iterator_to_array($result));
+    }
 }
