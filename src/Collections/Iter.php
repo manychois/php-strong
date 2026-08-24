@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Manychois\PhpStrong\Collections;
 
 use ArrayIterator;
+use Countable;
 use InvalidArgumentException;
 use Iterator;
 use IteratorAggregate;
@@ -52,6 +53,31 @@ final class Iter
         if (\count($buffer) > 0) {
             yield $buffer;
         }
+    }
+
+    /**
+     * Eagerly counts the elements of an iterable.
+     *
+     * @param iterable $source The source iterable.
+     *
+     * @return int The number of elements.
+     *
+     * @phpstan-param iterable<mixed> $source
+     *
+     * @phpstan-return non-negative-int
+     */
+    public static function count(iterable $source): int
+    {
+        if (\is_array($source) || $source instanceof Countable) {
+            return \count($source);
+        }
+
+        $count = 0;
+        foreach ($source as $ignored) {
+            $count++;
+        }
+
+        return $count;
     }
 
     /**
@@ -146,6 +172,34 @@ final class Iter
         foreach ($source as $key => $value) {
             yield $key => $mapper($value, $key);
         }
+    }
+
+    /**
+     * Eagerly reduces an iterable to a single value.
+     *
+     * @param iterable $source The source iterable.
+     * @param callable $reducer The reducer combining the running value with each element.
+     * @param mixed $initial The initial accumulator value.
+     *
+     * @return mixed The final accumulated value.
+     *
+     * @template T
+     * @template TCarry
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param callable(TCarry,T,int|string):TCarry $reducer
+     * @phpstan-param TCarry $initial
+     *
+     * @phpstan-return TCarry
+     */
+    public static function reduce(iterable $source, callable $reducer, mixed $initial): mixed
+    {
+        $carry = $initial;
+        foreach ($source as $key => $value) {
+            $carry = $reducer($carry, $value, $key);
+        }
+
+        return $carry;
     }
 
     /**

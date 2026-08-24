@@ -297,4 +297,38 @@ final class IterTest extends TestCase
 
         static::assertSame([1, 2, 3], Iter::toList($source));
     }
+
+    #[Test]
+    public function reduceAccumulatesFromInitialValue(): void
+    {
+        $source = [1, 2, 3, 4];
+        $result = Iter::reduce($source, static fn (int $carry, int $v): int => $carry + $v, 0);
+
+        static::assertSame(10, $result);
+    }
+
+    #[Test]
+    public function countReturnsElementCountForArray(): void
+    {
+        static::assertSame(3, Iter::count([1, 2, 3]));
+    }
+
+    #[Test]
+    public function countReturnsElementCountForGenerator(): void
+    {
+        $source = (static function (): \Generator {
+            yield 1;
+            yield 2;
+        })();
+
+        static::assertSame(2, Iter::count($source));
+    }
+
+    #[Test]
+    public function countReturnsElementCountForCountable(): void
+    {
+        $countable = new \ArrayObject([1, 2, 3, 4]);
+
+        static::assertSame(4, Iter::count($countable));
+    }
 }
