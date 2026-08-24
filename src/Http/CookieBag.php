@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Http;
 
+use Psr\Http\Message\ResponseInterface as IResponse;
 use Psr\Http\Message\ServerRequestInterface as IServerRequest;
 
 /**
@@ -22,6 +23,11 @@ final class CookieBag
      * @var array<string,string>
      */
     private array $incoming = [];
+
+    /**
+     * @var array<string,Cookie>
+     */
+    private array $outgoing = [];
 
     /**
      * Creates a bag holding the cookies which arrived on the given request.
@@ -58,6 +64,38 @@ final class CookieBag
     }
 
     /**
+     * Adds one `Set-Cookie` header to the response for each queued cookie.
+     *
+     * Headers are appended, never replaced, because `Set-Cookie` is the header where multiple values are normal.
+     *
+     * @param IResponse $response The response to write the cookies to.
+     *
+     * @return IResponse The response carrying the cookies.
+     */
+    public function applyTo(IResponse $response): IResponse
+    {
+        foreach ($this->outgoing as $cookie) {
+            $response = $response->withAddedHeader('Set-Cookie', $cookie->toSetCookieHeader());
+        }
+
+        return $response;
+    }
+
+    /**
+     * Queues a cookie which clears an existing cookie of the given name.
+     *
+     * The domain and path must match the ones the cookie was set with, or the browser will clear nothing.
+     *
+     * @param string $name The name of the cookie to clear.
+     * @param ?string $domain The domain the cookie was set with.
+     * @param ?string $path The path the cookie was set with.
+     */
+    public function expire(string $name, ?string $domain = null, ?string $path = null): void
+    {
+        $this->set(Cookie::expired($name, $domain, $path));
+    }
+
+    /**
      * Returns the value of an incoming cookie.
      *
      * @param string $name The name of the cookie.
@@ -79,5 +117,42 @@ final class CookieBag
     public function has(string $name): bool
     {
         return array_key_exists($name, $this->incoming);
+    }
+
+    /**
+     * Returns the cookies queued to be sent back.
+     *
+     * @return array The queued cookies.
+     *
+     * @phpstan-return list<Cookie>
+     */
+    public function queued(): array
+    {
+        return array_values($this->outgoing);
+    }
+
+    /**
+     * Queues a cookie to be sent back on the response.
+     *
+     * A cookie already queued with the same name, domain and path is replaced, which is how a browser identifies a
+     * cookie; this keeps a handler overriding a middleware's cookie from emitting two contradictory headers.
+     *
+     * @param Cookie $cookie The cookie to send.
+     */
+    public function set(Cookie $cookie): void
+    {
+        $this->outgoing[self::keyOf($cookie)] = $cookie;
+    }
+
+    /**
+     * Builds the key a cookie is deduplicated by, i.e. how a browser identifies it.
+     *
+     * @param Cookie $cookie The cookie to key.
+     *
+     * @return string The key.
+     */
+    private static function keyOf(Cookie $cookie): string
+    {
+        return $cookie->name . "\0" . ($cookie->domain ?? '') . "\0" . ($cookie->path ?? '');
     }
 }
