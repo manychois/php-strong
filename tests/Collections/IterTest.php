@@ -331,4 +331,56 @@ final class IterTest extends TestCase
 
         static::assertSame(4, Iter::count($countable));
     }
+
+    #[Test]
+    public function firstReturnsFirstElementWithoutPredicate(): void
+    {
+        static::assertSame(1, Iter::first([1, 2, 3]));
+    }
+
+    #[Test]
+    public function firstReturnsFirstMatchingElement(): void
+    {
+        $result = Iter::first([1, 2, 3, 4], static fn (int $v): bool => $v % 2 === 0);
+
+        static::assertSame(2, $result);
+    }
+
+    #[Test]
+    public function firstThrowsWhenSourceIsEmpty(): void
+    {
+        $this->expectException(\UnderflowException::class);
+
+        Iter::first([]);
+    }
+
+    #[Test]
+    public function firstThrowsWhenNoElementMatches(): void
+    {
+        $this->expectException(\UnderflowException::class);
+
+        Iter::first([1, 3, 5], static fn (int $v): bool => $v % 2 === 0);
+    }
+
+    #[Test]
+    public function firstOrNullReturnsNullWhenSourceIsEmpty(): void
+    {
+        static::assertNull(Iter::firstOrNull([]));
+    }
+
+    #[Test]
+    public function firstOrNullReturnsNullWhenNoElementMatches(): void
+    {
+        $result = Iter::firstOrNull([1, 3, 5], static fn (int $v): bool => $v % 2 === 0);
+
+        static::assertNull($result);
+    }
+
+    #[Test]
+    public function firstOrNullReturnsFirstMatchingElement(): void
+    {
+        $result = Iter::firstOrNull([1, 2, 3, 4], static fn (int $v): bool => $v % 2 === 0);
+
+        static::assertSame(2, $result);
+    }
 }

@@ -9,6 +9,7 @@ use Countable;
 use InvalidArgumentException;
 use Iterator;
 use IteratorAggregate;
+use UnderflowException;
 
 /**
  * Provides lazy, generator-based utilities for manipulating iterables.
@@ -102,6 +103,60 @@ final class Iter
                 yield $key => $value;
             }
         }
+    }
+
+    /**
+     * Eagerly returns the first element, optionally matching a predicate.
+     *
+     * @param iterable $source The source iterable.
+     * @param ?callable $predicate The predicate the returned element must match; defaults to matching any element.
+     *
+     * @return mixed The first matching element.
+     *
+     * @throws UnderflowException if no element matches.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param ?callable(T,int|string):bool $predicate
+     *
+     * @phpstan-return T
+     */
+    public static function first(iterable $source, ?callable $predicate = null): mixed
+    {
+        foreach ($source as $key => $value) {
+            if ($predicate === null || $predicate($value, $key)) {
+                return $value;
+            }
+        }
+
+        throw new UnderflowException('No matching element found.');
+    }
+
+    /**
+     * Eagerly returns the first element, optionally matching a predicate, or null if none is found.
+     *
+     * @param iterable $source The source iterable.
+     * @param ?callable $predicate The predicate the returned element must match; defaults to matching any element.
+     *
+     * @return mixed The first matching element, or null if none is found.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param ?callable(T,int|string):bool $predicate
+     *
+     * @phpstan-return ?T
+     */
+    public static function firstOrNull(iterable $source, ?callable $predicate = null): mixed
+    {
+        foreach ($source as $key => $value) {
+            if ($predicate === null || $predicate($value, $key)) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     /**
