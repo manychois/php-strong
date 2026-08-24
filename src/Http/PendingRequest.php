@@ -23,6 +23,11 @@ final class PendingRequest
     private ?ClientException $error = null;
 
     /**
+     * @var list<callable(Response):void>
+     */
+    private array $responseCallbacks = [];
+
+    /**
      * @param CurlMultiExecutor $executor The executor driving this transfer.
      * @param CurlHandle $handle The configured easy handle for this transfer.
      * @param IRequest $request The request being sent.
@@ -96,6 +101,29 @@ final class PendingRequest
     }
 
     /**
+     * Registers a callback to run once this transfer produces a response.
+     *
+     * The callback does not run when the transfer fails, because there is no response to hand it. Registering
+     * after the transfer has already settled runs the callback straight away, so no completion can be missed.
+     *
+     * @param callable $callback The callback to run.
+     *
+     * @phpstan-param callable(Response):void $callback
+     */
+    public function onResponse(callable $callback): void
+    {
+        if ($this->settled) {
+            if ($this->response !== null) {
+                $callback($this->response);
+            }
+
+            return;
+        }
+
+        $this->responseCallbacks[] = $callback;
+    }
+
+    /**
      * Waits until this transfer completes and returns its response.
      * While waiting, every transfer on the same executor makes progress.
      * Repeated calls return the same response or rethrow the same exception.
@@ -146,6 +174,14 @@ final class PendingRequest
             );
         } catch (ClientException $ex) {
             $this->error = $ex;
+
+            return;
+        }
+
+        $callbacks = $this->responseCallbacks;
+        $this->responseCallbacks = [];
+        foreach ($callbacks as $callback) {
+            $callback($this->response);
         }
     }
 }

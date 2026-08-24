@@ -9,6 +9,7 @@ use Manychois\PhpStrong\Http\ClientException;
 use Manychois\PhpStrong\Http\Internal\CurlMultiExecutor;
 use Manychois\PhpStrong\Http\PendingRequest;
 use Manychois\PhpStrong\Http\Request;
+use Manychois\PhpStrong\Http\Response;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
@@ -240,6 +241,62 @@ final class PendingRequestTest extends TestCase
         $method->invoke($executor, ['handle' => $handle, 'result' => \CURLE_OK]);
 
         self::assertSame(0, $executor->activeCount());
+    }
+
+    #[Test]
+    public function onResponse_fires_when_the_transfer_succeeds(): void
+    {
+        $pending = $this->makePending();
+        $seen = [];
+        $pending->onResponse(static function (Response $response) use (&$seen): void {
+            $seen[] = $response->getStatusCode();
+        });
+
+        $this->settle($pending, \CURLE_OK, '', ['HTTP/1.1 200 OK'], 'body');
+
+        self::assertSame([200], $seen);
+    }
+
+    #[Test]
+    public function onResponse_does_not_fire_when_the_transfer_fails(): void
+    {
+        $pending = $this->makePending();
+        $fired = false;
+        $pending->onResponse(static function () use (&$fired): void {
+            $fired = true;
+        });
+
+        $this->settle($pending, \CURLE_COULDNT_CONNECT, 'connection refused', [], '');
+
+        self::assertFalse($fired);
+    }
+
+    #[Test]
+    public function onResponse_does_not_fire_when_the_response_cannot_be_parsed(): void
+    {
+        $pending = $this->makePending();
+        $fired = false;
+        $pending->onResponse(static function () use (&$fired): void {
+            $fired = true;
+        });
+
+        $this->settle($pending, \CURLE_OK, '', ['not a status line'], 'body');
+
+        self::assertFalse($fired);
+    }
+
+    #[Test]
+    public function onResponse_fires_immediately_when_registered_after_settlement(): void
+    {
+        $pending = $this->makePending();
+        $this->settle($pending, \CURLE_OK, '', ['HTTP/1.1 201 Created'], '');
+
+        $seen = [];
+        $pending->onResponse(static function (Response $response) use (&$seen): void {
+            $seen[] = $response->getStatusCode();
+        });
+
+        self::assertSame([201], $seen);
     }
 
     private function makePending(): PendingRequest
