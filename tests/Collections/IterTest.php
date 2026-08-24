@@ -232,58 +232,6 @@ final class IterTest extends TestCase
     }
 
     #[Test]
-    public function transposeYieldsTuplesStoppingAtShortestSource(): void
-    {
-        $result = Iter::transpose([1, 2, 3], ['a', 'b']);
-
-        static::assertSame([[1, 'a'], [2, 'b']], iterator_to_array($result));
-    }
-
-    #[Test]
-    public function transposeYieldsNothingWithNoSources(): void
-    {
-        $result = Iter::transpose();
-
-        static::assertSame([], iterator_to_array($result));
-    }
-
-    #[Test]
-    public function transposeAcceptsAnIteratorSource(): void
-    {
-        $generator = (static function (): Generator {
-            yield 1;
-            yield 2;
-        })();
-        $result = Iter::transpose($generator, ['a', 'b']);
-
-        static::assertSame([[1, 'a'], [2, 'b']], iterator_to_array($result));
-    }
-
-    #[Test]
-    public function transposeAcceptsAnIteratorAggregateSource(): void
-    {
-        $result = Iter::transpose(new ArrayObject([1, 2]), ['a', 'b']);
-
-        static::assertSame([[1, 'a'], [2, 'b']], iterator_to_array($result));
-    }
-
-    #[Test]
-    public function transposeAcceptsAPartiallyConsumedGeneratorSource(): void
-    {
-        $generator = (static function (): Generator {
-            yield 1;
-            yield 2;
-            yield 3;
-        })();
-        $generator->current();
-        $generator->next();
-
-        $result = Iter::transpose($generator, ['a', 'b']);
-
-        static::assertSame([[2, 'a'], [3, 'b']], iterator_to_array($result));
-    }
-
-    #[Test]
     public function uniqueYieldsFirstOccurrenceOfEachElementByDefault(): void
     {
         $source = ['a' => 1, 'b' => 2, 'c' => 1, 'd' => 3];

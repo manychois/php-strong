@@ -426,13 +426,6 @@ final class SeqTest extends TestCase
     }
 
     #[Test]
-    public function transposeReturnsTuplesStoppingAtTheShortestSource(): void
-    {
-        static::assertSame([[1, 'a'], [2, 'b']], Seq::transpose([1, 2, 3], ['a', 'b']));
-        static::assertSame([], Seq::transpose());
-    }
-
-    #[Test]
     public function uniqueKeepsTheFirstOccurrenceOfEachElement(): void
     {
         static::assertSame([1, 2, 3], Seq::unique(['a' => 1, 'b' => 2, 'c' => 1, 'd' => 3]));

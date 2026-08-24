@@ -731,22 +731,6 @@ final class Seq
     }
 
     /**
-     * Turns the source iterables into tuples, taking one element from each per step.
-     *
-     * @param iterable ...$sources The source iterables to read in lockstep.
-     *
-     * @return array The tuples, each a list with one element per source; as long as the shortest source.
-     *
-     * @phpstan-param iterable<mixed> ...$sources
-     *
-     * @phpstan-return list<list<mixed>>
-     */
-    public static function transpose(iterable ...$sources): array
-    {
-        return Iter::toList(Iter::transpose(...$sources));
-    }
-
-    /**
      * Keeps only the first occurrence of each distinct element.
      *
      * @param iterable $source The source iterable.

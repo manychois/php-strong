@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Collections;
 
-use ArrayIterator;
 use Countable;
 use InvalidArgumentException;
-use Iterator;
-use IteratorAggregate;
 use TypeError;
 use UnderflowException;
 
@@ -539,47 +536,6 @@ final class Iter
     }
 
     /**
-     * Lazily turns the source iterables into tuples, taking one element from each per step.
-     *
-     * Sources are read in lockstep and their keys are discarded; iteration stops as soon as any source is exhausted,
-     * so the result is as long as the shortest source. An Iterator source is read from its current position without
-     * being rewound, which lets a partially consumed Generator take part.
-     *
-     * @param iterable ...$sources The source iterables to read in lockstep.
-     *
-     * @return iterable The tuples, each a list with one element per source, with reindexed integer keys.
-     *
-     * @phpstan-param iterable<mixed> ...$sources
-     *
-     * @phpstan-return iterable<int,list<mixed>>
-     */
-    public static function transpose(iterable ...$sources): iterable
-    {
-        if (\count($sources) === 0) {
-            return;
-        }
-
-        $iterators = [];
-        foreach ($sources as $source) {
-            $iterators[] = self::toIterator($source);
-        }
-
-        while (true) {
-            $tuple = [];
-            foreach ($iterators as $iterator) {
-                if (!$iterator->valid()) {
-                    return;
-                }
-                $tuple[] = $iterator->current();
-            }
-            yield $tuple;
-            foreach ($iterators as $iterator) {
-                $iterator->next();
-            }
-        }
-    }
-
-    /**
      * Lazily yields only the first occurrence of each distinct element.
      *
      * @param iterable $source The source iterable.
@@ -705,28 +661,5 @@ final class Iter
                 break;
             }
         }
-    }
-
-    /**
-     * Normalizes an iterable into an iterator.
-     *
-     * @param iterable $source The iterable to normalize.
-     *
-     * @return Iterator The normalized iterator.
-     *
-     * @phpstan-param iterable<mixed> $source
-     *
-     * @phpstan-return Iterator<mixed>
-     */
-    private static function toIterator(iterable $source): Iterator
-    {
-        if ($source instanceof Iterator) {
-            return $source;
-        }
-        if ($source instanceof IteratorAggregate) {
-            return self::toIterator($source->getIterator());
-        }
-
-        return new ArrayIterator((array) $source);
     }
 }

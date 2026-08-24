@@ -81,9 +81,6 @@ list, as the coding standard requires.
   `InvalidArgumentException` if `$count < 0`.
 - `takeWhile(iterable $source, callable $predicate): array`
   Keeps leading matches, stops at the first non-match.
-- `transpose(iterable ...$sources): array`
-  Returns `list<list<mixed>>` tuples, one element per source per step,
-  stopping at the shortest source. Empty when no sources are given.
 - `unique(iterable $source, ?callable $keySelector = null): array`
   Keeps the first occurrence of each distinct element as a `list<T>`. When
   `$keySelector` is null, comparison uses PHP array-key coercion (the same
@@ -143,9 +140,9 @@ on the copy, `usort`), and a plain loop otherwise. Delegating to `Iter`'s
 generators only to materialize them immediately would add generator overhead
 for no benefit.
 
-The three methods whose logic is non-trivial and already tested in `Iter` —
-`flatten`, `transpose`, `unique` — delegate: `Iter::toList(Iter::unique(...))`
-and so on.
+The two methods whose logic is non-trivial and already tested in `Iter` —
+`flatten` and `unique` — delegate: `Iter::toList(Iter::unique(...))` and so
+on.
 
 Argument validation (`$size`, `$count`, `$index`) happens before any work, so
 every method fails at the boundary; no lazy-wrapper split is needed since

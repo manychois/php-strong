@@ -55,10 +55,6 @@ until iterated.
 - `flatten(iterable $source): iterable`
   One level: `$source` is an `iterable<iterable<T>>`, yields `T` reindexed
   with int keys.
-- `transpose(iterable ...$sources): iterable`
-  Yields `list<mixed>` tuples, one element from each source per tuple, in
-  source order. Stops at the shortest source (including immediately if
-  `$sources` is empty, in which case it yields nothing). Reindexed int keys.
 - `unique(iterable $source, ?callable $keySelector = null): iterable`
   Yields elements whose derived key (via `$keySelector`, or the element
   itself when null) has not been seen before. When `$keySelector` is null,
