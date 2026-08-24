@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Http;
 
+use DateTimeImmutable;
 use InvalidArgumentException;
 use Manychois\PhpStrong\Http\Internal\CookieEntry;
 use Manychois\PhpStrong\Time\UtcClock;
@@ -166,7 +167,28 @@ final class CookieStore
         );
 
         $key = $domain . "\0" . $path . "\0" . $cookie->name;
-        $this->entries[$key] = new CookieEntry($resolved, null, $hostOnly, $this->sequence);
+        $now = $this->clock->now();
+        $expiresAt = null;
+        if ($cookie->maxAge !== null) {
+            if ($cookie->maxAge <= 0) {
+                unset($this->entries[$key]);
+
+                return;
+            }
+
+            $moved = $now->modify(sprintf('+%d seconds', $cookie->maxAge));
+            $expiresAt = $moved instanceof DateTimeImmutable ? $moved : $now;
+        } elseif ($cookie->expires !== null) {
+            if ($cookie->expires <= $now) {
+                unset($this->entries[$key]);
+
+                return;
+            }
+
+            $expiresAt = $cookie->expires;
+        }
+
+        $this->entries[$key] = new CookieEntry($resolved, $expiresAt, $hostOnly, $this->sequence);
         $this->sequence++;
     }
 }

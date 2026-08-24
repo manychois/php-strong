@@ -171,6 +171,90 @@ final class CookieStoreTest extends TestCase
         static::assertSame([], $store->all());
     }
 
+    #[Test]
+    public function aCookieWithNeitherExpiresNorMaxAgeSurvivesIndefinitely(): void
+    {
+        $clock = new TestClock('2026-08-25 00:00:00');
+        $store = new CookieStore($clock);
+        $store->absorb($this->responseWith('sid=abc'), Uri::fromString('https://example.com/'));
+
+        $clock->advance('P10Y');
+
+        static::assertCount(1, $store->all());
+    }
+
+    #[Test]
+    public function maxAgeExpiresTheCookieWhenTheClockPassesIt(): void
+    {
+        $clock = new TestClock('2026-08-25 00:00:00');
+        $store = new CookieStore($clock);
+        $store->absorb($this->responseWith('sid=abc; Max-Age=60'), Uri::fromString('https://example.com/'));
+
+        $clock->advance('PT59S');
+        static::assertCount(1, $store->all());
+
+        $clock->advance('PT2S');
+        static::assertSame([], $store->all());
+    }
+
+    #[Test]
+    public function expiresExpiresTheCookieWhenTheClockPassesIt(): void
+    {
+        $clock = new TestClock('2026-08-25 00:00:00');
+        $store = new CookieStore($clock);
+        $store->absorb(
+            $this->responseWith('sid=abc; Expires=Tue, 25 Aug 2026 00:01:00 GMT'),
+            Uri::fromString('https://example.com/')
+        );
+
+        $clock->advance('PT30S');
+        static::assertCount(1, $store->all());
+
+        $clock->advance('PT31S');
+        static::assertSame([], $store->all());
+    }
+
+    #[Test]
+    public function maxAgeWinsOverExpiresWhenBothAreGiven(): void
+    {
+        $clock = new TestClock('2026-08-25 00:00:00');
+        $store = new CookieStore($clock);
+        $store->absorb(
+            $this->responseWith('sid=abc; Expires=Tue, 25 Aug 2026 10:00:00 GMT; Max-Age=60'),
+            Uri::fromString('https://example.com/')
+        );
+
+        $clock->advance('PT61S');
+
+        static::assertSame([], $store->all());
+    }
+
+    #[Test]
+    public function aZeroOrNegativeMaxAgeDeletesTheCookieImmediately(): void
+    {
+        $clock = new TestClock('2026-08-25 00:00:00');
+        $store = new CookieStore($clock);
+        $uri = Uri::fromString('https://example.com/');
+        $store->absorb($this->responseWith('sid=abc'), $uri);
+
+        $store->absorb($this->responseWith('sid=; Max-Age=0'), $uri);
+
+        static::assertSame([], $store->all());
+    }
+
+    #[Test]
+    public function anExpiresAlreadyInThePastDeletesTheCookieImmediately(): void
+    {
+        $clock = new TestClock('2026-08-25 00:00:00');
+        $store = new CookieStore($clock);
+        $uri = Uri::fromString('https://example.com/');
+        $store->absorb($this->responseWith('sid=abc'), $uri);
+
+        $store->absorb($this->responseWith('sid=; Expires=Mon, 24 Aug 2026 00:00:00 GMT'), $uri);
+
+        static::assertSame([], $store->all());
+    }
+
     private function responseWith(string $setCookie): Response
     {
         return new Response(headers: ['Set-Cookie' => $setCookie]);
