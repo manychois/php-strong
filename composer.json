@@ -11,6 +11,7 @@
     "psr-11",
     "psr-13",
     "psr-14",
+    "psr-15",
     "psr-16",
     "psr-17",
     "psr-18",
@@ -24,6 +25,8 @@
     "http-message",
     "http-factory",
     "http-client",
+    "middleware",
+    "request-handler",
     "clock",
     "strong-typing"
   ],
@@ -64,7 +67,9 @@
     "psr/event-dispatcher": "^1.0",
     "psr/cache": "^3",
     "psr/simple-cache": "^3",
-    "psr/link": "^2"
+    "psr/link": "^2",
+    "psr/http-server-handler": "^1.0",
+    "psr/http-server-middleware": "^1.0"
   },
   "require-dev": {
     "phpstan/extension-installer": "^1.4.3",
