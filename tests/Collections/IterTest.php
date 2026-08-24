@@ -86,4 +86,99 @@ final class IterTest extends TestCase
         iterator_to_array($result);
         self::assertSame(2, $calls);
     }
+
+    #[Test]
+    public function flatMapConcatenatesMappedIterablesWithReindexedKeys(): void
+    {
+        $source = [1, 2];
+        $result = Iter::flatMap($source, static fn (int $v): array => [$v, $v * 10]);
+
+        static::assertSame([1, 10, 2, 20], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function flatMapIsLazy(): void
+    {
+        $calls = 0;
+        $source = [1, 2];
+        $result = Iter::flatMap($source, static function (int $v) use (&$calls): array {
+            $calls++;
+
+            return [$v];
+        });
+
+        static::assertSame(0, $calls);
+        iterator_to_array($result);
+        static::assertSame(2, $calls);
+    }
+
+    #[Test]
+    public function takeYieldsAtMostCountElementsPreservingKeys(): void
+    {
+        $source = ['a' => 1, 'b' => 2, 'c' => 3];
+        $result = Iter::take($source, 2);
+
+        static::assertSame(['a' => 1, 'b' => 2], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function takeYieldsFewerElementsIfSourceIsShorter(): void
+    {
+        $source = [1, 2];
+        $result = Iter::take($source, 5);
+
+        static::assertSame([1, 2], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function takeThrowsForNegativeCount(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        iterator_to_array(Iter::take([1, 2], -1));
+    }
+
+    #[Test]
+    public function takeDoesNotIterateSourceBeyondCount(): void
+    {
+        $calls = 0;
+        $source = (static function () use (&$calls): \Generator {
+            while (true) {
+                $calls++;
+
+                yield $calls;
+            }
+        })();
+
+        $result = iterator_to_array(Iter::take($source, 3));
+
+        static::assertSame([1, 2, 3], $result);
+        static::assertSame(3, $calls);
+    }
+
+    #[Test]
+    public function skipOmitsFirstCountElementsPreservingKeys(): void
+    {
+        $source = ['a' => 1, 'b' => 2, 'c' => 3];
+        $result = Iter::skip($source, 1);
+
+        static::assertSame(['b' => 2, 'c' => 3], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function skipYieldsNothingIfCountExceedsSourceLength(): void
+    {
+        $source = [1, 2];
+        $result = Iter::skip($source, 5);
+
+        static::assertSame([], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function skipThrowsForNegativeCount(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        iterator_to_array(Iter::skip([1, 2], -1));
+    }
 }
