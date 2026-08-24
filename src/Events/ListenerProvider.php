@@ -80,6 +80,50 @@ final class ListenerProvider implements IListenerProvider
         return $this;
     }
 
+    #region implements IListenerProvider
+
+    /**
+     * Returns the listeners that match the event, most important first.
+     *
+     * @param object $event The event about to be dispatched.
+     *
+     * @return iterable The matching listeners in call order.
+     *
+     * @phpstan-return list<callable>
+     */
+    #[Override]
+    public function getListenersForEvent(object $event): iterable
+    {
+        $class = $event::class;
+        if (array_key_exists($class, $this->cache)) {
+            return $this->cache[$class];
+        }
+
+        $matched = [];
+        foreach ($this->registry as $type => $entries) {
+            if (!($event instanceof $type)) {
+                continue;
+            }
+
+            foreach ($entries as $entry) {
+                $matched[] = $entry;
+            }
+        }
+
+        usort($matched, static function (array $a, array $b): int {
+            $byPriority = $b[1] <=> $a[1];
+
+            return $byPriority !== 0 ? $byPriority : $a[2] <=> $b[2];
+        });
+
+        $listeners = array_map(static fn (array $entry): callable => $entry[0], $matched);
+        $this->cache[$class] = $listeners;
+
+        return $listeners;
+    }
+
+    #endregion implements IListenerProvider
+
     /**
      * Normalises an array listener into a callable.
      * `[$instance, $method]` is used as-is; `[$serviceId, $method]` becomes a closure that resolves the service
@@ -130,48 +174,4 @@ final class ListenerProvider implements IListenerProvider
             return $callable($event);
         };
     }
-
-    #region implements IListenerProvider
-
-    /**
-     * Returns the listeners that match the event, most important first.
-     *
-     * @param object $event The event about to be dispatched.
-     *
-     * @return iterable The matching listeners in call order.
-     *
-     * @phpstan-return list<callable>
-     */
-    #[Override]
-    public function getListenersForEvent(object $event): iterable
-    {
-        $class = $event::class;
-        if (array_key_exists($class, $this->cache)) {
-            return $this->cache[$class];
-        }
-
-        $matched = [];
-        foreach ($this->registry as $type => $entries) {
-            if (!($event instanceof $type)) {
-                continue;
-            }
-
-            foreach ($entries as $entry) {
-                $matched[] = $entry;
-            }
-        }
-
-        usort($matched, static function (array $a, array $b): int {
-            $byPriority = $b[1] <=> $a[1];
-
-            return $byPriority !== 0 ? $byPriority : $a[2] <=> $b[2];
-        });
-
-        $listeners = array_map(static fn (array $entry): callable => $entry[0], $matched);
-        $this->cache[$class] = $listeners;
-
-        return $listeners;
-    }
-
-    #endregion implements IListenerProvider
 }

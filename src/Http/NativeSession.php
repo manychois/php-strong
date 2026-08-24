@@ -22,18 +22,6 @@ use Override;
  */
 final class NativeSession extends AbstractDataReader implements ISession
 {
-    /**
-     * Starts the session unless it is already active.
-     */
-    private function start(): void
-    {
-        if (session_status() === \PHP_SESSION_ACTIVE) {
-            return;
-        }
-
-        session_start();
-    }
-
     #region extends AbstractDataReader
 
     /**
@@ -191,4 +179,16 @@ final class NativeSession extends AbstractDataReader implements ISession
     }
 
     #endregion implements ISession
+
+    /**
+     * Starts the session unless it is already active.
+     */
+    private function start(): void
+    {
+        if (session_status() === \PHP_SESSION_ACTIVE) {
+            return;
+        }
+
+        session_start();
+    }
 }

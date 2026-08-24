@@ -63,25 +63,6 @@ final class MemoryCachePool implements ICacheItemPool
         return $count;
     }
 
-    /**
-     * @return ?array{value: mixed, expiry: ?DateTimeImmutable} The entry, or `null` when it is absent or expired.
-     */
-    private function liveEntry(string $key): ?array
-    {
-        $entry = $this->entries[$key] ?? null;
-        if ($entry === null) {
-            return null;
-        }
-
-        if ($entry['expiry'] !== null && $entry['expiry'] <= $this->clock->now()) {
-            unset($this->entries[$key]);
-
-            return null;
-        }
-
-        return $entry;
-    }
-
     #region implements ICacheItemPool
 
     /**
@@ -243,4 +224,23 @@ final class MemoryCachePool implements ICacheItemPool
     }
 
     #endregion implements ICacheItemPool
+
+    /**
+     * @return ?array{value: mixed, expiry: ?DateTimeImmutable} The entry, or `null` when it is absent or expired.
+     */
+    private function liveEntry(string $key): ?array
+    {
+        $entry = $this->entries[$key] ?? null;
+        if ($entry === null) {
+            return null;
+        }
+
+        if ($entry['expiry'] !== null && $entry['expiry'] <= $this->clock->now()) {
+            unset($this->entries[$key]);
+
+            return null;
+        }
+
+        return $entry;
+    }
 }

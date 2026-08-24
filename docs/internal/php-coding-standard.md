@@ -40,7 +40,10 @@ class Xxx implements IXxx { }
 3. Properties
 4. Constructor
 5. Organise methods into `#region` blocks based on `extends`/`implements`
-6. Methods outside of regions are placed at top, then `#region` blocks in the order declared in the class declaration
+6. Methods outside of regions are placed either above or below the `#region` blocks, based on their visibility:
+   - **public and protected** methods outside regions go **above** the first `#region`
+   - **private** methods go **below** the last `#endregion`, at the very bottom of the class
+   - `#region` blocks themselves stay in the order declared in the class declaration
 7. Order methods within each region (and those outside regions) by:
    - static then instance
    - final then non-final

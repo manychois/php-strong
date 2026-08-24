@@ -101,150 +101,6 @@ final class FileCachePool implements ICacheItemPool
         return $count;
     }
 
-    /**
-     * @return ?array{expiry: ?DateTimeImmutable, value: mixed} The decoded body, or `null` when it is malformed.
-     */
-    private function parse(string $raw): ?array
-    {
-        $newline = strpos($raw, "\n");
-        if ($newline === false) {
-            return null;
-        }
-
-        $stamp = substr($raw, 0, $newline);
-        if ($stamp === '' || !ctype_digit($stamp)) {
-            return null;
-        }
-
-        $body = substr($raw, $newline + 1);
-        if ($body === serialize(false)) {
-            $value = false;
-        } else {
-            $value = @unserialize($body);
-            if ($value === false || $value instanceof __PHP_Incomplete_Class) {
-                return null;
-            }
-        }
-
-        $timestamp = (int) $stamp;
-
-        return [
-            'expiry' => $timestamp === 0 ? null : new DateTimeImmutable('@' . $timestamp),
-            'value' => $value,
-        ];
-    }
-
-    private function pathOf(string $key): string
-    {
-        $hash = hash('sha256', $key);
-
-        return sprintf('%s/%s/%s/%s.cache', $this->directory, substr($hash, 0, 2), substr($hash, 2, 2), $hash);
-    }
-
-    /**
-     * @return array{hit: bool, value: mixed, expiry: ?DateTimeImmutable} The decoded state of the key.
-     */
-    private function read(string $key): array
-    {
-        if (array_key_exists($key, $this->memo)) {
-            return $this->memo[$key];
-        }
-
-        $state = $this->readFile($this->pathOf($key));
-        $this->memo[$key] = $state;
-
-        return $state;
-    }
-
-    /**
-     * @return array{hit: bool, value: mixed, expiry: ?DateTimeImmutable} The decoded state of the file.
-     */
-    private function readFile(string $path): array
-    {
-        $miss = ['hit' => false, 'value' => null, 'expiry' => null];
-        if (!is_file($path)) {
-            return $miss;
-        }
-
-        $raw = @file_get_contents($path);
-        if ($raw === false) {
-            return $miss;
-        }
-
-        $parsed = $this->parse($raw);
-        if ($parsed === null || ($parsed['expiry'] !== null && $parsed['expiry'] <= $this->clock->now())) {
-            @unlink($path);
-
-            return $miss;
-        }
-
-        return ['hit' => true, 'value' => $parsed['value'], 'expiry' => $parsed['expiry']];
-    }
-
-    private function removeTree(string $dir): bool
-    {
-        $entries = @scandir($dir);
-        if ($entries === false) {
-            return false;
-        }
-
-        $ok = true;
-        foreach ($entries as $entry) {
-            if ($entry === '.' || $entry === '..') {
-                continue;
-            }
-
-            $path = $dir . '/' . $entry;
-            $ok = (is_dir($path) ? $this->removeTree($path) : @unlink($path)) && $ok;
-        }
-
-        return @rmdir($dir) && $ok;
-    }
-
-    /**
-     * @return list<string> The two-hex-character shard directories directly under the root.
-     */
-    private function shardDirs(): array
-    {
-        $found = glob($this->directory . '/[0-9a-f][0-9a-f]', \GLOB_ONLYDIR);
-
-        return $found === false ? [] : $found;
-    }
-
-    private function write(string $key, mixed $value, ?DateTimeImmutable $expiry): bool
-    {
-        $path = $this->pathOf($key);
-        $dir = dirname($path);
-        if (!is_dir($dir) && !@mkdir($dir, 0o777, true) && !is_dir($dir)) {
-            return false;
-        }
-
-        if (is_resource($value)) {
-            return false;
-        }
-
-        try {
-            $body = ($expiry?->getTimestamp() ?? 0) . "\n" . serialize($value);
-        } catch (Throwable) {
-            return false;
-        }
-
-        $temp = $path . '.' . bin2hex(random_bytes(6)) . '.tmp';
-        if (@file_put_contents($temp, $body) === false) {
-            return false;
-        }
-
-        if (!@rename($temp, $path)) {
-            @unlink($temp);
-
-            return false;
-        }
-
-        $this->memo[$key] = ['hit' => true, 'value' => $value, 'expiry' => $expiry];
-
-        return true;
-    }
-
     #region implements ICacheItemPool
 
     /**
@@ -408,4 +264,148 @@ final class FileCachePool implements ICacheItemPool
     }
 
     #endregion implements ICacheItemPool
+
+    /**
+     * @return ?array{expiry: ?DateTimeImmutable, value: mixed} The decoded body, or `null` when it is malformed.
+     */
+    private function parse(string $raw): ?array
+    {
+        $newline = strpos($raw, "\n");
+        if ($newline === false) {
+            return null;
+        }
+
+        $stamp = substr($raw, 0, $newline);
+        if ($stamp === '' || !ctype_digit($stamp)) {
+            return null;
+        }
+
+        $body = substr($raw, $newline + 1);
+        if ($body === serialize(false)) {
+            $value = false;
+        } else {
+            $value = @unserialize($body);
+            if ($value === false || $value instanceof __PHP_Incomplete_Class) {
+                return null;
+            }
+        }
+
+        $timestamp = (int) $stamp;
+
+        return [
+            'expiry' => $timestamp === 0 ? null : new DateTimeImmutable('@' . $timestamp),
+            'value' => $value,
+        ];
+    }
+
+    private function pathOf(string $key): string
+    {
+        $hash = hash('sha256', $key);
+
+        return sprintf('%s/%s/%s/%s.cache', $this->directory, substr($hash, 0, 2), substr($hash, 2, 2), $hash);
+    }
+
+    /**
+     * @return array{hit: bool, value: mixed, expiry: ?DateTimeImmutable} The decoded state of the key.
+     */
+    private function read(string $key): array
+    {
+        if (array_key_exists($key, $this->memo)) {
+            return $this->memo[$key];
+        }
+
+        $state = $this->readFile($this->pathOf($key));
+        $this->memo[$key] = $state;
+
+        return $state;
+    }
+
+    /**
+     * @return array{hit: bool, value: mixed, expiry: ?DateTimeImmutable} The decoded state of the file.
+     */
+    private function readFile(string $path): array
+    {
+        $miss = ['hit' => false, 'value' => null, 'expiry' => null];
+        if (!is_file($path)) {
+            return $miss;
+        }
+
+        $raw = @file_get_contents($path);
+        if ($raw === false) {
+            return $miss;
+        }
+
+        $parsed = $this->parse($raw);
+        if ($parsed === null || ($parsed['expiry'] !== null && $parsed['expiry'] <= $this->clock->now())) {
+            @unlink($path);
+
+            return $miss;
+        }
+
+        return ['hit' => true, 'value' => $parsed['value'], 'expiry' => $parsed['expiry']];
+    }
+
+    private function removeTree(string $dir): bool
+    {
+        $entries = @scandir($dir);
+        if ($entries === false) {
+            return false;
+        }
+
+        $ok = true;
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            $path = $dir . '/' . $entry;
+            $ok = (is_dir($path) ? $this->removeTree($path) : @unlink($path)) && $ok;
+        }
+
+        return @rmdir($dir) && $ok;
+    }
+
+    /**
+     * @return list<string> The two-hex-character shard directories directly under the root.
+     */
+    private function shardDirs(): array
+    {
+        $found = glob($this->directory . '/[0-9a-f][0-9a-f]', \GLOB_ONLYDIR);
+
+        return $found === false ? [] : $found;
+    }
+
+    private function write(string $key, mixed $value, ?DateTimeImmutable $expiry): bool
+    {
+        $path = $this->pathOf($key);
+        $dir = dirname($path);
+        if (!is_dir($dir) && !@mkdir($dir, 0o777, true) && !is_dir($dir)) {
+            return false;
+        }
+
+        if (is_resource($value)) {
+            return false;
+        }
+
+        try {
+            $body = ($expiry?->getTimestamp() ?? 0) . "\n" . serialize($value);
+        } catch (Throwable) {
+            return false;
+        }
+
+        $temp = $path . '.' . bin2hex(random_bytes(6)) . '.tmp';
+        if (@file_put_contents($temp, $body) === false) {
+            return false;
+        }
+
+        if (!@rename($temp, $path)) {
+            @unlink($temp);
+
+            return false;
+        }
+
+        $this->memo[$key] = ['hit' => true, 'value' => $value, 'expiry' => $expiry];
+
+        return true;
+    }
 }

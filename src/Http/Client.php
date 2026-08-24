@@ -60,6 +60,31 @@ class Client implements IClient
         return $pending;
     }
 
+    #region implements IClient
+
+    /**
+     * Sends a PSR-7 request and returns the response.
+     *
+     * @param IRequest $request The request to send.
+     *
+     * @return Response The response received.
+     *
+     * @throws RequestException if the request method is empty, the request URI has an
+     * unsupported scheme or no host, or the request body cannot be read.
+     * @throws NetworkException if the request cannot be completed due to a network failure.
+     */
+    #[Override]
+    public function sendRequest(IRequest $request): Response
+    {
+        $this->assertSendable($request);
+
+        $raw = $this->transport->send($request, $this->options);
+
+        return new Response($raw->statusCode, $raw->reasonPhrase, $raw->headers, $raw->body, $raw->protocolVersion);
+    }
+
+    #endregion implements IClient
+
     /**
      * Throws when the request lacks what is needed to send it.
      *
@@ -86,29 +111,4 @@ class Client implements IClient
             throw new RequestException('Request URI must include a host.', $request);
         }
     }
-
-    #region implements IClient
-
-    /**
-     * Sends a PSR-7 request and returns the response.
-     *
-     * @param IRequest $request The request to send.
-     *
-     * @return Response The response received.
-     *
-     * @throws RequestException if the request method is empty, the request URI has an
-     * unsupported scheme or no host, or the request body cannot be read.
-     * @throws NetworkException if the request cannot be completed due to a network failure.
-     */
-    #[Override]
-    public function sendRequest(IRequest $request): Response
-    {
-        $this->assertSendable($request);
-
-        $raw = $this->transport->send($request, $this->options);
-
-        return new Response($raw->statusCode, $raw->reasonPhrase, $raw->headers, $raw->body, $raw->protocolVersion);
-    }
-
-    #endregion implements IClient
 }
