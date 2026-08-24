@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Manychois\PhpStrongTests\Http;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use InvalidArgumentException;
 use Manychois\PhpStrong\Http\Cookie;
 use Manychois\PhpStrong\Http\SameSite;
@@ -132,5 +133,64 @@ final class CookieTest extends TestCase
         static::assertSame(0, $cookie->expires->getTimestamp());
         static::assertSame('example.com', $cookie->domain);
         static::assertSame('/app', $cookie->path);
+    }
+
+    #[Test]
+    public function toSetCookieHeaderWritesTheNameAndValueOnly(): void
+    {
+        $cookie = new Cookie('theme', 'dark');
+
+        static::assertSame('theme=dark', $cookie->toSetCookieHeader());
+    }
+
+    #[Test]
+    public function toSetCookieHeaderEncodesTheValue(): void
+    {
+        $cookie = new Cookie('t', 'a b+c%d');
+
+        static::assertSame('t=a%20b%2Bc%25d', $cookie->toSetCookieHeader());
+    }
+
+    #[Test]
+    public function toSetCookieHeaderWritesEveryAttributeInAFixedOrder(): void
+    {
+        $cookie = new Cookie(
+            name: 'sid',
+            value: 'abc',
+            expires: new DateTimeImmutable('2026-08-25 10:00:00', new DateTimeZone('UTC')),
+            maxAge: 600,
+            domain: 'example.com',
+            path: '/app',
+            secure: true,
+            httpOnly: true,
+            sameSite: SameSite::Lax,
+            partitioned: true,
+        );
+
+        static::assertSame(
+            'sid=abc; Expires=Tue, 25 Aug 2026 10:00:00 GMT; Max-Age=600; Domain=example.com; Path=/app; '
+            . 'Secure; HttpOnly; SameSite=Lax; Partitioned',
+            $cookie->toSetCookieHeader()
+        );
+    }
+
+    #[Test]
+    public function toSetCookieHeaderConvertsExpiresToUtc(): void
+    {
+        $cookie = new Cookie(
+            't',
+            'v',
+            expires: new DateTimeImmutable('2026-08-25 20:00:00', new DateTimeZone('Australia/Sydney')),
+        );
+
+        static::assertSame('t=v; Expires=Tue, 25 Aug 2026 10:00:00 GMT', $cookie->toSetCookieHeader());
+    }
+
+    #[Test]
+    public function toSetCookieHeaderOmitsFalseFlags(): void
+    {
+        $cookie = new Cookie('t', 'v', secure: false, httpOnly: false);
+
+        static::assertSame('t=v', $cookie->toSetCookieHeader());
     }
 }

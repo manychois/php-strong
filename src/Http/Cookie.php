@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Manychois\PhpStrong\Http;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use InvalidArgumentException;
 
 /**
@@ -85,5 +86,46 @@ final class Cookie
             domain: $domain,
             path: $path,
         );
+    }
+
+    /**
+     * Formats this cookie as the value of a `Set-Cookie` header.
+     *
+     * The value is `rawurlencode`d. `Expires` is written in the IMF-fixdate format browsers require, always
+     * converted to UTC first. Attributes left `null` and flags left `false` are omitted.
+     *
+     * @return string The header value, e.g. `theme=dark; Path=/; Secure; HttpOnly; SameSite=Lax`.
+     */
+    public function toSetCookieHeader(): string
+    {
+        $parts = [$this->name . '=' . rawurlencode($this->value)];
+
+        if ($this->expires !== null) {
+            $utc = $this->expires->setTimezone(new DateTimeZone('UTC'));
+            $parts[] = 'Expires=' . $utc->format('D, d M Y H:i:s \G\M\T');
+        }
+        if ($this->maxAge !== null) {
+            $parts[] = 'Max-Age=' . $this->maxAge;
+        }
+        if ($this->domain !== null) {
+            $parts[] = 'Domain=' . $this->domain;
+        }
+        if ($this->path !== null) {
+            $parts[] = 'Path=' . $this->path;
+        }
+        if ($this->secure) {
+            $parts[] = 'Secure';
+        }
+        if ($this->httpOnly) {
+            $parts[] = 'HttpOnly';
+        }
+        if ($this->sameSite !== null) {
+            $parts[] = 'SameSite=' . $this->sameSite->value;
+        }
+        if ($this->partitioned) {
+            $parts[] = 'Partitioned';
+        }
+
+        return implode('; ', $parts);
     }
 }
