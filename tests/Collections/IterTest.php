@@ -277,4 +277,24 @@ final class IterTest extends TestCase
 
         static::assertSame(['a' => [1, 'x'], 'c' => [3, 'y']], iterator_to_array($result));
     }
+
+    #[Test]
+    public function toArrayPreservesKeysWithLastWriteWinningOnCollision(): void
+    {
+        $source = (static function (): \Generator {
+            yield 'a' => 1;
+            yield 'a' => 2;
+            yield 'b' => 3;
+        })();
+
+        static::assertSame(['a' => 2, 'b' => 3], Iter::toArray($source));
+    }
+
+    #[Test]
+    public function toListReindexesElements(): void
+    {
+        $source = ['a' => 1, 'b' => 2, 'c' => 3];
+
+        static::assertSame([1, 2, 3], Iter::toList($source));
+    }
 }

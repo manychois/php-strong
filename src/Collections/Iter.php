@@ -296,6 +296,52 @@ final class Iter
     }
 
     /**
+     * Eagerly materializes an iterable into an array, preserving keys.
+     *
+     * @param iterable $source The source iterable.
+     *
+     * @return array The materialized elements. On key collision, the last value wins.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     *
+     * @phpstan-return array<int|string,T>
+     */
+    public static function toArray(iterable $source): array
+    {
+        $result = [];
+        foreach ($source as $key => $value) {
+            $result[$key] = $value;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Eagerly materializes an iterable into a reindexed list.
+     *
+     * @param iterable $source The source iterable.
+     *
+     * @return array The materialized elements, reindexed starting from 0.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     *
+     * @phpstan-return list<T>
+     */
+    public static function toList(iterable $source): array
+    {
+        $result = [];
+        foreach ($source as $value) {
+            $result[] = $value;
+        }
+
+        return $result;
+    }
+
+    /**
      * Lazily yields only the first occurrence of each distinct element.
      *
      * @param iterable $source The source iterable.
