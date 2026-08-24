@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrongTests\Collections;
 
+use ArrayObject;
+use Generator;
 use InvalidArgumentException;
 use Manychois\PhpStrong\Collections\Iter;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use TypeError;
 use UnderflowException;
 
 final class IterTest extends TestCase
@@ -18,7 +21,7 @@ final class IterTest extends TestCase
         $source = ['a' => 1, 'b' => 2, 'c' => 3];
         $result = Iter::map($source, static fn (int $v): int => $v * 10);
 
-        self::assertSame(['a' => 10, 'b' => 20, 'c' => 30], iterator_to_array($result));
+        static::assertSame(['a' => 10, 'b' => 20, 'c' => 30], iterator_to_array($result));
     }
 
     #[Test]
@@ -32,9 +35,9 @@ final class IterTest extends TestCase
             return $v;
         });
 
-        self::assertSame(0, $calls);
+        static::assertSame(0, $calls);
         iterator_to_array($result);
-        self::assertSame(3, $calls);
+        static::assertSame(3, $calls);
     }
 
     #[Test]
@@ -43,7 +46,7 @@ final class IterTest extends TestCase
         $source = ['a' => 1, 'b' => 2, 'c' => 3, 'd' => 4];
         $result = Iter::filter($source, static fn (int $v): bool => $v % 2 === 0);
 
-        self::assertSame(['b' => 2, 'd' => 4], iterator_to_array($result));
+        static::assertSame(['b' => 2, 'd' => 4], iterator_to_array($result));
     }
 
     #[Test]
@@ -57,9 +60,9 @@ final class IterTest extends TestCase
             return true;
         });
 
-        self::assertSame(0, $calls);
+        static::assertSame(0, $calls);
         iterator_to_array($result);
-        self::assertSame(3, $calls);
+        static::assertSame(3, $calls);
     }
 
     #[Test]
@@ -71,8 +74,8 @@ final class IterTest extends TestCase
             $seen[] = [$k, $v];
         });
 
-        self::assertSame(['a' => 1, 'b' => 2], iterator_to_array($result));
-        self::assertSame([['a', 1], ['b', 2]], $seen);
+        static::assertSame(['a' => 1, 'b' => 2], iterator_to_array($result));
+        static::assertSame([['a', 1], ['b', 2]], $seen);
     }
 
     #[Test]
@@ -84,9 +87,9 @@ final class IterTest extends TestCase
             $calls++;
         });
 
-        self::assertSame(0, $calls);
+        static::assertSame(0, $calls);
         iterator_to_array($result);
-        self::assertSame(2, $calls);
+        static::assertSame(2, $calls);
     }
 
     #[Test]
@@ -137,7 +140,7 @@ final class IterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        iterator_to_array(Iter::take([1, 2], -1));
+        Iter::take([1, 2], -1);
     }
 
     #[Test]
@@ -152,7 +155,7 @@ final class IterTest extends TestCase
     public function takeDoesNotIterateSourceBeyondCount(): void
     {
         $calls = 0;
-        $source = (static function () use (&$calls): \Generator {
+        $source = (static function () use (&$calls): Generator {
             while (true) {
                 $calls++;
 
@@ -189,7 +192,7 @@ final class IterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        iterator_to_array(Iter::skip([1, 2], -1));
+        Iter::skip([1, 2], -1);
     }
 
     #[Test]
@@ -242,7 +245,7 @@ final class IterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        iterator_to_array(Iter::chunk([1, 2], 0));
+        Iter::chunk([1, 2], 0);
     }
 
     #[Test]
@@ -273,7 +276,7 @@ final class IterTest extends TestCase
     #[Test]
     public function zipAcceptsAnIteratorSource(): void
     {
-        $generator = (static function (): \Generator {
+        $generator = (static function (): Generator {
             yield 1;
             yield 2;
         })();
@@ -285,9 +288,25 @@ final class IterTest extends TestCase
     #[Test]
     public function zipAcceptsAnIteratorAggregateSource(): void
     {
-        $result = Iter::zip(new \ArrayObject([1, 2]), ['a', 'b']);
+        $result = Iter::zip(new ArrayObject([1, 2]), ['a', 'b']);
 
         static::assertSame([[1, 'a'], [2, 'b']], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function zipAcceptsAPartiallyConsumedGeneratorSource(): void
+    {
+        $generator = (static function (): Generator {
+            yield 1;
+            yield 2;
+            yield 3;
+        })();
+        $generator->current();
+        $generator->next();
+
+        $result = Iter::zip($generator, ['a', 'b']);
+
+        static::assertSame([[2, 'a'], [3, 'b']], iterator_to_array($result));
     }
 
     #[Test]
@@ -309,9 +328,27 @@ final class IterTest extends TestCase
     }
 
     #[Test]
+    public function uniqueByDefaultCollapsesElementsThatCoerceToTheSameArrayKey(): void
+    {
+        // 1, '1', true and 1.0 all coerce to the same int array key; '1.0' does not.
+        $source = [1, '1', true, 1.0, '1.0'];
+        $result = Iter::unique($source);
+
+        static::assertSame([0 => 1, 4 => '1.0'], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function uniqueThrowsTypeErrorForNonArrayKeyElementWithoutKeySelector(): void
+    {
+        $this->expectException(TypeError::class);
+
+        iterator_to_array(Iter::unique([(object) []]));
+    }
+
+    #[Test]
     public function toArrayPreservesKeysWithLastWriteWinningOnCollision(): void
     {
-        $source = (static function (): \Generator {
+        $source = (static function (): Generator {
             yield 'a' => 1;
             yield 'a' => 2;
             yield 'b' => 3;
@@ -346,7 +383,7 @@ final class IterTest extends TestCase
     #[Test]
     public function countReturnsElementCountForGenerator(): void
     {
-        $source = (static function (): \Generator {
+        $source = (static function (): Generator {
             yield 1;
             yield 2;
         })();
@@ -357,7 +394,7 @@ final class IterTest extends TestCase
     #[Test]
     public function countReturnsElementCountForCountable(): void
     {
-        $countable = new \ArrayObject([1, 2, 3, 4]);
+        $countable = new ArrayObject([1, 2, 3, 4]);
 
         static::assertSame(4, Iter::count($countable));
     }
