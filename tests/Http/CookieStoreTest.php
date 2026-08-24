@@ -334,7 +334,7 @@ final class CookieStoreTest extends TestCase
     }
 
     #[Test]
-    public function attachToEncodesTheValue(): void
+    public function attachToSendsThePercentEncodedValueVerbatim(): void
     {
         $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
         $store->absorb($this->responseWith('sid=a%20b'), Uri::fromString('https://example.com/'));
@@ -342,6 +342,63 @@ final class CookieStoreTest extends TestCase
         $request = $store->attachTo(new Request('GET', 'https://example.com/'));
 
         static::assertSame('sid=a%20b', $request->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function attachToSendsAValueWhichWasNeverEncodedVerbatim(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $store->absorb($this->responseWith('sid=dK9x+7Qf/aQ='), Uri::fromString('https://example.com/'));
+
+        $request = $store->attachTo(new Request('GET', 'https://example.com/'));
+
+        static::assertSame('sid=dK9x+7Qf/aQ=', $request->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function attachToKeepsTheQuotesAValueArrivedWith(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $store->absorb($this->responseWith('sid="a"'), Uri::fromString('https://example.com/'));
+
+        $request = $store->attachTo(new Request('GET', 'https://example.com/'));
+
+        static::assertSame('sid="a"', $request->getHeaderLine('Cookie'));
+        static::assertSame('a', $store->all()[0]->value);
+    }
+
+    #[Test]
+    public function absorbRejectsASecureCookieOverPlainHttp(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+
+        $store->absorb($this->responseWith('sid=abc; Secure'), Uri::fromString('http://example.com/'));
+
+        static::assertSame([], $store->all());
+    }
+
+    #[Test]
+    public function absorbRejectsAHostPrefixedCookieOverPlainHttp(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+
+        $store->absorb($this->responseWith('__Host-sid=abc; Secure; Path=/'), Uri::fromString('http://example.com/'));
+
+        static::assertSame([], $store->all());
+    }
+
+    #[Test]
+    public function absorbDoesNotLetAPlainHttpResponseOverwriteASecureEntry(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+        $store->absorb($this->responseWith('sid=good; Secure; Path=/'), Uri::fromString('https://example.com/'));
+
+        $store->absorb($this->responseWith('sid=attacker; Path=/'), Uri::fromString('http://example.com/'));
+
+        $all = $store->all();
+        static::assertCount(1, $all);
+        static::assertSame('good', $all[0]->value);
+        static::assertTrue($all[0]->secure);
     }
 
     #[Test]

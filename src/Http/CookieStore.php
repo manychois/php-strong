@@ -47,8 +47,8 @@ final class CookieStore
     /**
      * Stores every cookie the response sets which the rules of RFC 6265 allow.
      *
-     * The request URI is needed because a response carries none of its own, and both the domain and the path a
-     * cookie defaults to are derived from it.
+     * The request URI is needed because a response carries none of its own: the domain and the path a cookie
+     * defaults to are derived from it, and so is whether the connection counted as a secure one.
      *
      * @param IResponse $response The response to read `Set-Cookie` headers from.
      * @param IUri $requestUri The URI the request was sent to.
@@ -58,6 +58,7 @@ final class CookieStore
         $this->prune();
 
         $host = strtolower($requestUri->getHost());
+        $secureRequest = strtolower($requestUri->getScheme()) === 'https';
         foreach ($response->getHeader('Set-Cookie') as $line) {
             try {
                 $cookie = Cookie::parseSetCookie($line);
@@ -65,7 +66,7 @@ final class CookieStore
                 continue;
             }
 
-            $this->store($cookie, $host, $requestUri->getPath());
+            $this->store($cookie, self::rawValueIn($line), $host, $requestUri->getPath(), $secureRequest);
         }
     }
 
@@ -85,6 +86,10 @@ final class CookieStore
 
     /**
      * Adds a `Cookie` header carrying every stored cookie the request should send.
+     *
+     * Each value is written exactly as the `Set-Cookie` header carried it, which RFC 6265 requires: a cookie value
+     * is opaque to a client, so re-encoding one that never arrived encoded would hand the server a different value
+     * from the one it set.
      *
      * Cookies already named in the request's own `Cookie` header are left alone: an explicit header at the call
      * site is an intent this store should not second-guess. Cookies are ordered longest path first, then oldest
@@ -134,7 +139,7 @@ final class CookieStore
         });
 
         $pairs = array_map(
-            static fn (CookieEntry $e): string => $e->cookie->name . '=' . rawurlencode($e->cookie->value),
+            static fn (CookieEntry $e): string => $e->cookie->name . '=' . $e->rawValue,
             $matches
         );
         $joined = implode('; ', $pairs);
@@ -237,6 +242,22 @@ final class CookieStore
     }
 
     /**
+     * Reads the cookie value out of a `Set-Cookie` header exactly as it arrived, without decoding it or stripping
+     * the quotes a server may have wrapped it in, so that it can be echoed back octet for octet.
+     *
+     * @param string $header The header value the cookie was parsed from.
+     *
+     * @return string The raw value, which is `''` when the header carries no `=`.
+     */
+    private static function rawValueIn(string $header): string
+    {
+        $first = explode(';', $header)[0];
+        $equals = strpos($first, '=');
+
+        return $equals === false ? '' : trim(substr($first, $equals + 1));
+    }
+
+    /**
      * Drops every entry whose expiry the clock has passed.
      */
     private function prune(): void
@@ -252,19 +273,37 @@ final class CookieStore
     /**
      * Applies the acceptance rules of RFC 6265 and stores the cookie if it passes them.
      *
-     * The `__Secure-` and `__Host-` cookie name prefixes defined by RFC 6265bis are enforced.
+     * The `__Secure-` and `__Host-` cookie name prefixes defined by RFC 6265bis are enforced. A request which was
+     * not made over HTTPS can neither set a cookie which claims to be secure — by the `Secure` attribute or by
+     * either name prefix — nor overwrite an entry already stored as secure, since the storage key carries no scheme
+     * and an on-path attacker on a plain request could otherwise replace a cookie set over a secure one.
      *
      * @param Cookie $cookie The cookie as the response sent it.
+     * @param string $rawValue The value exactly as the `Set-Cookie` header carried it.
      * @param string $host The lower-cased host the request was sent to.
      * @param string $requestPath The path the request was sent to.
+     * @param bool $secureRequest Whether the request was made over a secure scheme.
      */
-    private function store(Cookie $cookie, string $host, string $requestPath): void
-    {
+    private function store(
+        Cookie $cookie,
+        string $rawValue,
+        string $host,
+        string $requestPath,
+        bool $secureRequest,
+    ): void {
         if (str_starts_with($cookie->name, '__Secure-') && !$cookie->secure) {
             return;
         }
         if (str_starts_with($cookie->name, '__Host-')) {
             if (!$cookie->secure || $cookie->domain !== null || $cookie->path !== '/') {
+                return;
+            }
+        }
+        if (!$secureRequest) {
+            if ($cookie->secure) {
+                return;
+            }
+            if (str_starts_with($cookie->name, '__Secure-') || str_starts_with($cookie->name, '__Host-')) {
                 return;
             }
         }
@@ -303,6 +342,11 @@ final class CookieStore
         );
 
         $key = $domain . "\0" . $path . "\0" . $cookie->name;
+        $held = $this->entries[$key] ?? null;
+        if ($held !== null && $held->cookie->secure && !$secureRequest) {
+            return;
+        }
+
         $now = $this->clock->now();
         $expiresAt = null;
         if ($cookie->maxAge !== null) {
@@ -324,7 +368,7 @@ final class CookieStore
             $expiresAt = $cookie->expires;
         }
 
-        $this->entries[$key] = new CookieEntry($resolved, $expiresAt, $hostOnly, $this->sequence);
+        $this->entries[$key] = new CookieEntry($resolved, $rawValue, $expiresAt, $hostOnly, $this->sequence);
         $this->sequence++;
     }
 }

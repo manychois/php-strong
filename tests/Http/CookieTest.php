@@ -136,6 +136,47 @@ final class CookieTest extends TestCase
     }
 
     #[Test]
+    public function expiredForcesTheAttributesAHostPrefixDemands(): void
+    {
+        $cookie = Cookie::expired('__Host-session', 'example.com', '/app');
+
+        static::assertTrue($cookie->secure);
+        static::assertNull($cookie->domain);
+        static::assertSame('/', $cookie->path);
+        static::assertStringContainsString('Path=/', $cookie->toSetCookieHeader());
+        static::assertStringContainsString('Secure', $cookie->toSetCookieHeader());
+        static::assertStringNotContainsString('Domain=', $cookie->toSetCookieHeader());
+    }
+
+    #[Test]
+    public function expiredForcesTheAttributesASecurePrefixDemands(): void
+    {
+        $cookie = Cookie::expired('__Secure-session', 'example.com', '/app');
+
+        static::assertTrue($cookie->secure);
+        static::assertSame('example.com', $cookie->domain);
+        static::assertSame('/app', $cookie->path);
+    }
+
+    #[Test]
+    public function aPathWithALineBreakIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cookie path must not contain a control or separator character');
+
+        new Cookie('lang', 'en', path: "/shop/x\r\nSet-Cookie: evil=1");
+    }
+
+    #[Test]
+    public function aDomainWithALineBreakIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cookie domain must not contain a control or separator character');
+
+        new Cookie('lang', 'en', domain: "example.com\r\nSet-Cookie: evil=1");
+    }
+
+    #[Test]
     public function toSetCookieHeaderWritesTheNameAndValueOnly(): void
     {
         $cookie = new Cookie('theme', 'dark');

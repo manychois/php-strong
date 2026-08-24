@@ -22,6 +22,11 @@ use InvalidArgumentException;
 final class Cookie
 {
     /**
+     * The characters a `Domain` or `Path` attribute may consist of, i.e. RFC 6265 `av-octet` minus the separator.
+     */
+    private const ATTRIBUTE_PATTERN = '/^[\x20-\x3A\x3C-\x7E]*$/';
+
+    /**
      * The characters a cookie name may consist of, i.e. an RFC 2616 token.
      */
     private const NAME_PATTERN = '/^[!#$%&\'*+\-.^_`|~0-9A-Za-z]+$/';
@@ -40,8 +45,8 @@ final class Cookie
      * @param ?SameSite $sameSite When the browser sends the cookie with a cross-site request.
      * @param bool $partitioned Whether the cookie is partitioned per top-level site (CHIPS).
      *
-     * @throws InvalidArgumentException if the name is not a valid token, or an attribute combination is one
-     * browsers reject.
+     * @throws InvalidArgumentException if the name is not a valid token, the domain or the path carries a character
+     * illegal in a cookie attribute, or an attribute combination is one browsers reject.
      */
     public function __construct(
         public readonly string $name,
@@ -58,6 +63,16 @@ final class Cookie
         if (preg_match(self::NAME_PATTERN, $name) !== 1) {
             throw new InvalidArgumentException(sprintf('Cookie name must be a valid token, got "%s".', $name));
         }
+        if ($domain !== null && preg_match(self::ATTRIBUTE_PATTERN, $domain) !== 1) {
+            throw new InvalidArgumentException(
+                sprintf('Cookie domain must not contain a control or separator character, got "%s".', $domain)
+            );
+        }
+        if ($path !== null && preg_match(self::ATTRIBUTE_PATTERN, $path) !== 1) {
+            throw new InvalidArgumentException(
+                sprintf('Cookie path must not contain a control or separator character, got "%s".', $path)
+            );
+        }
         if ($sameSite === SameSite::None && !$secure) {
             throw new InvalidArgumentException('SameSite None requires a secure cookie, which browsers enforce.');
         }
@@ -71,6 +86,11 @@ final class Cookie
      *
      * Both `Max-Age` and `Expires` are set, because some older browsers honour only one of the two.
      *
+     * A name carrying a cookie prefix of RFC 6265bis gets the attributes that prefix demands, since a browser
+     * rejects the clearing cookie otherwise and the cookie is never cleared: a `__Host-` name forces `Secure`,
+     * `Path=/` and no `Domain`, and a `__Secure-` name forces `Secure`. Whatever the caller passed for a forced
+     * attribute is ignored.
+     *
      * @param string $name The name of the cookie to clear.
      * @param ?string $domain The domain of the cookie to clear, which must match the one it was set with.
      * @param ?string $path The path of the cookie to clear, which must match the one it was set with.
@@ -79,6 +99,15 @@ final class Cookie
      */
     public static function expired(string $name, ?string $domain = null, ?string $path = null): self
     {
+        $secure = false;
+        if (str_starts_with($name, '__Host-')) {
+            $secure = true;
+            $domain = null;
+            $path = '/';
+        } elseif (str_starts_with($name, '__Secure-')) {
+            $secure = true;
+        }
+
         return new self(
             name: $name,
             value: '',
@@ -86,6 +115,7 @@ final class Cookie
             maxAge: -1,
             domain: $domain,
             path: $path,
+            secure: $secure,
         );
     }
 
