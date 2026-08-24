@@ -217,4 +217,46 @@ final class IterTest extends TestCase
 
         static::assertSame([5, 1, 2], iterator_to_array($result));
     }
+
+    #[Test]
+    public function chunkGroupsElementsIntoListsOfGivenSize(): void
+    {
+        $source = [1, 2, 3, 4, 5];
+        $result = Iter::chunk($source, 2);
+
+        static::assertSame([[1, 2], [3, 4], [5]], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function chunkThrowsForNonPositiveSize(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        iterator_to_array(Iter::chunk([1, 2], 0));
+    }
+
+    #[Test]
+    public function flattenConcatenatesOneLevelWithReindexedKeys(): void
+    {
+        $source = [[1, 2], ['a' => 3], [4]];
+        $result = Iter::flatten($source);
+
+        static::assertSame([1, 2, 3, 4], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function zipYieldsTuplesStoppingAtShortestSource(): void
+    {
+        $result = Iter::zip([1, 2, 3], ['a', 'b']);
+
+        static::assertSame([[1, 'a'], [2, 'b']], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function zipYieldsNothingWithNoSources(): void
+    {
+        $result = Iter::zip();
+
+        static::assertSame([], iterator_to_array($result));
+    }
 }

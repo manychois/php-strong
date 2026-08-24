@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Collections;
 
+use ArrayIterator;
 use InvalidArgumentException;
+use Iterator;
+use IteratorAggregate;
 
 /**
  * Provides lazy, generator-based utilities for manipulating iterables.
@@ -13,6 +16,42 @@ final class Iter
 {
     private function __construct()
     {
+    }
+
+    /**
+     * Lazily groups elements of an iterable into fixed-size lists.
+     *
+     * @param iterable $source The source iterable.
+     * @param int $size The maximum size of each chunk.
+     *
+     * @return iterable The chunks, each a list of at most $size elements, with reindexed integer keys.
+     *
+     * @throws InvalidArgumentException if $size is not positive.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param positive-int $size
+     *
+     * @phpstan-return iterable<int,list<T>>
+     */
+    public static function chunk(iterable $source, int $size): iterable
+    {
+        if ($size <= 0) {
+            throw new InvalidArgumentException('Size must be positive.');
+        }
+
+        $buffer = [];
+        foreach ($source as $value) {
+            $buffer[] = $value;
+            if (\count($buffer) >= $size) {
+                yield $buffer;
+                $buffer = [];
+            }
+        }
+        if (\count($buffer) > 0) {
+            yield $buffer;
+        }
     }
 
     /**
@@ -60,6 +99,28 @@ final class Iter
         foreach ($source as $key => $value) {
             foreach ($mapper($value, $key) as $inner) {
                 yield $inner;
+            }
+        }
+    }
+
+    /**
+     * Lazily flattens one level of a nested iterable.
+     *
+     * @param iterable $source The source iterable of iterables.
+     *
+     * @return iterable The concatenated inner elements, with reindexed integer keys.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,iterable<int|string,T>> $source
+     *
+     * @phpstan-return iterable<int,T>
+     */
+    public static function flatten(iterable $source): iterable
+    {
+        foreach ($source as $inner) {
+            foreach ($inner as $value) {
+                yield $value;
             }
         }
     }
@@ -232,5 +293,66 @@ final class Iter
 
             yield $key => $value;
         }
+    }
+
+    /**
+     * Lazily combines multiple iterables into tuples, stopping at the shortest one.
+     *
+     * @param iterable ...$sources The source iterables to zip together.
+     *
+     * @return iterable The tuples, each a list with one element per source, with reindexed integer keys.
+     *
+     * @phpstan-param iterable<mixed> ...$sources
+     *
+     * @phpstan-return iterable<int,list<mixed>>
+     */
+    public static function zip(iterable ...$sources): iterable
+    {
+        if (\count($sources) === 0) {
+            return;
+        }
+
+        $iterators = [];
+        foreach ($sources as $source) {
+            $iterator = self::toGenerator($source);
+            $iterator->rewind();
+            $iterators[] = $iterator;
+        }
+
+        while (true) {
+            $tuple = [];
+            foreach ($iterators as $iterator) {
+                if (!$iterator->valid()) {
+                    return;
+                }
+                $tuple[] = $iterator->current();
+            }
+            yield $tuple;
+            foreach ($iterators as $iterator) {
+                $iterator->next();
+            }
+        }
+    }
+
+    /**
+     * Normalizes an iterable into a rewindable iterator.
+     *
+     * @param iterable $source The iterable to normalize.
+     *
+     * @return Iterator The normalized iterator.
+     *
+     * @phpstan-param iterable<mixed> $source
+     * @phpstan-return Iterator<mixed>
+     */
+    private static function toGenerator(iterable $source): Iterator
+    {
+        if ($source instanceof Iterator) {
+            return $source;
+        }
+        if ($source instanceof IteratorAggregate) {
+            return self::toGenerator($source->getIterator());
+        }
+
+        return new ArrayIterator((array) $source);
     }
 }
