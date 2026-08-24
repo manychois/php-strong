@@ -16,8 +16,59 @@ use UnderflowException;
  */
 final class Iter
 {
+    // This class is a static-only utility; the private constructor blocks instantiation and is never called.
+    // @codeCoverageIgnoreStart
     private function __construct()
     {
+    }
+    // @codeCoverageIgnoreEnd
+
+    /**
+     * Eagerly checks whether every element matches a predicate.
+     *
+     * @param iterable $source The source iterable.
+     * @param callable $predicate The predicate to test each element.
+     *
+     * @return bool True if every element matches (including an empty source); false otherwise.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param callable(T,int|string):bool $predicate
+     */
+    public static function all(iterable $source, callable $predicate): bool
+    {
+        foreach ($source as $key => $value) {
+            if (!$predicate($value, $key)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Eagerly checks whether any element matches a predicate.
+     *
+     * @param iterable $source The source iterable.
+     * @param callable $predicate The predicate to test each element.
+     *
+     * @return bool True if any element matches; false otherwise (including an empty source).
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param callable(T,int|string):bool $predicate
+     */
+    public static function any(iterable $source, callable $predicate): bool
+    {
+        foreach ($source as $key => $value) {
+            if ($predicate($value, $key)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

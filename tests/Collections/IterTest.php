@@ -139,6 +139,14 @@ final class IterTest extends TestCase
     }
 
     #[Test]
+    public function takeYieldsNothingForZeroCount(): void
+    {
+        $result = Iter::take([1, 2, 3], 0);
+
+        static::assertSame([], iterator_to_array($result));
+    }
+
+    #[Test]
     public function takeDoesNotIterateSourceBeyondCount(): void
     {
         $calls = 0;
@@ -258,6 +266,26 @@ final class IterTest extends TestCase
         $result = Iter::zip();
 
         static::assertSame([], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function zipAcceptsAnIteratorSource(): void
+    {
+        $generator = (static function (): \Generator {
+            yield 1;
+            yield 2;
+        })();
+        $result = Iter::zip($generator, ['a', 'b']);
+
+        static::assertSame([[1, 'a'], [2, 'b']], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function zipAcceptsAnIteratorAggregateSource(): void
+    {
+        $result = Iter::zip(new \ArrayObject([1, 2]), ['a', 'b']);
+
+        static::assertSame([[1, 'a'], [2, 'b']], iterator_to_array($result));
     }
 
     #[Test]
@@ -382,5 +410,63 @@ final class IterTest extends TestCase
         $result = Iter::firstOrNull([1, 2, 3, 4], static fn (int $v): bool => $v % 2 === 0);
 
         static::assertSame(2, $result);
+    }
+
+    #[Test]
+    public function anyReturnsTrueIfAnyElementMatches(): void
+    {
+        static::assertTrue(Iter::any([1, 2, 3], static fn (int $v): bool => $v === 2));
+    }
+
+    #[Test]
+    public function anyReturnsFalseIfNoElementMatches(): void
+    {
+        static::assertFalse(Iter::any([1, 2, 3], static fn (int $v): bool => $v === 5));
+    }
+
+    #[Test]
+    public function anyShortCircuitsOnFirstMatch(): void
+    {
+        $calls = 0;
+        $source = [1, 2, 3];
+        Iter::any($source, static function (int $v) use (&$calls): bool {
+            $calls++;
+
+            return $v === 1;
+        });
+
+        static::assertSame(1, $calls);
+    }
+
+    #[Test]
+    public function allReturnsTrueIfEveryElementMatches(): void
+    {
+        static::assertTrue(Iter::all([2, 4, 6], static fn (int $v): bool => $v % 2 === 0));
+    }
+
+    #[Test]
+    public function allReturnsFalseIfAnyElementFailsToMatch(): void
+    {
+        static::assertFalse(Iter::all([2, 3, 6], static fn (int $v): bool => $v % 2 === 0));
+    }
+
+    #[Test]
+    public function allReturnsTrueForEmptySource(): void
+    {
+        static::assertTrue(Iter::all([], static fn (int $v): bool => $v % 2 === 0));
+    }
+
+    #[Test]
+    public function allShortCircuitsOnFirstNonMatch(): void
+    {
+        $calls = 0;
+        $source = [2, 3, 4];
+        Iter::all($source, static function (int $v) use (&$calls): bool {
+            $calls++;
+
+            return $v % 2 === 0;
+        });
+
+        static::assertSame(2, $calls);
     }
 }
