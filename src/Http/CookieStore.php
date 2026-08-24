@@ -127,12 +127,23 @@ final class CookieStore
     /**
      * Applies the acceptance rules of RFC 6265 and stores the cookie if it passes them.
      *
+     * The `__Secure-` and `__Host-` cookie name prefixes defined by RFC 6265bis are enforced.
+     *
      * @param Cookie $cookie The cookie as the response sent it.
      * @param string $host The lower-cased host the request was sent to.
      * @param string $requestPath The path the request was sent to.
      */
     private function store(Cookie $cookie, string $host, string $requestPath): void
     {
+        if (str_starts_with($cookie->name, '__Secure-') && !$cookie->secure) {
+            return;
+        }
+        if (str_starts_with($cookie->name, '__Host-')) {
+            if (!$cookie->secure || $cookie->domain !== null || $cookie->path !== '/') {
+                return;
+            }
+        }
+
         $hostOnly = true;
         $domain = $host;
         if ($cookie->domain !== null && $cookie->domain !== '') {

@@ -255,6 +255,72 @@ final class CookieStoreTest extends TestCase
         static::assertSame([], $store->all());
     }
 
+    #[Test]
+    public function aSecurePrefixedCookieIsAcceptedWhenItIsSecure(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+
+        $store->absorb($this->responseWith('__Secure-sid=abc; Secure'), Uri::fromString('https://example.com/'));
+
+        static::assertCount(1, $store->all());
+    }
+
+    #[Test]
+    public function aSecurePrefixedCookieIsRejectedWhenItIsNotSecure(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+
+        $store->absorb($this->responseWith('__Secure-sid=abc'), Uri::fromString('https://example.com/'));
+
+        static::assertSame([], $store->all());
+    }
+
+    #[Test]
+    public function aHostPrefixedCookieIsAcceptedWhenItMeetsEveryCondition(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+
+        $store->absorb(
+            $this->responseWith('__Host-sid=abc; Secure; Path=/'),
+            Uri::fromString('https://example.com/')
+        );
+
+        static::assertCount(1, $store->all());
+    }
+
+    #[Test]
+    public function aHostPrefixedCookieIsRejectedWithoutSecure(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+
+        $store->absorb($this->responseWith('__Host-sid=abc; Path=/'), Uri::fromString('https://example.com/'));
+
+        static::assertSame([], $store->all());
+    }
+
+    #[Test]
+    public function aHostPrefixedCookieIsRejectedWithADomain(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+
+        $store->absorb(
+            $this->responseWith('__Host-sid=abc; Secure; Path=/; Domain=example.com'),
+            Uri::fromString('https://example.com/')
+        );
+
+        static::assertSame([], $store->all());
+    }
+
+    #[Test]
+    public function aHostPrefixedCookieIsRejectedWithoutAnExplicitRootPath(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+
+        $store->absorb($this->responseWith('__Host-sid=abc; Secure'), Uri::fromString('https://example.com/'));
+
+        static::assertSame([], $store->all());
+    }
+
     private function responseWith(string $setCookie): Response
     {
         return new Response(headers: ['Set-Cookie' => $setCookie]);
