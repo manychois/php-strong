@@ -91,7 +91,7 @@ final class Iter
      * Lazily skips the first N elements of an iterable.
      *
      * @param iterable $source The source iterable.
-     * @param int      $count  The number of elements to skip.
+     * @param int $count The number of elements to skip.
      *
      * @return iterable The remaining elements, preserving original keys.
      *
@@ -123,7 +123,7 @@ final class Iter
      * Lazily takes at most N elements of an iterable.
      *
      * @param iterable $source The source iterable.
-     * @param int      $count  The maximum number of elements to take.
+     * @param int $count The maximum number of elements to take.
      *
      * @return iterable At most $count elements, preserving original keys.
      *
