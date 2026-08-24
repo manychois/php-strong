@@ -259,4 +259,22 @@ final class IterTest extends TestCase
 
         static::assertSame([], iterator_to_array($result));
     }
+
+    #[Test]
+    public function uniqueYieldsFirstOccurrenceOfEachElementByDefault(): void
+    {
+        $source = ['a' => 1, 'b' => 2, 'c' => 1, 'd' => 3];
+        $result = Iter::unique($source);
+
+        static::assertSame(['a' => 1, 'b' => 2, 'd' => 3], iterator_to_array($result));
+    }
+
+    #[Test]
+    public function uniqueYieldsFirstOccurrenceByKeySelector(): void
+    {
+        $source = ['a' => [1, 'x'], 'b' => [2, 'x'], 'c' => [3, 'y']];
+        $result = Iter::unique($source, static fn (array $v): string => $v[1]);
+
+        static::assertSame(['a' => [1, 'x'], 'c' => [3, 'y']], iterator_to_array($result));
+    }
 }

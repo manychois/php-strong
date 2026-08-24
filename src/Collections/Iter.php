@@ -296,6 +296,37 @@ final class Iter
     }
 
     /**
+     * Lazily yields only the first occurrence of each distinct element.
+     *
+     * @param iterable $source The source iterable.
+     * @param ?callable $keySelector The selector deriving a comparison key from each element; defaults to the
+     *                               element itself.
+     *
+     * @return iterable The first-seen elements for each distinct key, preserving original keys.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param ?callable(T):array-key $keySelector
+     *
+     * @phpstan-return iterable<int|string,T>
+     */
+    public static function unique(iterable $source, ?callable $keySelector = null): iterable
+    {
+        $seen = [];
+        foreach ($source as $key => $value) {
+            /** @var int|string $uniqueKey */
+            $uniqueKey = $keySelector === null ? $value : $keySelector($value);
+            if (\array_key_exists($uniqueKey, $seen)) {
+                continue;
+            }
+            $seen[$uniqueKey] = true;
+
+            yield $key => $value;
+        }
+    }
+
+    /**
      * Lazily combines multiple iterables into tuples, stopping at the shortest one.
      *
      * @param iterable ...$sources The source iterables to zip together.
@@ -342,6 +373,7 @@ final class Iter
      * @return Iterator The normalized iterator.
      *
      * @phpstan-param iterable<mixed> $source
+     *
      * @phpstan-return Iterator<mixed>
      */
     private static function toGenerator(iterable $source): Iterator
