@@ -3,3 +3,4 @@ composer.phar
 playground.php
 /coverage
 /vendor
+.worktrees/
