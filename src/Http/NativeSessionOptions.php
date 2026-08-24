@@ -18,20 +18,20 @@ final class NativeSessionOptions
      * The settings a dedicated option already controls, which therefore may not appear in `$ini`.
      */
     private const RESERVED_INI = [
-        'session.name',
-        'session.save_path',
-        'session.cookie_lifetime',
-        'session.cookie_path',
-        'session.cookie_domain',
-        'session.cookie_secure',
-        'session.cookie_httponly',
-        'session.cookie_samesite',
-        'session.cookie_partitioned',
-        'session.use_strict_mode',
-        'session.use_only_cookies',
-        'session.gc_maxlifetime',
-        'session.serialize_handler',
-        'session.read_and_close',
+        'name',
+        'save_path',
+        'cookie_lifetime',
+        'cookie_path',
+        'cookie_domain',
+        'cookie_secure',
+        'cookie_httponly',
+        'cookie_samesite',
+        'cookie_partitioned',
+        'use_strict_mode',
+        'use_only_cookies',
+        'gc_maxlifetime',
+        'serialize_handler',
+        'read_and_close',
     ];
 
     /**
@@ -62,8 +62,9 @@ final class NativeSessionOptions
      * @param bool $readAndClose Whether the session is read once and closed straight away, releasing its lock so that
      * concurrent requests of the same visitor are not held up. The session becomes read-only: every member which
      * would write throws.
-     * @param array $ini Any further `session.*` settings, applied verbatim before the session starts. Keys must
-     * carry the `session.` prefix, and none may be one a dedicated option above already controls.
+     * @param array $ini Any further session settings, passed to `session_start()` verbatim. Keys are setting names
+     * without the `session.` prefix, e.g. `gc_probability`, and none may be one a dedicated option above already
+     * controls.
      *
      * @throws InvalidArgumentException if any value is unusable.
      *
@@ -122,9 +123,9 @@ final class NativeSessionOptions
         }
 
         foreach (array_keys($ini) as $key) {
-            if (!str_starts_with($key, 'session.')) {
+            if (str_starts_with($key, 'session.')) {
                 throw new InvalidArgumentException(
-                    sprintf('Setting "%s" must carry the "session." prefix.', $key)
+                    sprintf('Setting "%s" must be named without the "session." prefix.', $key)
                 );
             }
             if (in_array($key, self::RESERVED_INI, true)) {

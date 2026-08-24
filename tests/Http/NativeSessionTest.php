@@ -61,7 +61,7 @@ final class NativeSessionTest extends TestCase
             cookieSameSite: SameSite::Strict,
             gcMaxLifetime: 1440,
             serializeHandler: SessionSerializer::PhpSerialize,
-            ini: ['session.gc_probability' => 1],
+            ini: ['gc_probability' => 1],
         ));
         $session->set('a', 1);
 

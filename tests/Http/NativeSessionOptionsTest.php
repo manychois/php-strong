@@ -51,7 +51,7 @@ final class NativeSessionOptionsTest extends TestCase
             useOnlyCookies: false,
             gcMaxLifetime: 1440,
             serializeHandler: SessionSerializer::PhpSerialize,
-            ini: ['session.gc_probability' => 1],
+            ini: ['gc_probability' => 1],
         );
 
         static::assertSame('app_session', $options->name);
@@ -66,7 +66,7 @@ final class NativeSessionOptionsTest extends TestCase
         static::assertFalse($options->useOnlyCookies);
         static::assertSame(1440, $options->gcMaxLifetime);
         static::assertSame(SessionSerializer::PhpSerialize, $options->serializeHandler);
-        static::assertSame(['session.gc_probability' => 1], $options->ini);
+        static::assertSame(['gc_probability' => 1], $options->ini);
     }
 
     #[Test]
@@ -142,11 +142,11 @@ final class NativeSessionOptionsTest extends TestCase
     }
 
     #[Test]
-    public function anIniKeyWithoutTheSessionPrefixIsRejected(): void
+    public function anIniKeyWithTheSessionPrefixIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(ini: ['gc_probability' => 1]);
+        new NativeSessionOptions(ini: ['session.gc_probability' => 1]);
     }
 
     #[Test]
@@ -154,6 +154,6 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(ini: ['session.name' => 'app_session']);
+        new NativeSessionOptions(ini: ['name' => 'app_session']);
     }
 }

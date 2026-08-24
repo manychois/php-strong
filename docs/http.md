@@ -179,7 +179,7 @@ $session = new NativeSession(new NativeSessionOptions(
     cookieSameSite: SameSite::Strict,
     gcMaxLifetime: 1800,
     serializeHandler: SessionSerializer::PhpSerialize,
-    ini: ['session.gc_probability' => 1],           // anything without a dedicated option
+    ini: ['gc_probability' => 1],                   // anything without a dedicated option
 ));
 ```
 
@@ -199,11 +199,12 @@ $session = new NativeSession(new NativeSessionOptions(
 | `gcMaxLifetime` | `null` | Seconds an idle session survives. `null` keeps PHP's. |
 | `serializeHandler` | `null` | See *Serialization* below. |
 | `readAndClose` | `false` | Read the session once and close it immediately, releasing its lock. See below. |
-| `ini` | `[]` | Further `session.*` settings, applied verbatim. Keys must carry the `session.` prefix, and a key a dedicated option already controls is rejected rather than silently losing to it. |
+| `ini` | `[]` | Further session settings, passed to `session_start()` verbatim. Keys are setting names without the `session.` prefix, e.g. `gc_probability`, and a key a dedicated option already controls is rejected rather than silently losing to it. |
 
 Every value is validated in the constructor, so a bad setting fails where it is written rather than at
 `session_start()`. The options are handed to `session_start()` as one array — the only way to reach `read_and_close`,
-and the form in which PHP reports an unrecognised setting instead of ignoring it.
+and the form in which PHP reports an unrecognised setting instead of ignoring it. That is also why `ini` keys carry no
+`session.` prefix: it is the form `session_start()` itself takes, and PHP rejects a prefixed key.
 
 ### Read-only requests
 

@@ -217,7 +217,7 @@ final class NativeSession extends AbstractDataReader implements ISession
     /**
      * Builds the options `session_start()` is called with.
      *
-     * The keys of the array are `session.*` setting names without their prefix, which is the form `session_start()`
+     * The keys of the array are setting names without the `session.` prefix, which is the form `session_start()`
      * accepts; a prefixed key is rejected by PHP.
      *
      * @return array The options for `session_start()`.
@@ -253,7 +253,7 @@ final class NativeSession extends AbstractDataReader implements ISession
             $options['read_and_close'] = true;
         }
         foreach ($this->options->ini as $key => $value) {
-            $options[substr($key, strlen('session.'))] = $value;
+            $options[$key] = $value;
         }
 
         return $options;
