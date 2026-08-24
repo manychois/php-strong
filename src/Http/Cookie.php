@@ -67,6 +67,29 @@ final class Cookie
     }
 
     /**
+     * Creates a cookie which clears an existing cookie of the same name.
+     *
+     * Both `Max-Age` and `Expires` are set, because some older browsers honour only one of the two.
+     *
+     * @param string $name The name of the cookie to clear.
+     * @param ?string $domain The domain of the cookie to clear, which must match the one it was set with.
+     * @param ?string $path The path of the cookie to clear, which must match the one it was set with.
+     *
+     * @return self The cookie which clears it.
+     */
+    public static function expired(string $name, ?string $domain = null, ?string $path = null): self
+    {
+        return new self(
+            name: $name,
+            value: '',
+            expires: new DateTimeImmutable('@0'),
+            maxAge: -1,
+            domain: $domain,
+            path: $path,
+        );
+    }
+
+    /**
      * Parses one `Set-Cookie` header value.
      *
      * Attribute names are matched case-insensitively and unknown attributes are ignored, as RFC 6265 requires. An
@@ -151,29 +174,6 @@ final class Cookie
             httpOnly: $httpOnly,
             sameSite: $sameSite,
             partitioned: $partitioned,
-        );
-    }
-
-    /**
-     * Creates a cookie which clears an existing cookie of the same name.
-     *
-     * Both `Max-Age` and `Expires` are set, because some older browsers honour only one of the two.
-     *
-     * @param string $name The name of the cookie to clear.
-     * @param ?string $domain The domain of the cookie to clear, which must match the one it was set with.
-     * @param ?string $path The path of the cookie to clear, which must match the one it was set with.
-     *
-     * @return self The cookie which clears it.
-     */
-    public static function expired(string $name, ?string $domain = null, ?string $path = null): self
-    {
-        return new self(
-            name: $name,
-            value: '',
-            expires: new DateTimeImmutable('@0'),
-            maxAge: -1,
-            domain: $domain,
-            path: $path,
         );
     }
 
