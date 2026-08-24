@@ -42,7 +42,9 @@ returns a `list<T>` directly instead of a lazy `iterable`.
 
 ## Methods
 
-All public, static, listed alphabetically as they will appear in the class.
+All public and static. Grouped below for readability and alphabetical within
+each group; in the class itself the two groups merge into one alphabetical
+list, as the coding standard requires.
 
 ### Mirrored from `Iter`, returning eager results
 
@@ -91,6 +93,12 @@ All public, static, listed alphabetically as they will appear in the class.
 
 ### List-only operations
 
+- `at(iterable $source, int $index): mixed`
+  Element at position `$index`. A negative `$index` counts from the end, so
+  `-1` is the last element and `-count($source)` the first — the semantics of
+  JavaScript's `Array.prototype.at`, which PHP's `$list[$i]` does not offer.
+  Throws `OutOfBoundsException` if `$index` resolves outside the list, which
+  is always the case for an empty source.
 - `concat(iterable ...$sources): array`
   Appends the sources end to end into one `list<T>`. Empty when no sources are
   given.
@@ -147,7 +155,9 @@ everything here is eager.
 
 - `InvalidArgumentException` — non-positive `chunk` size, negative `skip`/
   `take` count.
-- `OutOfBoundsException` — `insertAt`/`removeAt` index outside the valid range.
+- `OutOfBoundsException` — `at`/`insertAt`/`removeAt` index outside the valid
+  range. `at` resolves a negative index first and reports the original value in
+  the message.
 - `UnderflowException` — `first`/`last` with no matching element.
 - `TypeError` — propagated natively from `unique` when an element is not a
   valid array key and no `$keySelector` is given.
