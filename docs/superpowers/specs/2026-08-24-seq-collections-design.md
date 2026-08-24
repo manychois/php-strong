@@ -37,7 +37,7 @@ returns a `list<T>` directly instead of a lazy `iterable`.
   (`@phpstan-param callable(T,non-negative-int):bool $predicate`). This is the
   deliberate difference from `Iter`, whose callbacks receive an arbitrary key
   and which therefore carries a `TKey` template. `Seq` has no `TKey`.
-- **Non-mutating:** no method modifies the caller's array. Sorting and
+- **Non-mutating:** no method modifies the caller's array. Ordering and
   insertion operate on the normalized copy.
 
 ## Methods
@@ -109,6 +109,12 @@ All public, static, listed alphabetically as they will appear in the class.
   Position of the last strictly equal element, or `null` if absent.
 - `lastOrNull(iterable $source, ?callable $predicate = null): mixed`
   As `last`, returning `null` instead of throwing.
+- `orderBy(iterable $source, ?callable $comparator = null): array`
+  Ascending by `<=>` when `$comparator` is null, otherwise by the comparator
+  (`@phpstan-param ?callable(T,T):int $comparator`). Stable, per PHP 8.0+ sort
+  guarantees. Ordering by a derived key is
+  `Seq::orderBy($users, fn ($a, $b) => $a->age <=> $b->age)`; descending is
+  `Seq::reverse(Seq::orderBy(...))`.
 - `removeAt(iterable $source, int $index): array`
   Returns a new list with the element at `$index` removed. Throws
   `OutOfBoundsException` if `$index` is not a valid position.
@@ -119,13 +125,6 @@ All public, static, listed alphabetically as they will appear in the class.
   `$length` (`null` means to the end; negative stops that many from the end).
   An out-of-range `$offset` yields an empty list rather than throwing, matching
   `array_slice`.
-- `sort(iterable $source, ?callable $comparator = null): array`
-  Ascending by `<=>` when `$comparator` is null, otherwise by the comparator
-  (`@phpstan-param ?callable(T,T):int`). Stable, per PHP 8.0+ sort guarantees.
-  Descending is `Seq::reverse(Seq::sort(...))`.
-- `sortBy(iterable $source, callable $keySelector): array`
-  Ascending by the derived key, compared with `<=>`
-  (`@phpstan-param callable(T):mixed $keySelector`). Stable.
 
 ## Implementation
 
@@ -170,5 +169,5 @@ positional `$index` passed to callbacks, and every documented exception.
 - No `groupBy` — its result is a map keyed by the derived key, not a `list`,
   so it does not fit this class's contract. Deferred to its own decision.
 - No `pad`/`fill` — no current need.
-- No mutation-in-place variants (e.g. `sortInPlace`); every method returns a
+- No mutation-in-place variants (e.g. `orderByInPlace`); every method returns a
   new list.
