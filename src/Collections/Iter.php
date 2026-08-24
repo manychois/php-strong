@@ -9,6 +9,7 @@ use Countable;
 use InvalidArgumentException;
 use Iterator;
 use IteratorAggregate;
+use TypeError;
 use UnderflowException;
 
 /**
@@ -94,17 +95,7 @@ final class Iter
             throw new InvalidArgumentException('Size must be positive.');
         }
 
-        $buffer = [];
-        foreach ($source as $value) {
-            $buffer[] = $value;
-            if (\count($buffer) >= $size) {
-                yield $buffer;
-                $buffer = [];
-            }
-        }
-        if (\count($buffer) > 0) {
-            yield $buffer;
-        }
+        return self::chunkGenerator($source, $size);
     }
 
     /**
@@ -331,13 +322,7 @@ final class Iter
             throw new InvalidArgumentException('Count must not be negative.');
         }
 
-        $index = 0;
-        foreach ($source as $key => $value) {
-            if ($index >= $count) {
-                yield $key => $value;
-            }
-            $index++;
-        }
+        return self::skipGenerator($source, $count);
     }
 
     /**
@@ -391,18 +376,7 @@ final class Iter
             throw new InvalidArgumentException('Count must not be negative.');
         }
 
-        if ($count === 0) {
-            return;
-        }
-
-        $index = 0;
-        foreach ($source as $key => $value) {
-            yield $key => $value;
-            $index++;
-            if ($index >= $count) {
-                break;
-            }
-        }
+        return self::takeGenerator($source, $count);
     }
 
     /**
@@ -510,6 +484,14 @@ final class Iter
      *
      * @return iterable The first-seen elements for each distinct key, preserving original keys.
      *
+     * When $keySelector is null, elements are compared by PHP array-key coercion (the same rules that apply
+     * when using the element as an array index), not by `==`. For example `1`, `'1'`, `1.0` and `true` all
+     * coerce to the same array key and are treated as duplicates, while `'1.0'` does not. In that case, T must
+     * be `array-key`; a non-`array-key` element (e.g. an array or object) throws a native TypeError. Pass
+     * $keySelector to derive an `array-key` from any element type instead.
+     *
+     * @throws TypeError if an element is not a valid array key and no $keySelector is given.
+     *
      * @template T
      *
      * @phpstan-param iterable<int|string,T> $source
@@ -551,9 +533,7 @@ final class Iter
 
         $iterators = [];
         foreach ($sources as $source) {
-            $iterator = self::toGenerator($source);
-            $iterator->rewind();
-            $iterators[] = $iterator;
+            $iterators[] = self::toIterator($source);
         }
 
         while (true) {
@@ -572,7 +552,94 @@ final class Iter
     }
 
     /**
-     * Normalizes an iterable into a rewindable iterator.
+     * Lazily groups elements of an iterable into fixed-size lists.
+     *
+     * @param iterable $source The source iterable.
+     * @param int $size The maximum size of each chunk.
+     *
+     * @return iterable The chunks, each a list of at most $size elements, with reindexed integer keys.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param positive-int $size
+     *
+     * @phpstan-return iterable<int,list<T>>
+     */
+    private static function chunkGenerator(iterable $source, int $size): iterable
+    {
+        $buffer = [];
+        foreach ($source as $value) {
+            $buffer[] = $value;
+            if (\count($buffer) >= $size) {
+                yield $buffer;
+                $buffer = [];
+            }
+        }
+        if (\count($buffer) > 0) {
+            yield $buffer;
+        }
+    }
+
+    /**
+     * Lazily skips the first N elements of an iterable.
+     *
+     * @param iterable $source The source iterable.
+     * @param int $count The number of elements to skip.
+     *
+     * @return iterable The remaining elements, preserving original keys.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param non-negative-int $count
+     *
+     * @phpstan-return iterable<int|string,T>
+     */
+    private static function skipGenerator(iterable $source, int $count): iterable
+    {
+        $index = 0;
+        foreach ($source as $key => $value) {
+            if ($index >= $count) {
+                yield $key => $value;
+            }
+            $index++;
+        }
+    }
+
+    /**
+     * Lazily takes at most N elements of an iterable.
+     *
+     * @param iterable $source The source iterable.
+     * @param int $count The maximum number of elements to take.
+     *
+     * @return iterable At most $count elements, preserving original keys.
+     *
+     * @template T
+     *
+     * @phpstan-param iterable<int|string,T> $source
+     * @phpstan-param non-negative-int $count
+     *
+     * @phpstan-return iterable<int|string,T>
+     */
+    private static function takeGenerator(iterable $source, int $count): iterable
+    {
+        if ($count === 0) {
+            return;
+        }
+
+        $index = 0;
+        foreach ($source as $key => $value) {
+            yield $key => $value;
+            $index++;
+            if ($index >= $count) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * Normalizes an iterable into an iterator.
      *
      * @param iterable $source The iterable to normalize.
      *
@@ -582,13 +649,13 @@ final class Iter
      *
      * @phpstan-return Iterator<mixed>
      */
-    private static function toGenerator(iterable $source): Iterator
+    private static function toIterator(iterable $source): Iterator
     {
         if ($source instanceof Iterator) {
             return $source;
         }
         if ($source instanceof IteratorAggregate) {
-            return self::toGenerator($source->getIterator());
+            return self::toIterator($source->getIterator());
         }
 
         return new ArrayIterator((array) $source);

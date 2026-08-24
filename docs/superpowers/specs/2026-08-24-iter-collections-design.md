@@ -61,7 +61,10 @@ until iterated.
   `$sources` is empty, in which case it yields nothing). Reindexed int keys.
 - `unique(iterable $source, ?callable $keySelector = null): iterable`
   Yields elements whose derived key (via `$keySelector`, or the element
-  itself compared loosely with `==` when null) has not been seen before.
+  itself when null) has not been seen before. When `$keySelector` is null,
+  comparison uses PHP array-key coercion (the same rules as using the
+  element as an array index), not `==`; T must be `array-key` on this path,
+  and a non-`array-key` element throws a native `TypeError`.
   Preserves original keys. `@phpstan-param ?callable(T):array-key $keySelector`.
 - `tap(iterable $source, callable $sideEffect): iterable`
   Calls `$sideEffect($value, $key)` lazily as each element is yielded, then
