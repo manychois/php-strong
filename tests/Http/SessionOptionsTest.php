@@ -5,39 +5,40 @@ declare(strict_types=1);
 namespace Manychois\PhpStrongTests\Http;
 
 use InvalidArgumentException;
-use Manychois\PhpStrong\Http\NativeSessionOptions;
+use Manychois\PhpStrong\Http\SessionOptions;
 use Manychois\PhpStrong\Http\SameSite;
 use Manychois\PhpStrong\Http\SessionSerializer;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class NativeSessionOptionsTest extends TestCase
+final class SessionOptionsTest extends TestCase
 {
     #[Test]
-    public function defaultsAreSecure(): void
+    public function everyOptionDefaultsToNull(): void
     {
-        $options = new NativeSessionOptions();
+        $options = new SessionOptions();
 
         static::assertNull($options->name);
         static::assertNull($options->savePath);
-        static::assertSame(0, $options->cookieLifetime);
-        static::assertSame('/', $options->cookiePath);
-        static::assertSame('', $options->cookieDomain);
-        static::assertTrue($options->cookieSecure);
-        static::assertTrue($options->cookieHttpOnly);
-        static::assertSame(SameSite::Lax, $options->cookieSameSite);
-        static::assertFalse($options->cookiePartitioned);
-        static::assertTrue($options->useStrictMode);
-        static::assertTrue($options->useOnlyCookies);
+        static::assertNull($options->cookieLifetime);
+        static::assertNull($options->cookiePath);
+        static::assertNull($options->cookieDomain);
+        static::assertNull($options->cookieSecure);
+        static::assertNull($options->cookieHttpOnly);
+        static::assertNull($options->cookieSameSite);
+        static::assertNull($options->cookiePartitioned);
+        static::assertNull($options->useStrictMode);
+        static::assertNull($options->useOnlyCookies);
         static::assertNull($options->gcMaxLifetime);
         static::assertNull($options->serializeHandler);
+        static::assertNull($options->readAndClose);
         static::assertSame([], $options->ini);
     }
 
     #[Test]
     public function valuesArePreserved(): void
     {
-        $options = new NativeSessionOptions(
+        $options = new SessionOptions(
             name: 'app_session',
             savePath: '/tmp/sessions',
             cookieLifetime: 3600,
@@ -74,7 +75,7 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(name: '');
+        new SessionOptions(name: '');
     }
 
     #[Test]
@@ -82,7 +83,7 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(name: '123');
+        new SessionOptions(name: '123');
     }
 
     #[Test]
@@ -90,7 +91,7 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(name: 'app session');
+        new SessionOptions(name: 'app session');
     }
 
     #[Test]
@@ -98,7 +99,7 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(savePath: '');
+        new SessionOptions(savePath: '');
     }
 
     #[Test]
@@ -106,7 +107,7 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(cookieLifetime: -1);
+        new SessionOptions(cookieLifetime: -1);
     }
 
     #[Test]
@@ -114,7 +115,7 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(cookiePath: '');
+        new SessionOptions(cookiePath: '');
     }
 
     #[Test]
@@ -122,7 +123,7 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(gcMaxLifetime: 0);
+        new SessionOptions(gcMaxLifetime: 0);
     }
 
     #[Test]
@@ -130,7 +131,16 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(cookieSecure: false, cookieSameSite: SameSite::None);
+        new SessionOptions(cookieSecure: false, cookieSameSite: SameSite::None);
+    }
+
+    #[Test]
+    public function sameSiteNoneIsAllowedWhenSecurityIsLeftToPhp(): void
+    {
+        $options = new SessionOptions(cookieSameSite: SameSite::None);
+
+        static::assertSame(SameSite::None, $options->cookieSameSite);
+        static::assertNull($options->cookieSecure);
     }
 
     #[Test]
@@ -138,7 +148,7 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(cookieSecure: false, cookiePartitioned: true);
+        new SessionOptions(cookieSecure: false, cookiePartitioned: true);
     }
 
     #[Test]
@@ -146,7 +156,7 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(ini: ['session.gc_probability' => 1]);
+        new SessionOptions(ini: ['session.gc_probability' => 1]);
     }
 
     #[Test]
@@ -154,6 +164,6 @@ final class NativeSessionOptionsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new NativeSessionOptions(ini: ['name' => 'app_session']);
+        new SessionOptions(ini: ['name' => 'app_session']);
     }
 }

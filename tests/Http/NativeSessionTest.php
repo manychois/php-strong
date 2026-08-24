@@ -7,7 +7,7 @@ namespace Manychois\PhpStrongTests\Http;
 use BadMethodCallException;
 use InvalidArgumentException;
 use Manychois\PhpStrong\Http\NativeSession;
-use Manychois\PhpStrong\Http\NativeSessionOptions;
+use Manychois\PhpStrong\Http\SessionOptions;
 use Manychois\PhpStrong\Http\SameSite;
 use Manychois\PhpStrong\Http\SessionSerializer;
 use Override;
@@ -50,7 +50,7 @@ final class NativeSessionTest extends TestCase
     #[Test]
     public function optionsAreAppliedWhenTheSessionStarts(): void
     {
-        $session = new NativeSession(new NativeSessionOptions(
+        $session = new NativeSession(new SessionOptions(
             name: 'app_session',
             savePath: sys_get_temp_dir(),
             cookieLifetime: 3600,
@@ -59,6 +59,7 @@ final class NativeSessionTest extends TestCase
             cookieSecure: true,
             cookieHttpOnly: true,
             cookieSameSite: SameSite::Strict,
+            useStrictMode: true,
             gcMaxLifetime: 1440,
             serializeHandler: SessionSerializer::PhpSerialize,
             ini: ['gc_probability' => 1],
@@ -83,13 +84,25 @@ final class NativeSessionTest extends TestCase
     }
 
     #[Test]
+    public function anOptionLeftAtNullKeepsTheValuePhpIsConfiguredWith(): void
+    {
+        $name = ini_get('session.name');
+        $gc = ini_get('session.gc_maxlifetime');
+
+        (new NativeSession())->set('a', 1);
+
+        static::assertSame($name, session_name());
+        static::assertSame($gc, ini_get('session.gc_maxlifetime'));
+    }
+
+    #[Test]
     public function readAndCloseReleasesTheLockAndStillReads(): void
     {
-        (new NativeSession(new NativeSessionOptions(savePath: sys_get_temp_dir())))->set('a', 'x');
+        (new NativeSession(new SessionOptions(savePath: sys_get_temp_dir())))->set('a', 'x');
         $id = session_id();
         session_write_close();
 
-        $session = new NativeSession(new NativeSessionOptions(
+        $session = new NativeSession(new SessionOptions(
             savePath: sys_get_temp_dir(),
             readAndClose: true,
         ));
@@ -103,7 +116,7 @@ final class NativeSessionTest extends TestCase
     #[Test]
     public function readAndCloseRefusesToWrite(): void
     {
-        $session = new NativeSession(new NativeSessionOptions(
+        $session = new NativeSession(new SessionOptions(
             savePath: sys_get_temp_dir(),
             readAndClose: true,
         ));
@@ -116,7 +129,7 @@ final class NativeSessionTest extends TestCase
     #[Test]
     public function readAndCloseRefusesEveryOtherMutation(): void
     {
-        $options = new NativeSessionOptions(savePath: sys_get_temp_dir(), readAndClose: true);
+        $options = new SessionOptions(savePath: sys_get_temp_dir(), readAndClose: true);
         $mutations = [
             static fn (NativeSession $s): mixed => $s->remove('a'),
             static fn (NativeSession $s): mixed => $s->clear(),

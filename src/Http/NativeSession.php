@@ -16,7 +16,7 @@ use Override;
  * Reads and writes the session of PHP itself, i.e. the `$_SESSION` superglobal.
  *
  * The session starts lazily: constructing this class touches nothing, and `session_start()` is called on the first
- * read or write of a value, passing the {@see NativeSessionOptions} given to the constructor to `session_start()`.
+ * read or write of a value, passing the {@see SessionOptions} given to the constructor to `session_start()`.
  * `id()` and `isStarted()` deliberately do not start it.
  *
  * With `readAndClose` the session is read once and closed immediately, so `isStarted()` reports false from then on
@@ -32,9 +32,9 @@ final class NativeSession extends AbstractDataReader implements ISession
     /**
      * Initializes a new instance of the NativeSession class.
      *
-     * @param NativeSessionOptions $options The settings passed to `session_start()`.
+     * @param SessionOptions $options The settings passed to `session_start()`.
      */
-    public function __construct(private readonly NativeSessionOptions $options = new NativeSessionOptions())
+    public function __construct(private readonly SessionOptions $options = new SessionOptions())
     {
     }
 
@@ -206,7 +206,12 @@ final class NativeSession extends AbstractDataReader implements ISession
      */
     private function start(): void
     {
-        if (session_status() === \PHP_SESSION_ACTIVE || $this->loaded) {
+        if (session_status() === \PHP_SESSION_ACTIVE) {
+            return;
+        }
+        // A read-and-close session is closed again the moment it is read, so its status no longer tells us whether
+        // the data has been loaded; without this the next accessor would re-open and re-read the session file.
+        if ($this->options->readAndClose === true && $this->loaded) {
             return;
         }
 
@@ -218,7 +223,8 @@ final class NativeSession extends AbstractDataReader implements ISession
      * Builds the options `session_start()` is called with.
      *
      * The keys of the array are setting names without the `session.` prefix, which is the form `session_start()`
-     * accepts; a prefixed key is rejected by PHP.
+     * accepts; a prefixed key is rejected by PHP. An option left at `null` is omitted, so PHP keeps the value it is
+     * configured with.
      *
      * @return array The options for `session_start()`.
      *
@@ -226,32 +232,30 @@ final class NativeSession extends AbstractDataReader implements ISession
      */
     private function startOptions(): array
     {
-        $options = [
+        $named = [
+            'name' => $this->options->name,
+            'save_path' => $this->options->savePath,
             'cookie_lifetime' => $this->options->cookieLifetime,
             'cookie_path' => $this->options->cookiePath,
             'cookie_domain' => $this->options->cookieDomain,
             'cookie_secure' => $this->options->cookieSecure,
             'cookie_httponly' => $this->options->cookieHttpOnly,
-            'cookie_samesite' => $this->options->cookieSameSite->value,
+            'cookie_samesite' => $this->options->cookieSameSite?->value,
             'cookie_partitioned' => $this->options->cookiePartitioned,
             'use_strict_mode' => $this->options->useStrictMode,
             'use_only_cookies' => $this->options->useOnlyCookies,
+            'gc_maxlifetime' => $this->options->gcMaxLifetime,
+            'serialize_handler' => $this->options->serializeHandler?->value,
+            'read_and_close' => $this->options->readAndClose,
         ];
-        if ($this->options->name !== null) {
-            $options['name'] = $this->options->name;
+
+        $options = [];
+        foreach ($named as $key => $value) {
+            if ($value !== null) {
+                $options[$key] = $value;
+            }
         }
-        if ($this->options->savePath !== null) {
-            $options['save_path'] = $this->options->savePath;
-        }
-        if ($this->options->gcMaxLifetime !== null) {
-            $options['gc_maxlifetime'] = $this->options->gcMaxLifetime;
-        }
-        if ($this->options->serializeHandler !== null) {
-            $options['serialize_handler'] = $this->options->serializeHandler->value;
-        }
-        if ($this->options->readAndClose) {
-            $options['read_and_close'] = true;
-        }
+
         foreach ($this->options->ini as $key => $value) {
             $options[$key] = $value;
         }
@@ -266,7 +270,7 @@ final class NativeSession extends AbstractDataReader implements ISession
      */
     private function refuseWhenReadOnly(): void
     {
-        if ($this->options->readAndClose) {
+        if ($this->options->readAndClose === true) {
             throw new BadMethodCallException('A session read with readAndClose is read-only.');
         }
     }

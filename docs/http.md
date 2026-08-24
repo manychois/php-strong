@@ -166,13 +166,14 @@ decided whether a session is needed.
 
 ### Configuration
 
-`NativeSessionOptions` carries everything applied to PHP right before the session starts. Its defaults are the secure
-ones, so the no-argument constructor is a reasonable production setting.
+`SessionOptions` carries everything handed to `session_start()`. Every option defaults to `null`, meaning the setting
+is not passed at all and PHP keeps the value from `php.ini` — so set only what the application must decide for
+itself, and configure the rest where you configure PHP.
 
 ```php
-use Manychois\PhpStrong\Http\{NativeSession, NativeSessionOptions, SameSite, SessionSerializer};
+use Manychois\PhpStrong\Http\{NativeSession, SessionOptions, SameSite, SessionSerializer};
 
-$session = new NativeSession(new NativeSessionOptions(
+$session = new NativeSession(new SessionOptions(
     name: 'app_session',
     savePath: '/var/lib/app/sessions',
     cookieLifetime: 0,                              // until the browser closes
@@ -183,22 +184,28 @@ $session = new NativeSession(new NativeSessionOptions(
 ));
 ```
 
-| Option | Default | Notes |
-| ------ | ------- | ----- |
-| `name` | `null` | The session, and cookie, name. `null` keeps PHP's. Letters, digits, dashes and underscores; digits only is rejected, as PHP forbids it. |
-| `savePath` | `null` | Where session files are written. `null` keeps PHP's. |
-| `cookieLifetime` | `0` | Seconds; `0` means until the browser closes. |
-| `cookiePath` | `'/'` | |
-| `cookieDomain` | `''` | Empty means the current host only. |
-| `cookieSecure` | `true` | HTTPS only. |
-| `cookieHttpOnly` | `true` | Hidden from JavaScript. |
-| `cookieSameSite` | `SameSite::Lax` | `None` requires `cookieSecure`, which browsers enforce. |
-| `cookiePartitioned` | `false` | CHIPS; requires `cookieSecure`. |
-| `useStrictMode` | `true` | PHP refuses a session id it did not generate — the fixation defence. |
-| `useOnlyCookies` | `true` | The id never comes from the URL. |
-| `gcMaxLifetime` | `null` | Seconds an idle session survives. `null` keeps PHP's. |
-| `serializeHandler` | `null` | See *Serialization* below. |
-| `readAndClose` | `false` | Read the session once and close it immediately, releasing its lock. See below. |
+Every option below defaults to `null`. The *Sets* column names the PHP setting it maps to.
+
+| Option | Sets | Notes |
+| ------ | ---- | ----- |
+| `name` | `session.name` | The session, and cookie, name. Letters, digits, dashes and underscores; digits only is rejected, as PHP forbids it. |
+| `savePath` | `session.save_path` | Where session files are written. |
+| `cookieLifetime` | `session.cookie_lifetime` | Seconds; `0` means until the browser closes. |
+| `cookiePath` | `session.cookie_path` | |
+| `cookieDomain` | `session.cookie_domain` | An empty string means the current host only. |
+| `cookieSecure` | `session.cookie_secure` | HTTPS only. |
+| `cookieHttpOnly` | `session.cookie_httponly` | Hidden from JavaScript. |
+| `cookieSameSite` | `session.cookie_samesite` | `None` together with `cookieSecure: false` is rejected, since browsers enforce it. |
+| `cookiePartitioned` | `session.cookie_partitioned` | CHIPS; likewise rejected together with `cookieSecure: false`. |
+| `useStrictMode` | `session.use_strict_mode` | PHP refuses a session id it did not generate — the fixation defence. |
+| `useOnlyCookies` | `session.use_only_cookies` | The id never comes from the URL. |
+| `gcMaxLifetime` | `session.gc_maxlifetime` | Seconds an idle session survives. |
+| `serializeHandler` | `session.serialize_handler` | See *Serialization* below. |
+| `readAndClose` | `read_and_close` | Read the session once and close it immediately, releasing its lock. See below. |
+
+Because the defaults defer to `php.ini`, the security-relevant settings — `cookie_secure`, `cookie_httponly`,
+`cookie_samesite`, `use_strict_mode` — are whatever the server is configured with. Set them here when the application
+must not depend on that.
 | `ini` | `[]` | Further session settings, passed to `session_start()` verbatim. Keys are setting names without the `session.` prefix, e.g. `gc_probability`, and a key a dedicated option already controls is rejected rather than silently losing to it. |
 
 Every value is validated in the constructor, so a bad setting fails where it is written rather than at
@@ -212,7 +219,7 @@ A started session holds an exclusive lock on its file until the request ends, so
 visitor waits. When a request only reads, `readAndClose` avoids that:
 
 ```php
-$session = new NativeSession(new NativeSessionOptions(readAndClose: true));
+$session = new NativeSession(new SessionOptions(readAndClose: true));
 
 $session->string('user.name');   // read once, lock already released
 $session->isStarted();           // false — the session is closed again

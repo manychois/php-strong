@@ -9,10 +9,10 @@ use InvalidArgumentException;
 /**
  * Aggregates the settings a {@see NativeSession} passes to `session_start()`.
  *
- * The defaults are the secure ones: the cookie is marked secure and HTTP-only, `SameSite` is `Lax`, and strict mode
- * is on, so an id the visitor made up is never adopted.
+ * Every option defaults to `null`, which means the setting is not passed at all and PHP keeps the value it is
+ * configured with in `php.ini`. Set only what the application needs to decide for itself.
  */
-final class NativeSessionOptions
+final class SessionOptions
 {
     /**
      * The settings a dedicated option already controls, which therefore may not appear in `$ini`.
@@ -44,23 +44,23 @@ final class NativeSessionOptions
      * configured with.
      * @param ?string $savePath The directory session files are written to. `null` keeps the path PHP is configured
      * with.
-     * @param int $cookieLifetime The lifetime of the session cookie, in seconds; `0` until the browser closes.
-     * @param string $cookiePath The path the session cookie is sent for.
-     * @param string $cookieDomain The domain the session cookie is sent for; an empty string means the current host
+     * @param ?int $cookieLifetime The lifetime of the session cookie, in seconds; `0` until the browser closes.
+     * @param ?string $cookiePath The path the session cookie is sent for.
+     * @param ?string $cookieDomain The domain the session cookie is sent for; an empty string means the current host
      * only.
-     * @param bool $cookieSecure Whether the session cookie is sent over HTTPS only.
-     * @param bool $cookieHttpOnly Whether the session cookie is hidden from JavaScript.
-     * @param SameSite $cookieSameSite When the browser sends the session cookie with a cross-site request.
-     * @param bool $cookiePartitioned Whether the session cookie is partitioned per top-level site (CHIPS), which
+     * @param ?bool $cookieSecure Whether the session cookie is sent over HTTPS only.
+     * @param ?bool $cookieHttpOnly Whether the session cookie is hidden from JavaScript.
+     * @param ?SameSite $cookieSameSite When the browser sends the session cookie with a cross-site request.
+     * @param ?bool $cookiePartitioned Whether the session cookie is partitioned per top-level site (CHIPS), which
      * browsers accept on a secure cookie only.
-     * @param bool $useStrictMode Whether PHP refuses a session id it did not generate itself.
-     * @param bool $useOnlyCookies Whether the session id is read from a cookie only, never from the URL.
+     * @param ?bool $useStrictMode Whether PHP refuses a session id it did not generate itself.
+     * @param ?bool $useOnlyCookies Whether the session id is read from a cookie only, never from the URL.
      * @param ?int $gcMaxLifetime The number of seconds an idle session survives before it may be collected. `null`
      * keeps the value PHP is configured with.
      * @param ?SessionSerializer $serializeHandler The handler which serializes the session data. `null` keeps the
      * handler PHP is configured with.
-     * @param bool $readAndClose Whether the session is read once and closed straight away, releasing its lock so that
-     * concurrent requests of the same visitor are not held up. The session becomes read-only: every member which
+     * @param ?bool $readAndClose Whether the session is read once and closed straight away, releasing its lock so
+     * that concurrent requests of the same visitor are not held up. The session becomes read-only: every member which
      * would write throws.
      * @param array $ini Any further session settings, passed to `session_start()` verbatim. Keys are setting names
      * without the `session.` prefix, e.g. `gc_probability`, and none may be one a dedicated option above already
@@ -68,25 +68,25 @@ final class NativeSessionOptions
      *
      * @throws InvalidArgumentException if any value is unusable.
      *
-     * @phpstan-param non-negative-int $cookieLifetime
+     * @phpstan-param ?non-negative-int $cookieLifetime
      * @phpstan-param ?positive-int $gcMaxLifetime
      * @phpstan-param array<string,bool|float|int|string> $ini
      */
     public function __construct(
         public readonly ?string $name = null,
         public readonly ?string $savePath = null,
-        public readonly int $cookieLifetime = 0,
-        public readonly string $cookiePath = '/',
-        public readonly string $cookieDomain = '',
-        public readonly bool $cookieSecure = true,
-        public readonly bool $cookieHttpOnly = true,
-        public readonly SameSite $cookieSameSite = SameSite::Lax,
-        public readonly bool $cookiePartitioned = false,
-        public readonly bool $useStrictMode = true,
-        public readonly bool $useOnlyCookies = true,
+        public readonly ?int $cookieLifetime = null,
+        public readonly ?string $cookiePath = null,
+        public readonly ?string $cookieDomain = null,
+        public readonly ?bool $cookieSecure = null,
+        public readonly ?bool $cookieHttpOnly = null,
+        public readonly ?SameSite $cookieSameSite = null,
+        public readonly ?bool $cookiePartitioned = null,
+        public readonly ?bool $useStrictMode = null,
+        public readonly ?bool $useOnlyCookies = null,
         public readonly ?int $gcMaxLifetime = null,
         public readonly ?SessionSerializer $serializeHandler = null,
-        public readonly bool $readAndClose = false,
+        public readonly ?bool $readAndClose = null,
         array $ini = [],
     ) {
         if ($name !== null) {
@@ -102,7 +102,7 @@ final class NativeSessionOptions
         if ($savePath === '') {
             throw new InvalidArgumentException('Save path must not be an empty string.');
         }
-        if ($cookieLifetime < 0) {
+        if ($cookieLifetime !== null && $cookieLifetime < 0) {
             throw new InvalidArgumentException(
                 sprintf('Cookie lifetime must not be negative, got %d.', $cookieLifetime)
             );
@@ -115,10 +115,10 @@ final class NativeSessionOptions
                 sprintf('Garbage collection max lifetime must be greater than 0, got %d.', $gcMaxLifetime)
             );
         }
-        if ($cookieSameSite === SameSite::None && !$cookieSecure) {
+        if ($cookieSameSite === SameSite::None && $cookieSecure === false) {
             throw new InvalidArgumentException('SameSite None requires a secure cookie, which browsers enforce.');
         }
-        if ($cookiePartitioned && !$cookieSecure) {
+        if ($cookiePartitioned === true && $cookieSecure === false) {
             throw new InvalidArgumentException('A partitioned cookie must be secure, which browsers enforce.');
         }
 
