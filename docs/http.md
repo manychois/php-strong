@@ -290,9 +290,6 @@ would attribute the final host's cookies to the original one. Follow redirects m
 With several transfers in flight, cookies are absorbed in completion order — should two concurrent responses set the
 same cookie, the last one to settle wins.
 
-Not yet covered: the library has no response emitter, so `CookieBag::applyTo()` returns a response whose
-`Set-Cookie` headers the application must currently send itself.
-
 ## Session
 
 `NativeSession` reads and writes PHP's own session — the `$_SESSION` superglobal — with the typed accessors of

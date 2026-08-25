@@ -1,6 +1,6 @@
 # php-strong
 
-**php-strong** provides solid, strongly-typed implementations of the [PHP-FIG PSR](https://www.php-fig.org/psr/) interfaces, one sub-namespace per PSR. The goal is to cover every PSR that defines an interface.
+**php-strong** provides solid, strongly-typed implementations of the [PHP-FIG PSR](https://www.php-fig.org/psr/) interfaces, one sub-namespace per problem area rather than per PSR, so utilities no PSR covers live beside the PSR classes they belong with. The goal is to cover every PSR that defines an interface.
 
 Targets **PHP 8.5+**, namespace `Manychois\PhpStrong`, PSR-4 autoloading.
 
@@ -36,6 +36,7 @@ Every accepted PSR that defines an interface is now covered.
 | --------- | ------- | ---- |
 | `Manychois\PhpStrong\Collections` | `DataReader`, strongly typed access to an untyped array or object with dot-notation keys and strict/converting/nullable accessors, plus the `Iter` (lazy) and `Seq` (eager) iterable utilities. | [docs/collections.md](docs/collections.md) |
 | `Manychois\PhpStrong\Http` | `NativeSession`, a lazily started `$_SESSION` wrapper whose `SessionInterface` extends `DataReaderInterface`, so session data is read with the same strongly typed, dot-notation accessors; plus `Cookie`, `CookieBag` and `CookieStore`/`CookieAwareClient` for reading, queuing and remembering cookies on either side of a request. Plus `SapiEmitter`, which sends a finished response to the SAPI and is the one place the response's headers and PHP's own queued cookies are merged. | [docs/http.md](docs/http.md) |
+| `Manychois\PhpStrong\Texts` | `Regex`, a value object wrapping one pattern, whose `match()`, `matchAll()`, `replace()`, `replaceCallback()` and `split()` raise `RuntimeException` instead of returning `false`; matches come back as `MatchResult`/`Capture` objects carrying the captured text and its byte offset. | [docs/texts.md](docs/texts.md) |
 | `Manychois\PhpStrong\Time` | `DayOfWeek` and `Month`, calendar enums numbered to match `DateTimeInterface::format()`, with wrapping arithmetic and leap-aware month lengths. | [docs/time.md](docs/time.md) |
 
 ## Development

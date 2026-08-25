@@ -119,7 +119,81 @@ it is what lets another reader with its own storage reuse the whole accessor sur
 
 ## `Iter` and `Seq`
 
-Two static-only utilities in the same namespace. `Iter` manipulates any `iterable` lazily through generators —
-`map()`, `filter()`, `take()`, `chunk()`, `unique()` and the rest — while `Seq` does the same work eagerly over
-lists, normalising every source to a list reindexed from 0 on entry. Both carry full generic PHPDoc, so element types
-survive a chain of calls.
+Two static-only utilities in the same namespace, covering the same ground with opposite evaluation strategies. Both
+carry full generic PHPDoc, so the element type survives a chain of calls.
+
+`Iter` works lazily through generators. Nothing is read from the source until the result is iterated, so a chain
+composes without materialising an intermediate array and an endless source stays usable as long as the chain ends in
+something that short-circuits. **Source keys are preserved** by the lazy methods, except where reindexing is
+inherent to the operation (`chunk()`, `flatten()`, `flatMap()`).
+
+`Seq` works eagerly over lists. Every source is normalised with `Iter::toList()` on entry, so **source keys are
+discarded**, the result is always a `list` reindexed from 0, and each callback receives the element's position in
+that list as its second argument. In exchange it offers what a single lazy pass cannot: positional access, ordering,
+and searching backwards.
+
+```php
+use Manychois\PhpStrong\Collections\Iter;
+use Manychois\PhpStrong\Collections\Seq;
+
+$firstThree = Iter::take(Iter::filter($lines, $isError), 3);   // reads only as far as the third error
+$sorted = Seq::orderBy($users, fn ($a, $b) => $a->age <=> $b->age);
+```
+
+### Shared members
+
+Same name, same meaning, differing only in that `Iter` returns an `iterable` where `Seq` returns a `list`.
+
+| Member | `Iter` returns | `Seq` returns | Notes |
+| ------ | -------------- | ------------- | ----- |
+| `all($source, $predicate)` | `bool` | `bool` | True for an empty source. Short-circuits on the first non-match. |
+| `any($source, $predicate)` | `bool` | `bool` | False for an empty source. Short-circuits on the first match. |
+| `chunk($source, int $size)` | `iterable<list<T>>` | `list<list<T>>` | The last chunk may be short. `InvalidArgumentException` if `$size` is not positive. |
+| `filter($source, $predicate)` | `iterable<T>` | `list<T>` | |
+| `first($source, ?$predicate = null)` | `T` | `T` | `UnderflowException` if nothing matches. |
+| `firstOrNull($source, ?$predicate = null)` | `?T` | `?T` | |
+| `flatMap($source, $mapper)` | `iterable<T2>` | `list<T2>` | The mapper returns an iterable per element; results are concatenated and reindexed. |
+| `flatten($source)` | `iterable<T>` | `list<T>` | One level only. |
+| `last($source, ?$predicate = null)` | `T` | `T` | `UnderflowException` if nothing matches. Consumes the whole source, so it never returns on an endless one. |
+| `lastOrNull($source, ?$predicate = null)` | `?T` | `?T` | Same caveat as `last()`. |
+| `map($source, $mapper)` | `iterable<T2>` | `list<T2>` | |
+| `reduce($source, $reducer, mixed $initial)` | `mixed` | `mixed` | The initial value is required; there is no seedless overload. |
+| `skip($source, int $count)` | `iterable<T>` | `list<T>` | `InvalidArgumentException` if `$count` is negative. |
+| `skipWhile($source, $predicate)` | `iterable<T>` | `list<T>` | Stops testing after the first non-match; everything from there on is kept. |
+| `take($source, int $count)` | `iterable<T>` | `list<T>` | `InvalidArgumentException` if `$count` is negative. |
+| `takeWhile($source, $predicate)` | `iterable<T>` | `list<T>` | Stops at the first non-match. |
+| `unique($source, ?$keySelector = null)` | `iterable<T>` | `list<T>` | Keeps the first occurrence of each key. Without a selector, elements are compared by PHP array-key coercion, so `1`, `'1'` and `true` collapse together and a non-array-key element raises `TypeError`. |
+
+The second argument a callback receives differs between the two, following each class's treatment of keys.
+`Iter` passes the **source key** — `callable(T $value, TKey $key)`, and `callable(TAcc $carry, T $value, TKey $key)`
+for `reduce()` — so a string-keyed source reaches the callback with its string keys intact. `Seq` passes the
+element's **position in the normalised list**, a `non-negative-int` counting from 0. `unique()` is the exception on
+both: its `$keySelector` receives only the value and returns an `array-key`.
+
+### `Iter` only
+
+| Member | Returns | Notes |
+| ------ | ------- | ----- |
+| `count($source)` | `int` | Uses `count()` on a `Countable` source, otherwise walks it. |
+| `toArray($source)` | `array<array-key,T>` | Preserves keys. On collision the last value wins, and keys are subject to array-key coercion; `TypeError` if a key cannot be one. |
+| `toList($source)` | `list<T>` | Discards keys, reindexing from 0. |
+
+### `Seq` only
+
+Each of these needs the whole list in hand, which is why `Iter` has no counterpart.
+
+| Member | Returns | Notes |
+| ------ | ------- | ----- |
+| `at($source, int $index)` | `T` | A negative index counts from the end, so `-1` is the last element. `OutOfBoundsException` if it resolves outside the list. |
+| `concat(...$sources)` | `list<T>` | Appends any number of iterables end to end. |
+| `contains($source, mixed $value)` | `bool` | Strict comparison (`===`). |
+| `indexOf($source, mixed $value)` | `?int` | Position of the first strict match, or `null`. |
+| `insertAt($source, int $index, mixed ...$values)` | `list<T>` | Inserts before `$index`; `$index === count($source)` appends. `OutOfBoundsException` if negative or past the end. |
+| `lastIndexOf($source, mixed $value)` | `?int` | Position of the last strict match, or `null`. |
+| `orderBy($source, ?$comparator = null)` | `list<T>` | Stable: equal elements keep their original order. Without a comparator, sorts ascending with the default comparison. |
+| `removeAt($source, int $index)` | `list<T>` | `OutOfBoundsException` if `$index` is not a valid position. |
+| `reverse($source)` | `list<T>` | |
+| `slice($source, int $offset, ?int $length = null)` | `list<T>` | `array_slice()` semantics: a negative `$offset` counts from the end, a negative `$length` stops that many elements short of it, and `null` runs to the end. Out-of-range gives an empty list. |
+
+Every method on both classes is static and none mutates its source; `insertAt()`, `removeAt()`, `orderBy()` and
+`reverse()` return a new list.
