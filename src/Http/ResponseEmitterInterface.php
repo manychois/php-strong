@@ -23,7 +23,8 @@ interface ResponseEmitterInterface
      * @param ?IRequest $request The request being answered, read only to detect `HEAD`, which must receive no body.
      * Pass `null` when the request is known not to be a `HEAD` request.
      *
-     * @throws RuntimeException if output has already started, since the headers can no longer be sent.
+     * @throws RuntimeException if output has already started, since the headers can no longer be sent, or if
+     * the body stream fails while being read, after part of the response has already been written.
      */
     public function emit(IResponse $response, ?IRequest $request = null): void;
 }

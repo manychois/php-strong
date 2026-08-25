@@ -17,8 +17,9 @@ use RuntimeException;
  * The body is written in fixed-size chunks, so streaming a file of any size never approaches `memory_limit`.
  *
  * This class deliberately leaves output buffers alone. A buffer it did not open may hold output the caller intends
- * to keep, and a library is in no position to judge; a buffer which has already flushed surfaces instead as the
- * exception thrown before anything is written.
+ * to keep, and a library is in no position to judge; output that has already reached the client surfaces instead
+ * as the exception thrown before anything is written. Output merely sitting in an active buffer — the common case
+ * under `output_buffering` — is not detected.
  */
 final class SapiEmitter implements IResponseEmitter
 {
@@ -28,8 +29,6 @@ final class SapiEmitter implements IResponseEmitter
      * @param int $chunkSize The number of bytes read from the body stream per write. Must be at least 1.
      *
      * @throws InvalidArgumentException if the chunk size is below 1.
-     *
-     * @phpstan-param positive-int $chunkSize
      */
     public function __construct(private readonly int $chunkSize = 8_388_608)
     {

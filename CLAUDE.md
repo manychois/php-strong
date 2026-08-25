@@ -35,6 +35,13 @@ Non-negotiable:
 - Return narrowed types where possible (concrete class or narrower interface over the PSR type)
 - PHPDoc on all public/protected methods
 
+## `Http` module seam
+
+Only `SapiEmitter` may call `header()` or `headers_sent()` unqualified. Every other class in
+`Manychois\PhpStrong\Http` calling either one gets silently intercepted by the test stubs in
+`tests/Http/sapi-functions.php` — its tests pass, but it sends nothing in production. A class that genuinely
+needs the real function must call it fully qualified as `\header()` or `\headers_sent()`.
+
 ## Public documentation
 
 For user-facing docs (README, guides, API reference), follow Diátaxis: @docs/internal/diataxis-framework-reference.md — keep tutorials, how-tos, explanation, and reference separate.

@@ -279,8 +279,10 @@ The cookies spec's "Hand-off to the emitter spec" note gains a closing line poin
 ## Non-goals
 
 - **Output buffer manipulation.** The emitter never opens, flushes, or cleans a buffer. A buffer it did not
-  open may hold output the caller intends to keep, and a library is in no position to judge. A dirty buffer
-  surfaces through the `headers_sent()` guard, which names the file and line responsible.
+  open may hold output the caller intends to keep, and a library is in no position to judge. The
+  `headers_sent()` guard catches output only once it has actually reached the client; with `output_buffering`
+  on — the common case, and PHP's own production default — a stray `echo` sitting in an active buffer passes
+  the guard undetected.
 - **`Content-Length` management.** Setting it from `getBody()->getSize()` is the most likely "helpful"
   addition someone proposes later, and it is wrong whenever output compression (`ob_gzhandler`, `mod_deflate`)
   rewrites the body after the emitter runs: a stale length truncates the response, and the emitter cannot see

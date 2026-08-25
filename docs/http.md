@@ -164,7 +164,7 @@ $response = $pipeline->handle($request);
 
 | Member | Notes |
 | ------ | ----- |
-| `__construct(int $chunkSize = 8_388_608)` | The number of bytes read from the body stream per write. A value below 1 throws `InvalidArgumentException`. The 8 MiB default sends an ordinary HTML or JSON response in a single read, while a multi-gigabyte download still costs constant memory. |
+| `__construct(int $chunkSize = 8_388_608)` | The number of bytes read from the body stream per write. A value below 1 throws `InvalidArgumentException`. The 8 MiB default sends an ordinary HTML or JSON response in a single read, while a multi-gigabyte download costs constant memory — provided no active output buffer is unchunked; `echo` writes into any buffer the caller has open, so a plain `ob_start()` still buffers the whole body. |
 | `emit(ResponseInterface $response, ?RequestInterface $request = null): void` | Sends the response. `$request` is read for one purpose only — detecting a `HEAD` request, which must receive no body. Pass `null` when the request is known not to be `HEAD`. Throws `RuntimeException` if output has already started. |
 
 - **Headers are merged, not replaced.** Every `Set-Cookie` value is sent with PHP's `replace` flag false, the first
@@ -175,11 +175,19 @@ $response = $pipeline->handle($request);
   touched in those cases, so a lazily-populated body is never realised.
 - **Output buffers are left alone.** The emitter never opens, flushes, or cleans one: a buffer it did not open may
   hold output the caller intends to keep. If output has already started, `emit()` throws before writing anything,
-  naming the file and line PHP blames — so the caller is free to emit a different response instead.
+  naming the file and line PHP blames — so the caller is free to emit a different response instead. The guard
+  detects only output that has actually reached the client; with `output_buffering` on (PHP's own production
+  default), a stray `echo` or BOM sitting in an active buffer passes it undetected, and the chunked write above
+  loses its constant-memory guarantee for the same reason.
 - **`Content-Length` is yours to set.** The emitter never computes or rewrites it. Deriving it from the stream size
-  would truncate the response whenever output compression rewrites the body afterwards.
+  would truncate the response whenever output compression rewrites the body afterwards. This also means the
+  emitter does not strip it when suppressing a body: on `HEAD` and `304` a forwarded `Content-Length` is correct
+  or permitted, but on `204` and `1xx` RFC 9110 §8.6 says a server must not send one, and the emitter sends it
+  anyway if the caller set it.
 - Header names and values are sent verbatim: PSR-7 preserves the caller's casing deliberately, and nothing here
   re-folds, trims, or normalises them.
+- A seekable body is always rewound to position 0 before it is read, unconditionally. A caller who `seek()`s the
+  body to an offset and sets `Content-Range` still gets the whole stream emitted from the start.
 - A custom reason phrase set through `withStatus()` reaches the status line. Under HTTP/2 the protocol has no reason
   phrase on the wire, so PHP discards it.
 
