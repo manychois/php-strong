@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrongTests\Http\Internal;
 
+use InvalidArgumentException;
 use Manychois\PhpStrong\Http\Internal\AbstractMessage;
 use Manychois\PhpStrong\Http\StreamFactory;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\StreamInterface as IStream;
@@ -144,6 +146,113 @@ final class AbstractMessageTest extends TestCase
         $next = $message->withoutHeader('x-remove');
         self::assertTrue($message->hasHeader('X-Remove'));
         self::assertFalse($next->hasHeader('X-Remove'));
+    }
+
+    #[Test]
+    public function constructor_accepts_a_numeric_header_name(): void
+    {
+        $message = self::message(['123' => 'x']);
+        self::assertSame(['x'], $message->getHeader('123'));
+    }
+
+    #[Test]
+    public function constructor_rejects_an_invalid_header_name(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('"X Y" is not a valid header name.');
+
+        self::message(['X Y' => 'v']);
+    }
+
+    #[Test]
+    public function getHeaders_keys_a_numeric_header_name_as_an_int(): void
+    {
+        $message = self::message([])->withHeader('123', 'x');
+        $names = array_keys($message->getHeaders());
+
+        // PHP coerces a numeric string array key to an integer on write, so no implementation can hand this back
+        // as a string. The name still round-trips through getHeader(); a consumer using the key as a string casts.
+        self::assertSame([123], $names);
+        self::assertSame(['x'], $message->getHeader('123'));
+    }
+
+    #[Test]
+    public function withHeader_rejects_an_empty_header_name(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('"" is not a valid header name.');
+
+        self::message([])->withHeader('', 'v');
+    }
+
+    #[Test]
+    public function withHeader_rejects_an_empty_value_list(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Header "Vary" needs at least one value; an empty array was given.');
+
+        self::message([])->withHeader('Vary', []);
+    }
+
+    #[Test]
+    public function withHeader_rejects_an_invalid_header_name(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('"X Y" is not a valid header name.');
+
+        self::message([])->withHeader('X Y', 'v');
+    }
+
+    #[Test]
+    #[DataProvider('provideValuesWithForbiddenCharacters')]
+    public function withHeader_rejects_a_value_carrying_a_forbidden_character(string $value): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Header "X-Bad" has a value containing a carriage return, line feed or NUL.');
+
+        self::message([])->withHeader('X-Bad', $value);
+    }
+
+    /**
+     * @return iterable<string,array{string}>
+     */
+    public static function provideValuesWithForbiddenCharacters(): iterable
+    {
+        yield 'carriage return' => ["a\rB"];
+        yield 'line feed' => ["a\nB"];
+        yield 'header injection attempt' => ["a\r\nX-Injected: 1"];
+        yield 'obsolete line folding' => ["a\r\n b"];
+        yield 'NUL' => ["a\0b"];
+    }
+
+    #[Test]
+    public function withAddedHeader_rejects_a_value_carrying_a_forbidden_character(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        self::message(['Vary' => 'Accept'])->withAddedHeader('Vary', "Origin\r\nX: 1");
+    }
+
+    #[Test]
+    public function constructor_rejects_a_value_carrying_a_forbidden_character(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        self::message(['X-Bad' => "a\r\nX-Injected: 1"]);
+    }
+
+    #[Test]
+    public function a_value_keeps_its_surrounding_whitespace(): void
+    {
+        $message = self::message(['X-Pad' => ' a, b ']);
+        self::assertSame([' a, b '], $message->getHeader('X-Pad'));
+    }
+
+    #[Test]
+    public function an_empty_string_stays_a_valid_header_value(): void
+    {
+        $message = self::message([])->withHeader('X-Empty', '');
+        self::assertSame([''], $message->getHeader('X-Empty'));
     }
 
     /**

@@ -34,6 +34,23 @@ echo $response->getReasonPhrase(); // Created
 | `Method` | enum (string) | `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, `CONNECT`, `OPTIONS`, `TRACE`, `QUERY`; `Method::fromString()` is case-insensitive. |
 | `StatusCode` | enum (int) | IANA-registered status codes; `fromCode()` throws on unknown codes, `reasonPhrase()` gives the default phrase. |
 
+### Header validation
+
+Every message — request, server request, or response — validates its headers where they enter: in the constructor
+and in `withHeader()` / `withAddedHeader()`. `InvalidArgumentException` is thrown when:
+
+- the name is not a non-empty RFC 9110 token, so `X Y` and `''` are rejected while `123` and `X-Trace_Id` are fine;
+- the value list is empty, e.g. `withHeader('Vary', [])` — PSR-7 requires at least one value;
+- any value contains a carriage return, line feed or NUL, which is what makes header injection and obsolete line
+  folding impossible to construct.
+
+Surrounding whitespace in a value is kept rather than trimmed or rejected: PSR-7 leaves trimming optional, and
+recipients strip it. An empty string stays a valid value — it is how a header is sent with no content.
+
+One PHP limitation shows through `getHeaders()`. A header whose name is all digits comes back under an `int` key,
+because PHP coerces a numeric string array key to an integer on write and no implementation can prevent it. The name
+still round-trips through `getHeader('123')`; cast the key if you use it as a string.
+
 ## Factories (PSR-17)
 
 | Class | Implements | Returns |

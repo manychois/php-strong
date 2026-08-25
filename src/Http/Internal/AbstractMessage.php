@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Http\Internal;
 
+use InvalidArgumentException;
 use Override;
 use Psr\Http\Message\MessageInterface as IMessage;
 use Psr\Http\Message\StreamInterface as IStream;
@@ -14,12 +15,15 @@ use Psr\Http\Message\StreamInterface as IStream;
 abstract class AbstractMessage implements IMessage
 {
     /**
-     * @var array<string,list<string>>
+     * A numeric header name is stored under an `int` key: PHP coerces numeric string array keys to integers, and
+     * a lookup coerces identically, so the name still round-trips through {@see getHeader()}.
+     *
+     * @var array<array-key,list<string>>
      */
     private array $headers;
 
     /**
-     * @var array<string,string>
+     * @var array<array-key,string>
      */
     private array $normalizedHeaderNames;
 
@@ -72,6 +76,15 @@ abstract class AbstractMessage implements IMessage
     /**
      * @inheritDoc
      */
+    /**
+     * Returns every header, keyed by the name as it was supplied.
+     *
+     * A header whose name is all digits, e.g. `123`, comes back under an `int` key. PHP coerces a numeric string
+     * array key to an integer on write, so no implementation can return it as a string; cast the key before using
+     * it as one.
+     *
+     * @return array<array-key,list<string>> The headers.
+     */
     #[Override]
     public function getHeaders(): array
     {
@@ -104,7 +117,7 @@ abstract class AbstractMessage implements IMessage
     {
         $clone = clone $this;
         $existing = $clone->getHeader($name);
-        $clone->setHeader($name, array_values([...$existing, ...self::normalizeHeaderValues($value)]));
+        $clone->setHeader($name, array_values([...$existing, ...self::normalizeHeaderValues($name, $value)]));
         return $clone;
     }
 
@@ -126,7 +139,7 @@ abstract class AbstractMessage implements IMessage
     public function withHeader(string $name, $value): static
     {
         $clone = clone $this;
-        $clone->setHeader($name, self::normalizeHeaderValues($value));
+        $clone->setHeader($name, self::normalizeHeaderValues($name, $value));
         return $clone;
     }
 
@@ -165,6 +178,7 @@ abstract class AbstractMessage implements IMessage
      */
     final protected function setHeader(string $name, array $values): void
     {
+        self::assertHeaderName($name);
         $normalized = self::normalizeHeaderName($name);
         if (array_key_exists($normalized, $this->normalizedHeaderNames)) {
             $old = $this->normalizedHeaderNames[$normalized];
@@ -176,11 +190,27 @@ abstract class AbstractMessage implements IMessage
     }
 
     /**
+     * Throws unless the name is a valid RFC 9110 field name, i.e. a non-empty token.
+     *
+     * @param string $name The header name to check.
+     *
+     * @throws InvalidArgumentException if the name is empty or carries a character a token may not contain.
+     */
+    private static function assertHeaderName(string $name): void
+    {
+        if (preg_match('/^[!#$%&\'*+\-.^_`|~0-9A-Za-z]+$/', $name) === 1) {
+            return;
+        }
+
+        throw new InvalidArgumentException(sprintf('"%s" is not a valid header name.', $name));
+    }
+
+    /**
      * @param array<string,string|string[]> $headers
      *
      * @return array{
-     *     0: array<string,list<string>>,
-     *     1: array<string,string>,
+     *     0: array<array-key,list<string>>,
+     *     1: array<array-key,string>,
      * }
      */
     private static function normalizeHeaders(array $headers): array
@@ -188,7 +218,9 @@ abstract class AbstractMessage implements IMessage
         $normalizedHeaders = [];
         $normalizedHeaderNames = [];
         foreach ($headers as $name => $value) {
-            $values = self::normalizeHeaderValues($value);
+            $name = (string) $name;
+            self::assertHeaderName($name);
+            $values = self::normalizeHeaderValues($name, $value);
             $normalized = self::normalizeHeaderName($name);
             $normalizedHeaders[$name] = $values;
             $normalizedHeaderNames[$normalized] = $name;
@@ -201,12 +233,27 @@ abstract class AbstractMessage implements IMessage
      *
      * @return list<string>
      */
-    private static function normalizeHeaderValues(string|array $value): array
+    private static function normalizeHeaderValues(string $name, string|array $value): array
     {
         $values = is_array($value) ? $value : [$value];
+        if ($values === []) {
+            throw new InvalidArgumentException(sprintf(
+                'Header "%s" needs at least one value; an empty array was given.',
+                $name,
+            ));
+        }
+
         $result = [];
         foreach ($values as $part) {
-            $result[] = (string) $part;
+            $part = (string) $part;
+            if (strpbrk($part, "\r\n\0") !== false) {
+                throw new InvalidArgumentException(sprintf(
+                    'Header "%s" has a value containing a carriage return, line feed or NUL.',
+                    $name,
+                ));
+            }
+
+            $result[] = $part;
         }
         return $result;
     }

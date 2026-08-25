@@ -15,6 +15,7 @@ use Manychois\PhpStrong\Http\StreamFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ResponseInterface as IResponse;
 use Psr\Http\Message\StreamInterface as IStream;
 use RuntimeException;
 
@@ -239,7 +240,14 @@ final class SapiEmitterTest extends TestCase
     #[Test]
     public function emitSkipsAHeaderWithAnEmptyValueList(): void
     {
-        $response = (new Response())->withHeader('Vary', []);
+        // This library's own Response now rejects an empty value list at the boundary, but emit() accepts any
+        // PSR-7 response, and nothing stops a third-party one from yielding it. Skipping beats emitting "Vary: ".
+        $response = $this->createStub(IResponse::class);
+        $response->method('getStatusCode')->willReturn(200);
+        $response->method('getReasonPhrase')->willReturn('OK');
+        $response->method('getProtocolVersion')->willReturn('1.1');
+        $response->method('getHeaders')->willReturn(['Vary' => []]);
+        $response->method('getBody')->willReturn((new StreamFactory())->createStream());
 
         (new SapiEmitter())->emit($response);
 

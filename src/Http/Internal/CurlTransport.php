@@ -67,6 +67,7 @@ final class CurlTransport implements TransportInterface
 
         $headerLines = [];
         foreach ($request->getHeaders() as $name => $values) {
+            $name = (string) $name;
             foreach ($values as $value) {
                 $headerLines[] = $value === '' ? sprintf('%s;', $name) : sprintf('%s: %s', $name, $value);
             }
