@@ -535,7 +535,7 @@ final class SapiEmitter implements IResponseEmitter
 
 `headers_sent()` is written **unqualified** — see the seam constraint. `$file` and `$line` are seeded before the call because PHP fills them by reference only when it returns true.
 
-PHPStan will report `$response` and `$request` as unused in `emit()` at this stage. That is expected and Task 3 resolves it; if `composer phpstan` flags them now, do not silence it with a suppression — leave it and let Task 3 remove the cause.
+`$response` and `$request` are unused in `emit()` at this stage; nothing flags that. `phpcs.xml` enables no unused-parameter sniff and PHPStan does not report unused method parameters, so all four gates must be clean at the end of this task as at every other.
 
 - [ ] **Step 5: Run the test to verify it passes**
 
@@ -547,7 +547,7 @@ Expected: `OK (3 tests, …)`.
 
 Run: `composer phpcbf && composer phpcs && composer phpstan && composer test`
 
-Expected: PHPCS clean; PHPStan may report the two unused parameters described in Step 4 and nothing else; `composer test` green.
+Expected: PHPCS clean, PHPStan `[OK]`, `composer test` green.
 
 - [ ] **Step 7: Commit**
 
@@ -663,7 +663,7 @@ Expected: `OK (7 tests, …)`.
 
 Run: `composer phpcbf && composer phpcs && composer phpstan && composer test`
 
-Expected: all clean. The `$response` unused-parameter warning from Task 2 is now gone; `$request` is still unused and stays so until Task 5.
+Expected: all clean.
 
 - [ ] **Step 7: Commit**
 
@@ -907,18 +907,6 @@ These assert the stream was never *read*, not merely that no output appeared —
             ['ETag: "v1"', true, 0],
         ], SapiSpy::recorded());
     }
-
-    #[Test]
-    public function aGetRequestDoesNotSuppressTheBody(): void
-    {
-        $request = new Request('GET', 'https://example.com/');
-
-        ob_start();
-        (new SapiEmitter())->emit(new Response(200, body: 'hello'), $request);
-        $output = ob_get_clean();
-
-        static::assertSame('hello', $output);
-    }
 ```
 
 New imports for the file:
@@ -929,7 +917,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Http\Message\StreamInterface as IStream;
 ```
 
-`aGetRequestDoesNotSuppressTheBody` will still fail after this task, because the body phase does not exist yet. Mark it skipped for now — add `static::markTestSkipped('The body phase arrives in Task 6.');` as its first line — and remove that line in Task 6. It is written here because it is the negative case for *this* task's rule, and splitting it from its siblings would hide the pairing.
+`Request` is used by the `HEAD` provider tests above and again in Task 6.
+
+The negative case — a `GET` request whose body is *not* suppressed — belongs to Task 6, where the body phase exists to make it pass. Writing it here would mean shipping a test that asserts nothing.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -982,13 +972,13 @@ Alphabetically the privates now read `assertHeadersNotSent`, `emitHeaders`, `emi
 
 Run: `./vendor/bin/phpunit tests/Http/SapiEmitterTest.php`
 
-Expected: `OK, but incomplete/skipped` — every test green with one skipped (`aGetRequestDoesNotSuppressTheBody`).
+Expected: `OK (…)` — every test green, nothing skipped.
 
 - [ ] **Step 6: Run the gates**
 
 Run: `composer phpcbf && composer phpcs && composer phpstan && composer test`
 
-Expected: all clean. `$request` is now read, so the last unused-parameter warning is gone.
+Expected: all clean.
 
 - [ ] **Step 7: Commit**
 
@@ -1009,13 +999,23 @@ git commit -m "feat(http): suppress the body where HTTP forbids one"
 - Consumes: `hasBody()` from Task 5.
 - Produces: private `emitBody(IResponse $response): void`. Completes the class.
 
-- [ ] **Step 1: Un-skip the pending test**
+- [ ] **Step 1: Write the failing tests**
 
-Delete the `static::markTestSkipped('The body phase arrives in Task 6.');` line added in Task 5.
-
-- [ ] **Step 2: Write the failing tests**
+`aGetRequestDoesNotSuppressTheBody` is the negative case for Task 5's suppression rule, held back until now because only this task makes it pass.
 
 ```php
+    #[Test]
+    public function aGetRequestDoesNotSuppressTheBody(): void
+    {
+        $request = new Request('GET', 'https://example.com/');
+
+        ob_start();
+        (new SapiEmitter())->emit(new Response(200, body: 'hello'), $request);
+        $output = ob_get_clean();
+
+        static::assertSame('hello', $output);
+    }
+
     #[Test]
     public function emitWritesTheWholeBody(): void
     {
@@ -1126,13 +1126,13 @@ Delete the `static::markTestSkipped('The body phase arrives in Task 6.');` line 
 use Manychois\PhpStrong\Http\StreamFactory;
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `./vendor/bin/phpunit tests/Http/SapiEmitterTest.php`
 
 Expected: FAIL — every body test asserts non-empty output and gets `''`, since `emit()` still returns after the suppression check.
 
-- [ ] **Step 4: Call the final phase from `emit()`**
+- [ ] **Step 3: Call the final phase from `emit()`**
 
 The complete method:
 
@@ -1151,7 +1151,7 @@ The complete method:
     }
 ```
 
-- [ ] **Step 5: Add the private method**
+- [ ] **Step 4: Add the private method**
 
 Alphabetically first among the `emit*` privates: `assertHeadersNotSent`, `emitBody`, `emitHeaders`, `emitStatusLine`, `hasBody`.
 
@@ -1187,19 +1187,19 @@ Alphabetically first among the `emit*` privates: `assertHeadersNotSent`, `emitBo
     }
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `./vendor/bin/phpunit tests/Http/SapiEmitterTest.php`
 
-Expected: `OK (…)` with nothing skipped. If the run hangs for three seconds and then reports a time limit, re-read Step 5's `break`.
+Expected: `OK (…)`. If the run hangs for three seconds and then reports a time limit, re-read Step 4's `break`.
 
-- [ ] **Step 7: Run the whole suite and the gates**
+- [ ] **Step 6: Run the whole suite and the gates**
 
 Run: `composer phpcbf && composer phpcs && composer phpstan && composer test`
 
 Expected: PHPCS clean, PHPStan `[OK]`, and the full suite green.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/Http/SapiEmitter.php tests/Http/SapiEmitterTest.php
