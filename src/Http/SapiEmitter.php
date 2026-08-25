@@ -51,6 +51,7 @@ final class SapiEmitter implements IResponseEmitter
     {
         $this->assertHeadersNotSent();
         $this->emitStatusLine($response);
+        $this->emitHeaders($response);
     }
 
     #endregion implements IResponseEmitter
@@ -71,6 +72,28 @@ final class SapiEmitter implements IResponseEmitter
             $file === '' ? 'an unknown file' : $file,
             $line,
         ));
+    }
+
+    /**
+     * Sends every header of the response, merging rather than replacing the cookies PHP has already queued.
+     *
+     * `Set-Cookie` is emitted with `replace` false for every value, the first included. Replacing on the first value
+     * would delete any `Set-Cookie` PHP itself has queued — most importantly the session cookie `session_start()`
+     * writes inside {@see NativeSession}, which never appears in the response object and so cannot be recovered from
+     * it. This method is the single point where PHP's own queued headers and the response's headers meet.
+     *
+     * @param IResponse $response The response whose headers are sent.
+     */
+    private function emitHeaders(IResponse $response): void
+    {
+        foreach ($response->getHeaders() as $name => $values) {
+            $isSetCookie = strcasecmp($name, 'Set-Cookie') === 0;
+            $first = true;
+            foreach ($values as $value) {
+                header($name . ': ' . $value, $first && !$isSetCookie);
+                $first = false;
+            }
+        }
     }
 
     /**
