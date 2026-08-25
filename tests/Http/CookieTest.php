@@ -307,6 +307,14 @@ final class CookieTest extends TestCase
     }
 
     #[Test]
+    public function parseSetCookieIgnoresAnEmptyExpires(): void
+    {
+        $cookie = Cookie::parseSetCookie('t=v; Expires=');
+
+        static::assertNull($cookie->expires);
+    }
+
+    #[Test]
     public function parseSetCookieIgnoresANonNumericMaxAge(): void
     {
         $cookie = Cookie::parseSetCookie('t=v; Max-Age=soon');

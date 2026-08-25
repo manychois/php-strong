@@ -502,6 +502,18 @@ final class CookieStoreTest extends TestCase
         static::assertSame('sid=explicit; other=stored', $request->getHeaderLine('Cookie'));
     }
 
+    #[Test]
+    public function absorbDefaultsThePathToRootWhenTheRequestUriHasNoPath(): void
+    {
+        $store = new CookieStore(new TestClock('2026-08-25 00:00:00'));
+
+        $store->absorb($this->responseWith('sid=abc'), Uri::fromString('https://example.com'));
+
+        $all = $store->all();
+        static::assertCount(1, $all);
+        static::assertSame('/', $all[0]->path);
+    }
+
     private function responseWith(string $setCookie): Response
     {
         return new Response(headers: ['Set-Cookie' => $setCookie]);

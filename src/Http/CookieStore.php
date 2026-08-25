@@ -299,13 +299,8 @@ final class CookieStore
                 return;
             }
         }
-        if (!$secureRequest) {
-            if ($cookie->secure) {
-                return;
-            }
-            if (str_starts_with($cookie->name, '__Secure-') || str_starts_with($cookie->name, '__Host-')) {
-                return;
-            }
+        if (!$secureRequest && $cookie->secure) {
+            return;
         }
 
         $hostOnly = true;
