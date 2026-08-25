@@ -169,11 +169,11 @@ final class SapiEmitterTest extends TestCase
     #[Test]
     public function emitPreservesHeaderNameCasingAndDoesNotTrimValues(): void
     {
-        $response = (new Response())->withHeader('X-Weird-CASE', 'a, b');
+        $response = (new Response())->withHeader('X-Weird-CASE', ' a, b ');
 
         (new SapiEmitter())->emit($response);
 
-        static::assertSame([['X-Weird-CASE: a, b', true, 0]], array_slice(SapiSpy::recorded(), 1));
+        static::assertSame([['X-Weird-CASE:  a, b ', true, 0]], array_slice(SapiSpy::recorded(), 1));
     }
 
     #[Test]
@@ -219,6 +219,50 @@ final class SapiEmitterTest extends TestCase
         yield 'uppercase' => ['HEAD'];
         yield 'lowercase' => ['head'];
         yield 'mixed case' => ['Head'];
+    }
+
+    #[Test]
+    public function emitSendsTheHeadersWhenAnsweringAHeadRequest(): void
+    {
+        $body = $this->createStub(IStream::class);
+        $response = (new Response(200, body: $body))->withHeader('X-Head-Test', 'value');
+        $request = new Request('HEAD', 'https://example.com/');
+
+        (new SapiEmitter())->emit($response, $request);
+
+        static::assertSame([
+            ['HTTP/1.1 200 OK', true, 200],
+            ['X-Head-Test: value', true, 0],
+        ], SapiSpy::recorded());
+    }
+
+    #[Test]
+    public function emitSkipsAHeaderWithAnEmptyValueList(): void
+    {
+        $response = (new Response())->withHeader('Vary', []);
+
+        (new SapiEmitter())->emit($response);
+
+        static::assertSame([], array_slice(SapiSpy::recorded(), 1));
+    }
+
+    #[Test]
+    public function theReplaceStateOfSetCookieDoesNotLeakIntoOtherHeaders(): void
+    {
+        $response = (new Response())
+            ->withHeader('Set-Cookie', 'a=1')
+            ->withAddedHeader('Set-Cookie', 'b=2')
+            ->withHeader('X-Other', 'first')
+            ->withAddedHeader('X-Other', 'second');
+
+        (new SapiEmitter())->emit($response);
+
+        static::assertSame([
+            ['Set-Cookie: a=1', false, 0],
+            ['Set-Cookie: b=2', false, 0],
+            ['X-Other: first', true, 0],
+            ['X-Other: second', false, 0],
+        ], array_slice(SapiSpy::recorded(), 1));
     }
 
     #[Test]
