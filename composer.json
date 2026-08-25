@@ -53,7 +53,10 @@
     "psr-4": {
       "Manychois\\PhpStrongTests\\": "tests/",
       "Manychois\\PhpStrongFeatureTests\\": "feature-tests/"
-    }
+    },
+    "files": [
+      "tests/Http/sapi-functions.php"
+    ]
   },
   "require": {
     "php": ">=8.5",
