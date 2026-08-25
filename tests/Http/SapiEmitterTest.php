@@ -324,7 +324,7 @@ final class SapiEmitterTest extends TestCase
     #[Test]
     public function anEmptyReadBeforeEofEndsTheLoop(): void
     {
-        $body = $this->createMock(IStream::class);
+        $body = $this->createStub(IStream::class);
         $body->method('isReadable')->willReturn(true);
         $body->method('isSeekable')->willReturn(false);
         $body->method('eof')->willReturn(false);
