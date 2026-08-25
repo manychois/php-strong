@@ -11,6 +11,7 @@ use Manychois\PhpStrong\Http\Request;
 use Manychois\PhpStrong\Http\Response;
 use Manychois\PhpStrong\Http\SapiEmitter;
 use Manychois\PhpStrong\Http\ServerRequest;
+use Manychois\PhpStrong\Http\StreamFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -221,5 +222,118 @@ final class SapiEmitterTest extends TestCase
             ['HTTP/1.1 304 Not Modified', true, 304],
             ['ETag: "v1"', true, 0],
         ], SapiSpy::recorded());
+    }
+
+    #[Test]
+    public function aGetRequestDoesNotSuppressTheBody(): void
+    {
+        $request = new Request('GET', 'https://example.com/');
+
+        ob_start();
+        (new SapiEmitter())->emit(new Response(200, body: 'hello'), $request);
+        $output = ob_get_clean();
+
+        static::assertSame('hello', $output);
+    }
+
+    #[Test]
+    public function emitWritesTheWholeBody(): void
+    {
+        ob_start();
+        (new SapiEmitter())->emit(new Response(200, body: 'hello world'));
+        $output = ob_get_clean();
+
+        static::assertSame('hello world', $output);
+    }
+
+    #[Test]
+    public function aBodyLargerThanTheChunkSizeArrivesByteIdentical(): void
+    {
+        $content = str_repeat('abcdefghij', 1000);
+
+        ob_start();
+        (new SapiEmitter(7))->emit(new Response(200, body: $content));
+        $output = ob_get_clean();
+
+        static::assertSame($content, $output);
+    }
+
+    #[Test]
+    public function aBodyLargerThanTheChunkSizeIsReadMoreThanOnce(): void
+    {
+        $body = $this->createMock(IStream::class);
+        $body->method('isReadable')->willReturn(true);
+        $body->method('isSeekable')->willReturn(false);
+        $body->method('eof')->willReturn(false, false, true);
+        $body->expects(static::exactly(2))
+            ->method('read')
+            ->with(4)
+            ->willReturn('abcd', 'efgh');
+
+        ob_start();
+        (new SapiEmitter(4))->emit(new Response(200, body: $body));
+        $output = ob_get_clean();
+
+        static::assertSame('abcdefgh', $output);
+    }
+
+    #[Test]
+    public function aSeekableBodyIsRewoundBeforeItIsRead(): void
+    {
+        $stream = (new StreamFactory())->createStream('hello');
+        $stream->read(3);
+
+        ob_start();
+        (new SapiEmitter())->emit(new Response(200, body: $stream));
+        $output = ob_get_clean();
+
+        static::assertSame('hello', $output);
+    }
+
+    #[Test]
+    public function aNonSeekableBodyIsNotRewound(): void
+    {
+        $body = $this->createMock(IStream::class);
+        $body->method('isReadable')->willReturn(true);
+        $body->method('isSeekable')->willReturn(false);
+        $body->method('eof')->willReturn(false, true);
+        $body->method('read')->willReturn('tail');
+        $body->expects(static::never())->method('rewind');
+
+        ob_start();
+        (new SapiEmitter())->emit(new Response(200, body: $body));
+        $output = ob_get_clean();
+
+        static::assertSame('tail', $output);
+    }
+
+    #[Test]
+    public function aNonReadableBodyEmitsNothing(): void
+    {
+        $body = $this->createMock(IStream::class);
+        $body->method('isReadable')->willReturn(false);
+        $body->expects(static::never())->method('read');
+
+        ob_start();
+        (new SapiEmitter())->emit(new Response(200, body: $body));
+        $output = ob_get_clean();
+
+        static::assertSame('', $output);
+    }
+
+    #[Test]
+    public function anEmptyReadBeforeEofEndsTheLoop(): void
+    {
+        $body = $this->createMock(IStream::class);
+        $body->method('isReadable')->willReturn(true);
+        $body->method('isSeekable')->willReturn(false);
+        $body->method('eof')->willReturn(false);
+        $body->method('read')->willReturn('');
+
+        ob_start();
+        (new SapiEmitter())->emit(new Response(200, body: $body));
+        $output = ob_get_clean();
+
+        static::assertSame('', $output);
     }
 }

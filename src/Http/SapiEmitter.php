@@ -55,6 +55,8 @@ final class SapiEmitter implements IResponseEmitter
         if (!$this->hasBody($response, $request)) {
             return;
         }
+
+        $this->emitBody($response);
     }
 
     #endregion implements IResponseEmitter
@@ -75,6 +77,36 @@ final class SapiEmitter implements IResponseEmitter
             $file === '' ? 'an unknown file' : $file,
             $line,
         ));
+    }
+
+    /**
+     * Writes the body in fixed-size chunks, so a body of any size costs a constant amount of memory.
+     *
+     * A stream which cannot be read emits nothing rather than throwing halfway through a partly written response. A
+     * stream which cannot seek is read from wherever it stands, which is the only meaningful behaviour for a pipe or
+     * a socket. An empty read before end-of-file ends the loop: PSR-7 permits a non-blocking stream to return an
+     * empty string while more data is still coming, and continuing would spin forever.
+     *
+     * @param IResponse $response The response whose body is written.
+     */
+    private function emitBody(IResponse $response): void
+    {
+        $body = $response->getBody();
+        if (!$body->isReadable()) {
+            return;
+        }
+        if ($body->isSeekable()) {
+            $body->rewind();
+        }
+
+        while (!$body->eof()) {
+            $chunk = $body->read($this->chunkSize);
+            if ($chunk === '') {
+                break;
+            }
+
+            echo $chunk;
+        }
     }
 
     /**
