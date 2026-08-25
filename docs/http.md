@@ -141,12 +141,55 @@ $response = $pipeline->handle(ServerRequest::fromGlobals());
 - The return type is `ResponseInterface`, not the concrete `Response` — middlewares may return any implementation.
 - Exceptions from middlewares, the fallback, or the container propagate unchanged.
 
+## Emitting a response
+
+`SapiEmitter` sends a response to PHP's SAPI: status line, then headers, then body. It implements
+`ResponseEmitterInterface`, so an application can substitute a recording emitter in a functional test without
+touching PHP's global header state.
+
+```php
+use Manychois\PhpStrong\Http\CookieBag;
+use Manychois\PhpStrong\Http\MiddlewarePipeline;
+use Manychois\PhpStrong\Http\SapiEmitter;
+use Manychois\PhpStrong\Http\ServerRequest;
+
+$request = ServerRequest::fromGlobals();
+$cookies = CookieBag::fromRequest($request);
+
+$pipeline = new MiddlewarePipeline([new TrimTrailingSlash()], fallback: new NotFoundHandler());
+$response = $pipeline->handle($request);
+
+(new SapiEmitter())->emit($cookies->applyTo($response), $request);
+```
+
+| Member | Notes |
+| ------ | ----- |
+| `__construct(int $chunkSize = 8_388_608)` | The number of bytes read from the body stream per write. A value below 1 throws `InvalidArgumentException`. The 8 MiB default sends an ordinary HTML or JSON response in a single read, while a multi-gigabyte download still costs constant memory. |
+| `emit(ResponseInterface $response, ?RequestInterface $request = null): void` | Sends the response. `$request` is read for one purpose only — detecting a `HEAD` request, which must receive no body. Pass `null` when the request is known not to be `HEAD`. Throws `RuntimeException` if output has already started. |
+
+- **Headers are merged, not replaced.** Every `Set-Cookie` value is sent with PHP's `replace` flag false, the first
+  value included, so a cookie PHP itself has queued survives — most importantly the session cookie
+  `session_start()` writes inside `NativeSession`, which never appears in the `Response` object. Other headers
+  replace on their first value and append on the rest.
+- **No body is sent** on a 1xx, 204 or 304 response, or when answering a `HEAD` request. The body stream is not even
+  touched in those cases, so a lazily-populated body is never realised.
+- **Output buffers are left alone.** The emitter never opens, flushes, or cleans one: a buffer it did not open may
+  hold output the caller intends to keep. If output has already started, `emit()` throws before writing anything,
+  naming the file and line PHP blames — so the caller is free to emit a different response instead.
+- **`Content-Length` is yours to set.** The emitter never computes or rewrites it. Deriving it from the stream size
+  would truncate the response whenever output compression rewrites the body afterwards.
+- Header names and values are sent verbatim: PSR-7 preserves the caller's casing deliberately, and nothing here
+  re-folds, trims, or normalises them.
+- A custom reason phrase set through `withStatus()` reaches the status line. Under HTTP/2 the protocol has no reason
+  phrase on the wire, so PHP discards it.
+
 ## Cookies
 
 Two roles exist, each served by its own class: `CookieBag` reads the cookies on an incoming `ServerRequest` and
-queues the ones to send back on the response, while `CookieStore` remembers the cookies a remote host sets so a
-client can send them back on later requests to that host. Both build on `Cookie`, the immutable value object for one
-`Set-Cookie` entry.
+queues the ones to send back on the response. The headers a `CookieBag` applies reach the browser through
+[`SapiEmitter`](#emitting-a-response), which merges them with any cookie PHP has queued itself. `CookieStore`
+remembers the cookies a remote host sets so a client can send them back on later requests to that host. Both build
+on `Cookie`, the immutable value object for one `Set-Cookie` entry.
 
 ### `Cookie`
 

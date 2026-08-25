@@ -337,5 +337,5 @@ looping over `$response->getHeaders()` and replacing on the first value of each 
 `Cookie` or `CookieBag`; the emitter is the single point where PHP's own queued headers and the `Response`'s
 headers meet, and it must merge them rather than clobber them.
 
-Until that spec ships, `CookieBag::applyTo()` is verifiable by assertion on the returned `Response` but is not
-observable end to end from a real SAPI request.
+That spec is now written: `docs/superpowers/specs/2026-08-25-http-response-emitter-design.md`, and the rule is
+implemented and tested in `SapiEmitter::emitHeaders()`. `CookieBag::applyTo()` is observable end to end.
