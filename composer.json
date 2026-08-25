@@ -96,7 +96,7 @@
     ],
     "phpcs": "phpcs --standard=phpcs.xml -s",
     "phpcbf": "phpcbf --standard=phpcs.xml || true",
-    "phpstan": "phpstan analyse -c phpstan.dist.neon || true",
+    "phpstan": "phpstan analyse -c phpstan.dist.neon",
     "code": [
       "@phpcbf",
       "@phpcs",

@@ -1,0 +1,7 @@
+{
+    "intelephense.diagnostics.exclude": {
+        "**/vendor/**": ["*"],
+        "**/src/Http/Request.php": ["P1112"],
+        "**/src/Http/Response.php": ["P1112"]
+    }
+}

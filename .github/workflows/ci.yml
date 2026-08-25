@@ -2,15 +2,19 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "dev*"]
   pull_request:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    name: PHP ${{ matrix.php }} – ${{ matrix.os }}
+    name: PHP ${{ matrix.php }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -20,13 +24,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring
+          extensions: mbstring, curl, pcntl
           coverage: xdebug
           ini-values: memory_limit=256M
 
@@ -34,7 +38,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: vendor
-          key: composer-${{ matrix.php }}-${{ hashFiles('composer.json') }}
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
           restore-keys: composer-${{ matrix.php }}-
 
       - name: Install dependencies
@@ -48,3 +52,12 @@ jobs:
 
       - name: Run tests
         run: composer test
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-php${{ matrix.php }}-${{ matrix.os }}
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 7
