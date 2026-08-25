@@ -1,0 +1,8 @@
+{
+    "intelephense.diagnostics.exclude": {
+        "**/vendor/**": ["*"],
+        "**/src/Events/EventDispatcher.php": ["P1006"],
+        "**/src/Http/Request.php": ["P1112"],
+        "**/src/Http/Response.php": ["P1112"]
+    }
+}

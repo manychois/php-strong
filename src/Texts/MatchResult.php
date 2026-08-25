@@ -4,29 +4,31 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Texts;
 
-use Manychois\PhpStrong\Collections\ArrayList;
-use Manychois\PhpStrong\Collections\ReadonlyList;
-use Manychois\PhpStrong\Collections\ReadonlyListInterface as IReadonlyList;
-use Manychois\PhpStrong\Collections\ReadonlyMapInterface as IReadonlyMap;
-use Manychois\PhpStrong\Collections\StringMap;
-
 /**
  * Represents the result from a regular expression match.
  */
-class MatchResult extends Capture
+final class MatchResult extends Capture
 {
     public readonly bool $success;
     /**
-     * @var IReadonlyList<Capture>
+     * The numbered capturing groups, excluding the whole match.
+     * A group that did not participate in the match yields a `Capture` with an empty value and a `null` index.
+     *
+     * @var list<Capture>
      */
-    public readonly IReadonlyList $captures;
+    public readonly array $captures;
     /**
-     * @var IReadonlyMap<string,Capture>
+     * The named capturing groups, keyed by group name.
+     *
+     * @var array<string, Capture>
      */
-    public readonly IReadonlyMap $namedCaptures;
+    public readonly array $namedCaptures;
 
     /**
-     * @param array<mixed> $matches The `$matches` result from the PHP function `preg_match()`.
+     * Initializes a new instance of the MatchResult class.
+     *
+     * @param array<mixed> $matches The `$matches` result from the PHP function `preg_match()`,
+     * with or without `PREG_OFFSET_CAPTURE`.
      */
     public function __construct(array $matches)
     {
@@ -34,46 +36,52 @@ class MatchResult extends Capture
             parent::__construct('');
 
             $this->success = false;
-            $this->captures = new ReadonlyList([]);
-            $this->namedCaptures = new StringMap()->asReadonly();
+            $this->captures = [];
+            $this->namedCaptures = [];
 
             return;
         }
 
         $matchValue = '';
         $matchIndex = null;
-        $captures = new ArrayList();
-        $namedCaptures = new StringMap();
+        $captures = [];
+        $namedCaptures = [];
         foreach ($matches as $key => $value) {
-            /** @var string|array{0:string,1:non-negative-int} $value */
+            /** @var string|array{0:string,1:int} $value */
+            $capture = self::toCapture($value);
             if ($key === 0) {
-                if (is_array($value)) {
-                    $matchValue = $value[0];
-                    $matchIndex = $value[1];
-                } else {
-                    $matchValue = $value;
-                }
+                $matchValue = $capture->value;
+                $matchIndex = $capture->index;
+            } elseif (is_int($key)) {
+                $captures[] = $capture;
             } else {
-                if (is_int($key)) {
-                    if (is_array($value)) {
-                        $captures->add(new Capture($value[0], $value[1]));
-                    } else {
-                        $captures->add(new Capture($value));
-                    }
-                } else {
-                    if (is_array($value)) {
-                        $namedCaptures->add($key, new Capture($value[0], $value[1]));
-                    } else {
-                        $namedCaptures->add($key, new Capture($value));
-                    }
-                }
+                $namedCaptures[$key] = $capture;
             }
         }
 
         parent::__construct($matchValue, $matchIndex);
 
         $this->success = true;
-        $this->captures = $captures->asReadonly();
-        $this->namedCaptures = $namedCaptures->asReadonly();
+        $this->captures = $captures;
+        $this->namedCaptures = $namedCaptures;
+    }
+
+    /**
+     * Converts a `preg_match()` group entry into a `Capture`.
+     *
+     * @param string|array{0:string,1:int} $value The group entry.
+     *
+     * @return Capture The converted capture.
+     */
+    private static function toCapture(string|array $value): Capture
+    {
+        if (is_string($value)) {
+            return new Capture($value);
+        }
+
+        [$text, $offset] = $value;
+
+        // preg_* reports a group which did not participate in the match as ['', -1].
+        return new Capture($text, $offset >= 0 ? $offset : null);
     }
 }

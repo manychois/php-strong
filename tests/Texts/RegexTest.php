@@ -10,13 +10,10 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
-/**
- * Unit tests for Regex.
- */
 final class RegexTest extends TestCase
 {
     #[Test]
-    public function constructor_stores_pattern(): void
+    public function constructor_storesPattern(): void
     {
         $r = new Regex('/foo/');
 
@@ -24,25 +21,38 @@ final class RegexTest extends TestCase
     }
 
     #[Test]
-    public function escape_delegates_to_preg_quote(): void
+    public function escape_delegatesToPregQuote(): void
     {
         self::assertSame('\$', Regex::escape('$'));
         self::assertSame('\+\.', Regex::escape('+.', '+'));
     }
 
     #[Test]
-    public function match_returns_success_with_offset_data(): void
+    public function match_collectsNamedGroups(): void
     {
-        $r = new Regex('/hello/');
-        $result = $r->match('xxhelloyy', 2);
+        $r = new Regex('/(?<word>\w+)/');
+        $result = $r->match('hi there');
 
         self::assertTrue($result->success);
-        self::assertSame('hello', $result->value);
-        self::assertSame(2, $result->index);
+        self::assertArrayHasKey('word', $result->namedCaptures);
+        self::assertSame('hi', $result->namedCaptures['word']->value);
     }
 
     #[Test]
-    public function match_returns_failure_when_no_match(): void
+    public function match_reportsNonParticipatingGroupWithNullIndex(): void
+    {
+        $r = new Regex('/(a)|(b)/');
+        $result = $r->match('b');
+
+        self::assertTrue($result->success);
+        self::assertSame('', $result->captures[0]->value);
+        self::assertNull($result->captures[0]->index);
+        self::assertSame('b', $result->captures[1]->value);
+        self::assertSame(0, $result->captures[1]->index);
+    }
+
+    #[Test]
+    public function match_returnsFailureWhenNoMatch(): void
     {
         $r = new Regex('/zzz/');
         $result = $r->match('abc');
@@ -53,7 +63,28 @@ final class RegexTest extends TestCase
     }
 
     #[Test]
-    public function match_throws_when_utf8_pattern_and_subject_is_not_valid_utf8(): void
+    public function match_returnsSuccessWithOffsetData(): void
+    {
+        $r = new Regex('/hello/');
+        $result = $r->match('xxhelloyy', 2);
+
+        self::assertTrue($result->success);
+        self::assertSame('hello', $result->value);
+        self::assertSame(2, $result->index);
+    }
+
+    #[Test]
+    public function match_throwsOnInvalidPattern(): void
+    {
+        $r = new Regex('/(no end');
+
+        $this->expectException(RuntimeException::class);
+
+        $r->match('x');
+    }
+
+    #[Test]
+    public function match_throwsWhenSubjectIsNotValidUtf8(): void
     {
         $r = new Regex('//u');
         $invalidUtf8 = "\xFF";
@@ -66,36 +97,22 @@ final class RegexTest extends TestCase
     }
 
     #[Test]
-    public function match_collects_named_groups(): void
-    {
-        $r = new Regex('/(?<word>\w+)/');
-        $result = $r->match('hi there');
-
-        self::assertTrue($result->success);
-        self::assertTrue($result->namedCaptures->has('word'));
-        self::assertSame('hi', $result->namedCaptures->get('word')->value);
-    }
-
-    #[Test]
-    public function matchAll_returns_each_match_as_match_result(): void
+    public function matchAll_returnsEachMatchAsMatchResult(): void
     {
         $r = new Regex('/a/');
         $all = $r->matchAll('aba');
 
         self::assertCount(2, $all);
-        $first = $all->at(0);
-        $second = $all->at(1);
-        self::assertInstanceOf(MatchResult::class, $first);
-        self::assertInstanceOf(MatchResult::class, $second);
-        self::assertTrue($first->success);
-        self::assertSame('a', $first->value);
-        self::assertSame(0, $first->index);
-        self::assertSame('a', $second->value);
-        self::assertSame(2, $second->index);
+        self::assertContainsOnlyInstancesOf(MatchResult::class, $all);
+        self::assertTrue($all[0]->success);
+        self::assertSame('a', $all[0]->value);
+        self::assertSame(0, $all[0]->index);
+        self::assertSame('a', $all[1]->value);
+        self::assertSame(2, $all[1]->index);
     }
 
     #[Test]
-    public function matchAll_returns_empty_list_when_no_matches(): void
+    public function matchAll_returnsEmptyListWhenNoMatches(): void
     {
         $r = new Regex('/xyz/');
         $all = $r->matchAll('abc');
@@ -104,28 +121,40 @@ final class RegexTest extends TestCase
     }
 
     #[Test]
-    public function replace_performs_substitution(): void
+    public function replace_performsSubstitution(): void
     {
         $r = new Regex('/a/');
+
         self::assertSame('xbxc', $r->replace('abac', 'x'));
     }
 
     #[Test]
-    public function replace_respects_limit(): void
+    public function replace_respectsLimit(): void
     {
         $r = new Regex('/a/');
+
         self::assertSame('xbac', $r->replace('abac', 'x', 1));
     }
 
     #[Test]
-    public function replaceCallback_receives_match_result_with_named_group_and_index(): void
+    public function replace_throwsOnInvalidPattern(): void
+    {
+        $r = new Regex('/(no end');
+
+        $this->expectException(RuntimeException::class);
+
+        $r->replace('x', 'y');
+    }
+
+    #[Test]
+    public function replaceCallback_receivesMatchResultWithNamedGroupAndIndex(): void
     {
         $r = new Regex('/(?<d>\d)/');
         $out = $r->replaceCallback('x1y', static function (MatchResult $m): string {
             self::assertTrue($m->success);
             self::assertSame('1', $m->value);
             self::assertSame(1, $m->index);
-            self::assertSame('1', $m->namedCaptures->get('d')->value);
+            self::assertSame('1', $m->namedCaptures['d']->value);
 
             return 'n';
         }, 1);
@@ -134,29 +163,38 @@ final class RegexTest extends TestCase
     }
 
     #[Test]
-    public function split_returns_segments(): void
+    public function replaceCallback_restoresErrorHandlerWhenCallbackThrows(): void
+    {
+        $r = new Regex('/a/');
+
+        try {
+            $r->replaceCallback('a', static function (): string {
+                throw new RuntimeException('boom');
+            });
+            self::fail('Expected exception was not thrown.');
+        } catch (RuntimeException $ex) {
+            self::assertSame('boom', $ex->getMessage());
+        }
+
+        // The error handler must have been restored; a subsequent call works normally.
+        self::assertSame('x', $r->replace('a', 'x'));
+    }
+
+    #[Test]
+    public function split_returnsSegments(): void
     {
         $r = new Regex('/,/');
         $parts = $r->split('a,b,,c');
 
-        self::assertSame(['a', 'b', '', 'c'], $parts->asArray());
+        self::assertSame(['a', 'b', '', 'c'], $parts);
     }
 
     #[Test]
-    public function split_with_non_empty_omits_empty_segments(): void
+    public function split_withNonEmptyOmitsEmptySegments(): void
     {
         $r = new Regex('/,/');
         $parts = $r->split('a,b,,c', -1, true);
 
-        self::assertSame(['a', 'b', 'c'], $parts->asArray());
-    }
-
-    #[Test]
-    public function invalid_pattern_throws_runtime_exception(): void
-    {
-        $r = new Regex('/(no end');
-
-        $this->expectException(RuntimeException::class);
-        $r->match('x');
+        self::assertSame(['a', 'b', 'c'], $parts);
     }
 }

@@ -1,29 +1,51 @@
 # php-strong
 
-**php-strong** is a small PHP library that adds **typed boundaries** around places PHP is usually loose: nested arrays, the DI container, native sessions, and string matching. It does not replace the language type system; it gives you explicit, predictable APIs so invalid shapes fail **at the edge** (when you read a value or resolve a service) instead of far down the call stack.
+**php-strong** provides solid, strongly-typed implementations of the [PHP-FIG PSR](https://www.php-fig.org/psr/) interfaces, one sub-namespace per problem area rather than per PSR, so utilities no PSR covers live beside the PSR classes they belong with. The goal is to cover every PSR that defines an interface.
 
-It targets **PHP 8.5+**, uses the `Manychois\PhpStrong` namespace with PSR-4 autoloading, and integrates with **PSR-7** (HTTP messages), **PSR-17** (HTTP factories), **PSR-11** (containers), and **PSR-20** (clock) where relevant.
-
-## What’s in the box
-
-- **Collections** — Lazy and eager sequences (`LazySequence`), mutable lists (`ArrayList`), readonly list views (`ReadonlyList`), maps with typed keys (`StringMap`, `IntMap`, `ObjectMap`, and readonly variants), plus shared sequence/list interfaces and comparers for ordering. Suited to application code that wants clear generics-friendly collection APIs.
-
-- **Typed array and object reading** — `ArrayReader` (and `ArrayReaderInterface`) walk **dot-separated paths** and expose readers such as `asInt`, `bool`, `string`, `object`, and `instanceOf` so nested structures are validated when accessed.
-
-- **PSR-11 container** — `StrongContainerInterface` and `StrongContainerWrapper` wrap any `Psr\Container\ContainerInterface` and add `getObject($id, $class)` so resolved services are checked against an expected class or interface.
-
-- **`Web`** — **PSR-7** value objects: `OutRequest`, `InRequest`, `Response`, `Stream`, `Uri`, and **`UploadedFile`**, plus **`Method`** and **`StatusCode`** enums. **PSR-17** factories: `RequestFactory` (requests and server requests), `ResponseFactory`, `StreamFactory`, `UploadedFileFactory`, and `UriFactory`. **Sessions:** `PhpSession` / `PhpSessionInterface` expose `$_SESSION` with the same path-style, validated access as `ArrayReader`, plus lifecycle helpers.
-
-- **Time** — `UtcClock` implements PSR-20’s clock in UTC, with support for deterministic tests (e.g. frozen instants).
-
-- **Text** — `Regex`, `MatchResult`, `Capture`, and `Utf8String` offer an object-oriented, exception-oriented approach to pattern matching and UTF-8 strings; small helpers like `StringSide` and value types such as `DayOfWeek` live alongside them.
-
-## Why use it?
-
-If you like **C#- or Java-style rigor** at API boundaries—without fighting PHP’s arrays and superglobals—php-strong narrows `mixed` early: fewer surprises in business logic and better alignment with static analysis (e.g. PHPStan) on downstream code.
+Targets **PHP 8.5+**, namespace `Manychois\PhpStrong`, PSR-4 autoloading.
 
 ## Installation
 
 ```bash
 composer require manychois/php-strong
 ```
+
+## Modules
+
+Each module owns one problem area. Where a PSR governs it, the module implements that PSR; some modules also
+ship utilities no PSR covers.
+
+| PSR | Namespace | Summary | Docs |
+| --- | --------- | ------- | ---- |
+| PSR-3 Logger | `Manychois\PhpStrong\Logging` | `Logger` dispatching immutable `Log` objects to handlers (stream, console, in-memory) with pluggable formatters and `{placeholder}` interpolation. | [docs/logging.md](docs/logging.md) |
+| PSR-6 Cache | `Manychois\PhpStrong\Cache` | `FileCachePool` storing one file per key under a directory (sha-256 sharded paths, atomic writes, a request-scoped read memo) and `MemoryCachePool` keeping entries in memory; both support deferred items and `prune()`, with expiry driven by an injected PSR-20 clock. | [docs/cache.md](docs/cache.md) |
+| PSR-16 Simple Cache | `Manychois\PhpStrong\Cache` | `SimpleCache`, a PSR-16 adapter over any PSR-6 pool, including both of the above. | [docs/cache.md](docs/cache.md) |
+| PSR-7 HTTP Message + PSR-17 Factories | `Manychois\PhpStrong\Http` | Immutable `Request`, `ServerRequest` (with `fromGlobals()`), `Response`, `Stream`, `UploadedFile`, `Uri`, `Method`/`StatusCode` enums, and the five PSR-17 factories. | [docs/http.md](docs/http.md) |
+| PSR-18 HTTP Client | `Manychois\PhpStrong\Http` | cURL-backed `Client` configured via `RequestOptions` (timeouts, redirects, TLS verification, proxy, user agent, CA bundle); returns responses for every status code and throws `RequestException`/`NetworkException` per the PSR-18 contract, plus a non-PSR `sendAsync()` returning `PendingRequest` handles for concurrent requests over `curl_multi`. | [docs/http.md](docs/http.md) |
+| PSR-15 Handlers & Middleware | `Manychois\PhpStrong\Http` | `MiddlewarePipeline`, a request handler dispatching middleware in order to a fallback handler, with optional lazy resolution of middleware service ids from a PSR-11 container. | [docs/http.md](docs/http.md) |
+| PSR-11 Container | `Manychois\PhpStrong\DependencyInjection` | `ContainerBuilder` (`singleton`/`factory`/`alias`/opt-in `autowire`/`aware` setter hooks) producing an immutable, lazily-resolving `Container` with circular-dependency detection. | [docs/dependency-injection.md](docs/dependency-injection.md) |
+| PSR-20 Clock | `Manychois\PhpStrong\Time` | `UtcClock` (always UTC) and `TestClock` (frozen/advanceable instant for deterministic tests). | [docs/time.md](docs/time.md) |
+| PSR-14 Event Dispatcher | `Manychois\PhpStrong\Events` | `EventDispatcher` calling listeners returned by any PSR-14 provider; `ListenerProvider` matches listeners by type (including parents/interfaces), orders by priority, and supports deferred `[$serviceId, $method]` listeners resolved from an optional container. | [docs/events.md](docs/events.md) |
+| PSR-13 Links | `Manychois\PhpStrong\Links` | Immutable, evolvable `Link` and `LinkProvider`, with `isTemplated()` derived from a strict RFC 6570 check of the href. | [docs/links.md](docs/links.md) |
+
+Every accepted PSR that defines an interface is now covered.
+
+### Utilities
+
+| Namespace | Summary | Docs |
+| --------- | ------- | ---- |
+| `Manychois\PhpStrong\Collections` | `DataReader`, strongly typed access to an untyped array or object with dot-notation keys and strict/converting/nullable accessors, plus the `Iter` (lazy) and `Seq` (eager) iterable utilities. | [docs/collections.md](docs/collections.md) |
+| `Manychois\PhpStrong\Http` | `NativeSession`, a lazily started `$_SESSION` wrapper whose `SessionInterface` extends `DataReaderInterface`, so session data is read with the same strongly typed, dot-notation accessors; plus `Cookie`, `CookieBag` and `CookieStore`/`CookieAwareClient` for reading, queuing and remembering cookies on either side of a request. Plus `SapiEmitter`, which sends a finished response to the SAPI and is the one place the response's headers and PHP's own queued cookies are merged. | [docs/http.md](docs/http.md) |
+| `Manychois\PhpStrong\Texts` | `Regex`, a value object wrapping one pattern, whose `match()`, `matchAll()`, `replace()`, `replaceCallback()` and `split()` raise `RuntimeException` instead of returning `false`; matches come back as `MatchResult`/`Capture` objects carrying the captured text and its byte offset. | [docs/texts.md](docs/texts.md) |
+| `Manychois\PhpStrong\Time` | `DayOfWeek` and `Month`, calendar enums numbered to match `DateTimeInterface::format()`, with wrapping arithmetic and leap-aware month lengths. | [docs/time.md](docs/time.md) |
+
+## Development
+
+```bash
+composer code   # phpcbf + phpcs + phpstan
+composer test   # phpunit with coverage
+```
+
+## License
+
+MIT.

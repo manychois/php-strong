@@ -6,6 +6,9 @@
     <testsuite name="general">
       <directory>tests</directory>
     </testsuite>
+    <testsuite name="feature">
+      <directory>feature-tests</directory>
+    </testsuite>
   </testsuites>
   <coverage>
     <report>

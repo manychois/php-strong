@@ -4,17 +4,31 @@
   "description": "A utility library for PHP to help you write strong-typed code.",
   "type": "library",
   "keywords": [
-    "array-accessor",
-    "clock",
-    "container",
+    "psr",
+    "psr-3",
+    "psr-6",
+    "psr-7",
     "psr-11",
+    "psr-13",
+    "psr-14",
+    "psr-15",
+    "psr-16",
+    "psr-17",
+    "psr-18",
     "psr-20",
-    "regex",
-    "session",
-    "strong-type",
-    "strong-typing",
-    "type-safety",
-    "typed-array"
+    "cache",
+    "simple-cache",
+    "logger",
+    "container",
+    "event-dispatcher",
+    "link",
+    "http-message",
+    "http-factory",
+    "http-client",
+    "middleware",
+    "request-handler",
+    "clock",
+    "strong-typing"
   ],
   "homepage": "https://github.com/manychois/php-strong",
   "support": {
@@ -37,15 +51,28 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "Manychois\\PhpStrongTests\\": "tests/"
-    }
+      "Manychois\\PhpStrongTests\\": "tests/",
+      "Manychois\\PhpStrongFeatureTests\\": "feature-tests/"
+    },
+    "files": [
+      "tests/Http/sapi-functions.php"
+    ]
   },
   "require": {
     "php": ">=8.5",
     "psr/container": "^2.0.2",
     "psr/clock": "^1",
     "psr/http-message": "^2.0",
-    "psr/http-factory": "^1.1"
+    "psr/http-factory": "^1.1",
+    "psr/log": "^3.0",
+    "psr/http-client": "^1.0",
+    "ext-curl": "*",
+    "psr/event-dispatcher": "^1.0",
+    "psr/cache": "^3",
+    "psr/simple-cache": "^3",
+    "psr/link": "^2",
+    "psr/http-server-handler": "^1.0",
+    "psr/http-server-middleware": "^1.0"
   },
   "require-dev": {
     "phpstan/extension-installer": "^1.4.3",
@@ -69,11 +96,11 @@
     ],
     "phpcs": "phpcs --standard=phpcs.xml -s",
     "phpcbf": "phpcbf --standard=phpcs.xml || true",
-    "phpstan": "phpstan analyse -c phpstan.dist.neon || true",
+    "phpstan": "phpstan analyse -c phpstan.dist.neon",
     "code": [
       "@phpcbf",
       "@phpcs",
       "@phpstan"
     ]
-  }  
+  }
 }
