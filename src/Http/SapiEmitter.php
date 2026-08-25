@@ -122,6 +122,7 @@ final class SapiEmitter implements IResponseEmitter
     private function emitHeaders(IResponse $response): void
     {
         foreach ($response->getHeaders() as $name => $values) {
+            $name = (string) $name;
             $isSetCookie = strcasecmp($name, 'Set-Cookie') === 0;
             $first = true;
             foreach ($values as $value) {

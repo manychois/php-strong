@@ -139,6 +139,16 @@ final class SapiEmitterTest extends TestCase
     }
 
     #[Test]
+    public function emitEmitsANumericHeaderNameInsteadOfFatal(): void
+    {
+        $response = (new Response())->withHeader('123', 'x');
+
+        (new SapiEmitter())->emit($response);
+
+        static::assertSame([['123: x', true, 0]], array_slice(SapiSpy::recorded(), 1));
+    }
+
+    #[Test]
     public function everyCookieQueuedOnACookieBagSurvivesTheEmit(): void
     {
         $bag = CookieBag::fromRequest(new ServerRequest());
