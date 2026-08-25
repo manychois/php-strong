@@ -56,4 +56,36 @@ final class SapiEmitterTest extends TestCase
 
         static::assertSame([], SapiSpy::recorded());
     }
+
+    #[Test]
+    public function emitSendsTheStatusLineWithTheDefaultReasonPhrase(): void
+    {
+        (new SapiEmitter())->emit(new Response(404));
+
+        static::assertSame(['HTTP/1.1 404 Not Found', true, 404], SapiSpy::recorded()[0]);
+    }
+
+    #[Test]
+    public function emitSendsTheStatusLineWithACustomReasonPhrase(): void
+    {
+        (new SapiEmitter())->emit(new Response(418, 'I Am A Teapot'));
+
+        static::assertSame(['HTTP/1.1 418 I Am A Teapot', true, 418], SapiSpy::recorded()[0]);
+    }
+
+    #[Test]
+    public function emitOmitsTheTrailingSpaceWhenThereIsNoReasonPhrase(): void
+    {
+        (new SapiEmitter())->emit(new Response(599));
+
+        static::assertSame(['HTTP/1.1 599', true, 599], SapiSpy::recorded()[0]);
+    }
+
+    #[Test]
+    public function emitSendsTheProtocolVersionTheResponseCarries(): void
+    {
+        (new SapiEmitter())->emit(new Response(200, protocolVersion: '2'));
+
+        static::assertSame(['HTTP/2 200 OK', true, 200], SapiSpy::recorded()[0]);
+    }
 }

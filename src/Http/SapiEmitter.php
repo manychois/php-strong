@@ -50,6 +50,7 @@ final class SapiEmitter implements IResponseEmitter
     public function emit(IResponse $response, ?IRequest $request = null): void
     {
         $this->assertHeadersNotSent();
+        $this->emitStatusLine($response);
     }
 
     #endregion implements IResponseEmitter
@@ -70,5 +71,27 @@ final class SapiEmitter implements IResponseEmitter
             $file === '' ? 'an unknown file' : $file,
             $line,
         ));
+    }
+
+    /**
+     * Sends the status line, which also fixes the status code for every header sent after it.
+     *
+     * @param IResponse $response The response whose status is sent.
+     */
+    private function emitStatusLine(IResponse $response): void
+    {
+        $code = $response->getStatusCode();
+        $reason = $response->getReasonPhrase();
+
+        header(
+            sprintf(
+                'HTTP/%s %d%s',
+                $response->getProtocolVersion(),
+                $code,
+                $reason === '' ? '' : ' ' . $reason,
+            ),
+            true,
+            $code,
+        );
     }
 }
