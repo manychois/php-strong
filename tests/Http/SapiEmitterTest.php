@@ -7,11 +7,14 @@ namespace Manychois\PhpStrongTests\Http;
 use InvalidArgumentException;
 use Manychois\PhpStrong\Http\Cookie;
 use Manychois\PhpStrong\Http\CookieBag;
+use Manychois\PhpStrong\Http\Request;
 use Manychois\PhpStrong\Http\Response;
 use Manychois\PhpStrong\Http\SapiEmitter;
 use Manychois\PhpStrong\Http\ServerRequest;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\StreamInterface as IStream;
 use RuntimeException;
 
 /**
@@ -160,5 +163,63 @@ final class SapiEmitterTest extends TestCase
         (new SapiEmitter())->emit($response);
 
         static::assertSame([['X-Weird-CASE: a, b', true, 0]], array_slice(SapiSpy::recorded(), 1));
+    }
+
+    #[Test]
+    #[DataProvider('provideStatusesForbiddingABody')]
+    public function emitNeverTouchesTheBodyWhenTheStatusForbidsOne(int $status): void
+    {
+        $body = $this->createMock(IStream::class);
+        $body->expects(static::never())->method('read');
+        $body->expects(static::never())->method('rewind');
+        $body->expects(static::never())->method('__toString');
+
+        (new SapiEmitter())->emit(new Response($status, body: $body));
+    }
+
+    /**
+     * @return iterable<string,array{int}>
+     */
+    public static function provideStatusesForbiddingABody(): iterable
+    {
+        yield '100 Continue' => [100];
+        yield '199 unassigned informational' => [199];
+        yield '204 No Content' => [204];
+        yield '304 Not Modified' => [304];
+    }
+
+    #[Test]
+    #[DataProvider('provideHeadMethodCasings')]
+    public function emitNeverTouchesTheBodyWhenAnsweringAHeadRequest(string $method): void
+    {
+        $body = $this->createMock(IStream::class);
+        $body->expects(static::never())->method('read');
+
+        $request = new Request($method, 'https://example.com/');
+
+        (new SapiEmitter())->emit(new Response(200, body: $body), $request);
+    }
+
+    /**
+     * @return iterable<string,array{string}>
+     */
+    public static function provideHeadMethodCasings(): iterable
+    {
+        yield 'uppercase' => ['HEAD'];
+        yield 'lowercase' => ['head'];
+        yield 'mixed case' => ['Head'];
+    }
+
+    #[Test]
+    public function emitStillSendsTheHeadersOfASuppressedBody(): void
+    {
+        $response = (new Response(304))->withHeader('ETag', '"v1"');
+
+        (new SapiEmitter())->emit($response);
+
+        static::assertSame([
+            ['HTTP/1.1 304 Not Modified', true, 304],
+            ['ETag: "v1"', true, 0],
+        ], SapiSpy::recorded());
     }
 }

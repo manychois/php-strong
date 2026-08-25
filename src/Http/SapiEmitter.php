@@ -52,6 +52,9 @@ final class SapiEmitter implements IResponseEmitter
         $this->assertHeadersNotSent();
         $this->emitStatusLine($response);
         $this->emitHeaders($response);
+        if (!$this->hasBody($response, $request)) {
+            return;
+        }
     }
 
     #endregion implements IResponseEmitter
@@ -116,5 +119,27 @@ final class SapiEmitter implements IResponseEmitter
             true,
             $code,
         );
+    }
+
+    /**
+     * Checks whether HTTP allows this response to carry a body.
+     *
+     * RFC 9110 forbids a body on any 1xx, on 204, on 304, and on any response to a `HEAD` request. A body on a 304
+     * desynchronises the connection for the next request on it, so the failure surfaces as a corrupted *later*
+     * response — which is why this is not left to the caller.
+     *
+     * @param IResponse $response The response about to be sent.
+     * @param ?IRequest $request The request being answered, or null when it is known not to be a `HEAD` request.
+     *
+     * @return bool True if the body may be sent; false if it must be suppressed.
+     */
+    private function hasBody(IResponse $response, ?IRequest $request): bool
+    {
+        $code = $response->getStatusCode();
+        if ($code === 204 || $code === 304 || ($code >= 100 && $code < 200)) {
+            return false;
+        }
+
+        return $request === null || strtoupper($request->getMethod()) !== 'HEAD';
     }
 }
