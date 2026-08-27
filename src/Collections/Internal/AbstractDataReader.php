@@ -72,9 +72,12 @@ abstract class AbstractDataReader implements IDataReader
      * whitespace.
      */
     #[Override]
-    public function asBool(string $key): bool
+    public function asBool(string $key, bool $default = false): bool
     {
         $value = $this->nullGet($key);
+        if ($value === null) {
+            return $default;
+        }
         $converted = $this->convertToBool($value);
         if ($converted === null) {
             throw $this->typeError($key, 'convertible to a boolean', $value);
@@ -91,9 +94,12 @@ abstract class AbstractDataReader implements IDataReader
      * keeps its own time zone, and an immutable one is returned unchanged.
      */
     #[Override]
-    public function asDateTime(string $key): DateTimeImmutable
+    public function asDateTime(string $key, ?DateTimeImmutable $default = null): DateTimeImmutable
     {
         $value = $this->nullGet($key);
+        if ($value === null && $default !== null) {
+            return $default;
+        }
         if ($value instanceof DateTimeImmutable) {
             return $value;
         }
@@ -122,9 +128,12 @@ abstract class AbstractDataReader implements IDataReader
      * Integers, booleans and numeric strings are converted; booleans become `1.0` and `0.0`.
      */
     #[Override]
-    public function asFloat(string $key): float
+    public function asFloat(string $key, float $default = 0.0): float
     {
         $value = $this->nullGet($key);
+        if ($value === null) {
+            return $default;
+        }
         $converted = $this->convertToFloat($value);
         if ($converted === null) {
             throw $this->typeError($key, 'convertible to a float', $value);
@@ -140,9 +149,12 @@ abstract class AbstractDataReader implements IDataReader
      * discarded, so `3.7` becomes `3` and `-3.7` becomes `-3`. A float outside the integer range is rejected.
      */
     #[Override]
-    public function asInt(string $key): int
+    public function asInt(string $key, int $default = 0): int
     {
         $value = $this->nullGet($key);
+        if ($value === null) {
+            return $default;
+        }
         $converted = $this->convertToInt($value);
         if ($converted === null) {
             throw $this->typeError($key, 'convertible to an integer', $value);
@@ -154,18 +166,18 @@ abstract class AbstractDataReader implements IDataReader
     /**
      * @inheritDoc
      *
-     * The output resembles JSON: a boolean becomes `'true'` or `'false'`, and `null` becomes the empty string.
+     * The output resembles JSON: a boolean becomes `'true'` or `'false'`, and `null` becomes the default.
      * Integers, floats and stringable objects are converted as PHP renders them.
      */
     #[Override]
-    public function asString(string $key): string
+    public function asString(string $key, string $default = ''): string
     {
         $value = $this->nullGet($key);
         if (is_string($value)) {
             return $value;
         }
         if ($value === null) {
-            return '';
+            return $default;
         }
         if (is_bool($value)) {
             return $value ? 'true' : 'false';
@@ -185,7 +197,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function asTrimmedString(string $key, string $default = ''): string
     {
-        $value = trim($this->asString($key));
+        $value = trim($this->asString($key, $default));
 
         return $value === '' ? $default : $value;
     }

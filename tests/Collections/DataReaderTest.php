@@ -349,6 +349,9 @@ final class DataReaderTest extends TestCase
     public function asStringReadsAMissingKeyAsNull(): void
     {
         static::assertSame('', (new DataReader([]))->asString('a'));
+        static::assertSame('d', (new DataReader([]))->asString('a', 'd'));
+        static::assertSame('d', (new DataReader(['a' => null]))->asString('a', 'd'));
+        static::assertSame('', (new DataReader(['a' => '']))->asString('a', 'd'));
         static::assertSame('', (new DataReader(['a' => ['b' => 1]]))->asString('a.c'));
     }
 
@@ -383,12 +386,37 @@ final class DataReaderTest extends TestCase
     }
 
     #[Test]
+    public function asVariantsReturnTheDefaultWhenTheValueIsNull(): void
+    {
+        $reader = new DataReader(['a' => null]);
+        $date = new DateTimeImmutable('2024-01-01');
+
+        static::assertFalse($reader->asBool('a'));
+        static::assertTrue($reader->asBool('a', true));
+        static::assertTrue($reader->asBool('missing', true));
+        static::assertSame(0, $reader->asInt('a'));
+        static::assertSame(7, $reader->asInt('a', 7));
+        static::assertSame(0.0, $reader->asFloat('a'));
+        static::assertSame(1.5, $reader->asFloat('missing', 1.5));
+        static::assertSame($date, $reader->asDateTime('a', $date));
+        static::assertSame($date, $reader->asDateTime('missing', $date));
+    }
+
+    #[Test]
+    public function asDateTimeThrowsWhenTheValueIsNullAndNoDefaultIsGiven(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        (new DataReader(['a' => null]))->asDateTime('a');
+    }
+
+    #[Test]
     public function asVariantsThrowInvalidArgumentWhenTheKeyIsMissingAndNullIsNotConvertible(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Value of key "a" is expected to be convertible to an integer, null given.');
+        $this->expectExceptionMessage('Value of key "a" is expected to be convertible to a date and time, null given.');
 
-        (new DataReader([]))->asInt('a');
+        (new DataReader([]))->asDateTime('a');
     }
 
     #[Test]

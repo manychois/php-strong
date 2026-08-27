@@ -29,7 +29,7 @@ Every value accessor exists in up to three variants, which differ only in how st
 | Variant | Example | Behaviour |
 | ------- | ------- | --------- |
 | bare | `string('a')` | Strict. The value must already be a string, or `InvalidArgumentException` is thrown. |
-| `as` | `asString('a')` | Converts, when a sensible conversion exists. An absent key is read as `null`. Throws when no conversion exists. |
+| `as` | `asString('a')` | Converts, when a sensible conversion exists. An absent key is read as `null`, and a `null` value yields the optional default. Throws when no conversion exists. |
 | `null` | `nullString('a')` | Strict, but returns `null` instead of throwing when the key is absent, the value is `null`, or the value has another type. |
 
 Only the bare variants throw `OutOfBoundsException` for an absent key. The `as` variants read a missing key as `null`
@@ -82,7 +82,7 @@ differently; the interface leaves the rules open.
 | `asBool` | Whatever `filter_var()` with `FILTER_VALIDATE_BOOL` accepts: `1`, `true`, `on`, `yes` and their negatives, in any letter case, ignoring surrounding whitespace. The empty string is `false`. |
 | `asInt` | Booleans, floats and numeric strings. A fractional part is discarded, so `3.7` becomes `3` and `-3.7` becomes `-3`. A float outside the integer range, or a non-finite one, is rejected. |
 | `asFloat` | Integers, booleans and numeric strings. |
-| `asString` | Output resembling JSON: a boolean becomes `'true'` or `'false'`, and `null` becomes the empty string. Integers, floats and stringable objects are converted as PHP renders them. |
+| `asString` | Output resembling JSON: a boolean becomes `'true'` or `'false'`, and `null` (or an absent key) becomes the default, `''` unless given. Integers, floats and stringable objects are converted as PHP renders them. |
 | `asTrimmedString` | Converts as `asString` does, trims the result, and returns the given default (`''` by default) when nothing is left. Handy for form input. |
 | `asDateTime` | A string parsed with the standard date and time formats, or an integer read as a Unix timestamp. |
 
@@ -106,12 +106,17 @@ because converting it would be a conversion, and the strict variants do not conv
 | `entries()` | `array<string,mixed>` | The array itself, or the public properties of the object. |
 | `keys()` | `list<string>` | Top-level keys, in source order. |
 | `count()` | `int` | `DataReaderInterface` extends `Countable`. |
-| `string` / `asString` / `nullString` | `string` | |
+| `string` / `nullString` | `string` | |
+| `asString(string $key, string $default = '')` | `string` | Converted, defaulted when `null`. |
+| `asBool(string $key, bool $default = false)` | `bool` | Converted, defaulted when `null`. |
+| `asInt(string $key, int $default = 0)` | `int` | Converted, defaulted when `null`. |
+| `asFloat(string $key, float $default = 0.0)` | `float` | Converted, defaulted when `null`. |
+| `asDateTime(string $key, ?DateTimeImmutable $default = null)` | `DateTimeImmutable` | Converted, defaulted when `null`; without a default a `null` value throws. |
 | `asTrimmedString(string $key, string $default = '')` | `string` | Converted, trimmed, defaulted when empty. |
-| `int` / `asInt` / `nullInt` | `int` | |
-| `float` / `asFloat` / `nullFloat` | `float` | The strict variants accept an integer and widen it. |
-| `bool` / `asBool` / `nullBool` | `bool` | |
-| `dateTime` / `asDateTime` / `nullDateTime` | `DateTimeImmutable` | |
+| `int` / `nullInt` | `int` | |
+| `float` / `nullFloat` | `float` | The strict variants accept an integer and widen it. |
+| `bool` / `nullBool` | `bool` | |
+| `dateTime` / `nullDateTime` | `DateTimeImmutable` | |
 | `array` / `nullArray` | `array` | Any shape; the value must already be an array. |
 | `reader` / `nullReader` | `DataReaderInterface` | Wraps a nested array or object in another reader. |
 | `object(string $key, string $className)` / `nullObject` | `TObject` | Generic over `class-string<TObject>`. |
