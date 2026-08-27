@@ -28,8 +28,11 @@ $container->has('uuid');      // true; never invokes the factory
 | `autowire(string $id, bool $shared = true): static` | Instantiates the class named `$id` by reflection under that id; cached like `singleton()` unless `$shared` is `false`. See [Autowiring](#autowiring). |
 | `build(): Container` | Snapshots the definitions; later registrations do not affect the built container. |
 
-`new ContainerBuilder(?ContainerInterface $parent = null)` — identifiers not registered on the builder are delegated
-to `$parent` (any PSR-11 container). See [Long-running processes](#long-running-processes).
+`new ContainerBuilder(?ContainerInterface $parent = null, bool $autowire = false)` — identifiers not registered on
+the builder are delegated to `$parent` (any PSR-11 container); see [Long-running processes](#long-running-processes).
+With `$autowire` set to `true`, an identifier that is neither registered nor known to the parent but names an
+instantiable class is built by reflection on every `get()` (never cached, `aware()` configurers applied) and `has()`
+reports it as available; see [Autowiring](#autowiring).
 
 To register an already-built value, wrap it: `->singleton('config', static fn (): array => $config)`.
 
@@ -43,16 +46,16 @@ To bind an interface to a class, `autowire(Impl::class)` then `alias(Interface::
 
 | Method | Notes |
 | ------ | ----- |
-| `get(string $id): mixed` | Resolves the service from this container's definitions, else from the parent. |
+| `get(string $id): mixed` | Resolves the service from this container's definitions, else from the parent, else — when the builder was created with `$autowire = true` — by autowiring an instantiable class. |
 | `getInstance(string $class): object` | `get($class)` with an `instanceof $class` check; returns the precise type for static analysis (`@return T` for `class-string<T>`). Throws `ContainerException` on mismatch. |
 | `make(string $class): object` | Autowires a new instance of any instantiable class against the container, registered or not; never cached. Throws `ContainerException` if the class cannot be built. |
-| `has(string $id): bool` | Whether the identifier is registered here or in the parent; does not resolve anything. |
+| `has(string $id): bool` | Whether the identifier is registered here or in the parent (or, with `$autowire = true`, names an instantiable class); does not resolve anything. |
 
 `get()` throws:
 
 | Exception | When |
 | --------- | ---- |
-| `NotFoundException` (`NotFoundExceptionInterface`) | The identifier is not registered — also when thrown by a nested `get()` inside a factory. |
+| `NotFoundException` (`NotFoundExceptionInterface`) | The identifier is not registered and cannot be autowired — also when thrown by a nested `get()` inside a factory. |
 | `ContainerException` (`ContainerExceptionInterface`) | A circular dependency is detected (`Circular dependency detected: a -> b -> a.`), or a factory throws; the original exception is available via `getPrevious()`. |
 
 `NotFoundException extends ContainerException`, so a single `catch (ContainerException)` covers both. A failed
@@ -75,6 +78,9 @@ then instantiates it lazily on first `get()`. Each constructor parameter is reso
 Scalars, union/intersection types and untyped parameters therefore need a default value or must be wired through a
 closure instead. Variadic parameters receive no arguments. Cycles among unregistered classes are reported as
 `Circular dependency detected: A -> B -> A.`; cycles through registered identifiers are caught by `get()`.
+
+`new ContainerBuilder(autowire: true)` extends rule 3 to `get()` itself: any unregistered instantiable class can be
+requested directly, and is built afresh on each call. Register it with `autowire()` if it should be shared.
 
 ## Aware configurers
 

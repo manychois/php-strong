@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Manychois\PhpStrong\DependencyInjection;
 
 use Closure;
+use InvalidArgumentException;
 use Manychois\PhpStrong\DependencyInjection\Internal\Autowirer;
 use Manychois\PhpStrong\DependencyInjection\Internal\Definition;
 use Override;
@@ -19,9 +20,11 @@ use Throwable;
 class Container implements IContainer
 {
     /**
+     * Registered definitions, plus those synthesized for autowired classes on first lookup.
+     *
      * @var array<string, Definition>
      */
-    private readonly array $definitions;
+    private array $definitions;
 
     private readonly ?IContainer $parent;
 
@@ -33,6 +36,8 @@ class Container implements IContainer
      * @phpstan-var list<array{class-string, Closure(object, IContainer):void}>
      */
     private readonly array $awares;
+
+    private readonly bool $autowire;
 
     /**
      * @var array<string, mixed>
@@ -50,17 +55,23 @@ class Container implements IContainer
      * @param array<string, Definition> $definitions Service definitions keyed by identifier.
      * @param ?IContainer $parent Container consulted for identifiers not in `$definitions`.
      * @param list<array{string, Closure}> $awares Type-based configurers applied to produced objects.
+     * @param bool $autowire Whether unregistered instantiable classes are built by reflection on `get()`.
      *
      * @internal Use `ContainerBuilder::build()`.
      *
      * @phpstan-param list<array{class-string, Closure(object, IContainer):void}> $awares
      */
-    public function __construct(array $definitions, ?IContainer $parent = null, array $awares = [])
-    {
+    public function __construct(
+        array $definitions,
+        ?IContainer $parent = null,
+        array $awares = [],
+        bool $autowire = false,
+    ) {
         $this->definitions = $definitions;
         $this->parent = $parent;
         $this->autowirer = new Autowirer();
         $this->awares = $awares;
+        $this->autowire = $autowire;
     }
 
     /**
@@ -109,15 +120,13 @@ class Container implements IContainer
     {
         try {
             Autowirer::assertInstantiable($class);
-            $value = $this->autowirer->instantiate($class, $this);
+
+            return $this->autowirer->instantiate($class, $this);
         } catch (ContainerException $e) {
             throw $e;
         } catch (Throwable $e) {
             throw new ContainerException(sprintf('Failed to make "%s": %s', $class, $e->getMessage()), 0, $e);
         }
-        assert($value instanceof $class);
-
-        return $value;
     }
 
     #region implements IContainer
@@ -125,7 +134,7 @@ class Container implements IContainer
     /**
      * @inheritDoc
      *
-     * @throws NotFoundException if the identifier is not registered.
+     * @throws NotFoundException if the identifier is not registered and cannot be autowired.
      * @throws ContainerException if a circular dependency is detected or the factory throws.
      */
     #[Override]
@@ -139,8 +148,8 @@ class Container implements IContainer
             if ($this->parent?->has($id) === true) {
                 return $this->parent->get($id);
             }
-
-            throw new NotFoundException(sprintf('Service "%s" is not registered.', $id));
+            $definition = $this->autowiredDefinition($id)
+                ?? throw new NotFoundException(sprintf('Service "%s" is not registered.', $id));
         }
         if (in_array($id, $this->resolving, true)) {
             throw new ContainerException(
@@ -185,8 +194,28 @@ class Container implements IContainer
     #[Override]
     public function has(string $id): bool
     {
-        return array_key_exists($id, $this->definitions) || $this->parent?->has($id) === true;
+        return array_key_exists($id, $this->definitions)
+            || $this->parent?->has($id) === true
+            || $this->autowiredDefinition($id) !== null;
     }
 
     #endregion implements IContainer
+
+    /**
+     * Returns a transient definition for an unregistered instantiable class when autowiring is enabled, caching it
+     * so later lookups skip reflection.
+     */
+    private function autowiredDefinition(string $id): ?Definition
+    {
+        if (!$this->autowire || !class_exists($id)) {
+            return null;
+        }
+        try {
+            Autowirer::assertInstantiable($id);
+        } catch (InvalidArgumentException) {
+            return null;
+        }
+
+        return $this->definitions[$id] = new Definition($id, false);
+    }
 }

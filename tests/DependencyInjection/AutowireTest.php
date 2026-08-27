@@ -247,4 +247,75 @@ final class AutowireTest extends TestCase
         $this->expectExceptionMessage('Service "' . Leaf::class . '" is already registered.');
         (new ContainerBuilder())->autowire(Leaf::class)->autowire(Leaf::class);
     }
+
+    #[Test]
+    public function autowireFlag_getBuildsUnregisteredClassTransiently(): void
+    {
+        $container = (new ContainerBuilder(autowire: true))->autowire(Leaf::class)->build();
+
+        self::assertTrue($container->has(Greeter::class));
+        $a = $container->get(Greeter::class);
+        $b = $container->get(Greeter::class);
+        self::assertInstanceOf(Greeter::class, $a);
+        self::assertNotSame($a, $b);
+        self::assertSame($container->get(Leaf::class), $a->leaf);
+    }
+
+    #[Test]
+    public function autowireFlag_appliesAwareConfigurers(): void
+    {
+        $seen = [];
+        $container = (new ContainerBuilder(autowire: true))
+            ->aware(GreeterInterface::class, static function (GreeterInterface $g) use (&$seen): void {
+                $seen[] = $g;
+            })
+            ->build();
+
+        $obj = $container->get(Greeter::class);
+        self::assertSame([$obj], $seen);
+    }
+
+    #[Test]
+    public function autowireFlag_registeredAndParentDefinitionsTakePrecedence(): void
+    {
+        $parent = (new ContainerBuilder())->autowire(Leaf::class)->build();
+        $container = (new ContainerBuilder($parent, true))->autowire(NoConstructor::class)->build();
+
+        self::assertSame($container->get(Leaf::class), $parent->get(Leaf::class));
+        self::assertSame($container->get(NoConstructor::class), $container->get(NoConstructor::class));
+    }
+
+    #[Test]
+    public function autowireFlag_nonInstantiableIdentifiersStillNotFound(): void
+    {
+        $container = (new ContainerBuilder(autowire: true))->build();
+
+        self::assertFalse($container->has('not-a-class'));
+        self::assertFalse($container->has(GreeterInterface::class));
+        self::assertFalse($container->has(AbstractThing::class));
+        self::assertFalse($container->has(PrivateConstructor::class));
+
+        $this->expectException(NotFoundException::class);
+        $container->get(GreeterInterface::class);
+    }
+
+    #[Test]
+    public function autowireFlag_unresolvableDependencyThrowsContainerException(): void
+    {
+        $container = (new ContainerBuilder(autowire: true))->build();
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage('Cannot autowire parameter $count');
+        $container->get(NeedsScalar::class);
+    }
+
+    #[Test]
+    public function autowireFlag_defaultOffKeepsNotFound(): void
+    {
+        $container = (new ContainerBuilder())->build();
+
+        self::assertFalse($container->has(NoConstructor::class));
+        $this->expectException(NotFoundException::class);
+        $container->get(NoConstructor::class);
+    }
 }
