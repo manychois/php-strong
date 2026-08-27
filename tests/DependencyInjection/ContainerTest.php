@@ -7,6 +7,10 @@ namespace Manychois\PhpStrongTests\DependencyInjection;
 use Manychois\PhpStrong\DependencyInjection\ContainerBuilder;
 use Manychois\PhpStrong\DependencyInjection\ContainerException;
 use Manychois\PhpStrong\DependencyInjection\NotFoundException;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\AbstractThing;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\Leaf;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NeedsScalar;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NoConstructor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerExceptionInterface as IContainerException;
@@ -14,6 +18,8 @@ use Psr\Container\ContainerInterface as IContainer;
 use Psr\Container\NotFoundExceptionInterface as INotFoundException;
 use RuntimeException;
 use stdClass;
+
+require_once __DIR__ . '/Fixtures/Autowire.php';
 
 final class ContainerTest extends TestCase
 {
@@ -243,6 +249,37 @@ final class ContainerTest extends TestCase
 
         $this->expectException(NotFoundException::class);
         $container->getInstance(stdClass::class);
+    }
+
+    #[Test]
+    public function make_buildsUnregisteredClassUsingRegisteredServices(): void
+    {
+        $container = (new ContainerBuilder())->autowire(NoConstructor::class)->build();
+
+        $leaf = $container->make(Leaf::class);
+
+        self::assertSame($container->get(NoConstructor::class), $leaf->dep);
+        self::assertNotSame($leaf, $container->make(Leaf::class));
+        self::assertFalse($container->has(Leaf::class));
+    }
+
+    #[Test]
+    public function make_throwsForNonInstantiableClass(): void
+    {
+        $container = (new ContainerBuilder())->build();
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage('Failed to make "' . AbstractThing::class . '": Class "');
+        $container->make(AbstractThing::class);
+    }
+
+    #[Test]
+    public function make_throwsForUnresolvableDependency(): void
+    {
+        $container = (new ContainerBuilder())->build();
+
+        $this->expectException(ContainerException::class);
+        $container->make(NeedsScalar::class);
     }
 
     #[Test]

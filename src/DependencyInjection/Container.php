@@ -89,6 +89,37 @@ class Container implements IContainer
         return $value;
     }
 
+    /**
+     * Creates a new instance of `$class` by autowiring its constructor against this container, whether or not the
+     * class is registered. The instance is never cached; registered services it depends on are resolved as usual.
+     *
+     * @template T of object
+     *
+     * @param string $class Fully qualified, instantiable class name.
+     *
+     * @return object The new instance.
+     *
+     * @throws ContainerException if the class does not exist, is not instantiable, or a dependency cannot be resolved.
+     *
+     * @phpstan-param class-string<T> $class
+     *
+     * @phpstan-return T
+     */
+    public function make(string $class): object
+    {
+        try {
+            Autowirer::assertInstantiable($class);
+            $value = $this->autowirer->instantiate($class, $this);
+        } catch (ContainerException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            throw new ContainerException(sprintf('Failed to make "%s": %s', $class, $e->getMessage()), 0, $e);
+        }
+        assert($value instanceof $class);
+
+        return $value;
+    }
+
     #region implements IContainer
 
     /**
