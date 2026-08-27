@@ -45,11 +45,10 @@ interface DataReaderInterface extends Countable
      *
      * Which representations are recognised is up to the implementation.
      *
-     * @param string $key The key to read, in dot notation for a nested value.
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
      *
      * @return bool The converted value.
      *
-     * @throws OutOfBoundsException if the key is absent.
      * @throws InvalidArgumentException if the value is not a recognised boolean representation.
      */
     public function asBool(string $key): bool;
@@ -59,11 +58,10 @@ interface DataReaderInterface extends Countable
      *
      * Which representations are recognised is up to the implementation.
      *
-     * @param string $key The key to read, in dot notation for a nested value.
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
      *
      * @return DateTimeImmutable The converted value.
      *
-     * @throws OutOfBoundsException if the key is absent.
      * @throws InvalidArgumentException if the value is not convertible to a date and time.
      */
     public function asDateTime(string $key): DateTimeImmutable;
@@ -73,11 +71,10 @@ interface DataReaderInterface extends Countable
      *
      * Which representations are recognised is up to the implementation.
      *
-     * @param string $key The key to read, in dot notation for a nested value.
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
      *
      * @return float The converted value.
      *
-     * @throws OutOfBoundsException if the key is absent.
      * @throws InvalidArgumentException if the value is not convertible to a float.
      */
     public function asFloat(string $key): float;
@@ -87,11 +84,10 @@ interface DataReaderInterface extends Countable
      *
      * Which representations are recognised is up to the implementation.
      *
-     * @param string $key The key to read, in dot notation for a nested value.
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
      *
      * @return int The converted value.
      *
-     * @throws OutOfBoundsException if the key is absent.
      * @throws InvalidArgumentException if the value is not convertible to an integer.
      */
     public function asInt(string $key): int;
@@ -101,14 +97,28 @@ interface DataReaderInterface extends Countable
      *
      * Which representations are recognised is up to the implementation.
      *
-     * @param string $key The key to read, in dot notation for a nested value.
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
      *
      * @return string The converted value.
      *
-     * @throws OutOfBoundsException if the key is absent.
      * @throws InvalidArgumentException if the value has no sensible string representation.
      */
     public function asString(string $key): string;
+
+    /**
+     * Converts the value stored under a key to a string and trims it, falling back to a default when the result is
+     * empty.
+     *
+     * Which representations are recognised is up to the implementation.
+     *
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
+     * @param string $default The value to return when the trimmed string is empty.
+     *
+     * @return string The trimmed value, or the default.
+     *
+     * @throws InvalidArgumentException if the value has no sensible string representation.
+     */
+    public function asTrimmedString(string $key, string $default = ''): string;
 
     /**
      * Returns the boolean value stored under a key.
@@ -218,6 +228,15 @@ interface DataReaderInterface extends Countable
      * @throws InvalidArgumentException if the value is not an integer.
      */
     public function int(string $key): int;
+
+    /**
+     * Returns the value stored under a key, or `null` when the key is absent.
+     *
+     * @param string $key The key to read, in dot notation for a nested value.
+     *
+     * @return mixed The value, or `null` if the key is absent.
+     */
+    public function nullGet(string $key): mixed;
 
     /**
      * Returns all keys, in the order they appear in the source, i.e. the array keys or the public property names.

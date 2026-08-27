@@ -74,7 +74,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function asBool(string $key): bool
     {
-        $value = $this->get($key);
+        $value = $this->nullGet($key);
         $converted = $this->convertToBool($value);
         if ($converted === null) {
             throw $this->typeError($key, 'convertible to a boolean', $value);
@@ -93,7 +93,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function asDateTime(string $key): DateTimeImmutable
     {
-        $value = $this->get($key);
+        $value = $this->nullGet($key);
         if ($value instanceof DateTimeImmutable) {
             return $value;
         }
@@ -124,7 +124,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function asFloat(string $key): float
     {
-        $value = $this->get($key);
+        $value = $this->nullGet($key);
         $converted = $this->convertToFloat($value);
         if ($converted === null) {
             throw $this->typeError($key, 'convertible to a float', $value);
@@ -142,7 +142,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function asInt(string $key): int
     {
-        $value = $this->get($key);
+        $value = $this->nullGet($key);
         $converted = $this->convertToInt($value);
         if ($converted === null) {
             throw $this->typeError($key, 'convertible to an integer', $value);
@@ -160,7 +160,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function asString(string $key): string
     {
-        $value = $this->get($key);
+        $value = $this->nullGet($key);
         if (is_string($value)) {
             return $value;
         }
@@ -175,6 +175,19 @@ abstract class AbstractDataReader implements IDataReader
         }
 
         throw $this->typeError($key, 'convertible to a string', $value);
+    }
+
+    /**
+     * @inheritDoc
+     *
+     * The value is converted as `asString()` does before it is trimmed.
+     */
+    #[Override]
+    public function asTrimmedString(string $key, string $default = ''): string
+    {
+        $value = trim($this->asString($key));
+
+        return $value === '' ? $default : $value;
     }
 
     /**
@@ -251,7 +264,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function falsy(string $key): bool
     {
-        $value = $this->getOrNull($key);
+        $value = $this->nullGet($key);
 
         return $value === null
             || $value === false
@@ -326,6 +339,17 @@ abstract class AbstractDataReader implements IDataReader
      * @inheritDoc
      */
     #[Override]
+    public function nullGet(string $key): mixed
+    {
+        $found = false;
+
+        return $this->locate($key, $found);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    #[Override]
     public function keys(): array
     {
         return array_keys($this->entries());
@@ -337,7 +361,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function nullArray(string $key): ?array
     {
-        $value = $this->getOrNull($key);
+        $value = $this->nullGet($key);
 
         return is_array($value) ? $value : null;
     }
@@ -348,7 +372,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function nullBool(string $key): ?bool
     {
-        $value = $this->getOrNull($key);
+        $value = $this->nullGet($key);
 
         return is_bool($value) ? $value : null;
     }
@@ -359,7 +383,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function nullDateTime(string $key): ?DateTimeImmutable
     {
-        $value = $this->getOrNull($key);
+        $value = $this->nullGet($key);
 
         return $value instanceof DateTimeImmutable ? $value : null;
     }
@@ -370,7 +394,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function nullEnum(string $key, string $enumClass): ?object
     {
-        $value = $this->getOrNull($key);
+        $value = $this->nullGet($key);
 
         return $value instanceof $enumClass ? $value : null;
     }
@@ -383,7 +407,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function nullFloat(string $key): ?float
     {
-        $value = $this->getOrNull($key);
+        $value = $this->nullGet($key);
         if (is_int($value)) {
             return (float) $value;
         }
@@ -397,7 +421,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function nullInt(string $key): ?int
     {
-        $value = $this->getOrNull($key);
+        $value = $this->nullGet($key);
 
         return is_int($value) ? $value : null;
     }
@@ -408,7 +432,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function nullObject(string $key, string $className): ?object
     {
-        $value = $this->getOrNull($key);
+        $value = $this->nullGet($key);
 
         return $value instanceof $className ? $value : null;
     }
@@ -419,7 +443,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function nullReader(string $key): ?IDataReader
     {
-        $value = $this->getOrNull($key);
+        $value = $this->nullGet($key);
         if (is_object($value)) {
             return $this->createReader($value);
         }
@@ -441,7 +465,7 @@ abstract class AbstractDataReader implements IDataReader
     #[Override]
     public function nullString(string $key): ?string
     {
-        $value = $this->getOrNull($key);
+        $value = $this->nullGet($key);
 
         return is_string($value) ? $value : null;
     }
@@ -594,20 +618,6 @@ abstract class AbstractDataReader implements IDataReader
         }
 
         return null;
-    }
-
-    /**
-     * Returns the value stored under a key, or `null` when the key is absent.
-     *
-     * @param string $key The key, in dot notation for a nested value.
-     *
-     * @return mixed The value, or `null` if the key is absent.
-     */
-    private function getOrNull(string $key): mixed
-    {
-        $found = false;
-
-        return $this->locate($key, $found);
     }
 
     /**

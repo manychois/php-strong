@@ -191,6 +191,16 @@ final class DataReaderTest extends TestCase
     }
 
     #[Test]
+    public function nullGetReturnsTheValueOrNullWhenTheKeyIsMissing(): void
+    {
+        $reader = new DataReader(['a' => ['b' => 'x']]);
+
+        static::assertSame('x', $reader->nullGet('a.b'));
+        static::assertNull($reader->nullGet('a.c'));
+        static::assertNull($reader->nullGet('z'));
+    }
+
+    #[Test]
     public function nullVariantsFollowDotNotation(): void
     {
         $reader = new DataReader(['a' => ['b' => 'x']]);
@@ -333,6 +343,52 @@ final class DataReaderTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         (new DataReader(['a' => []]))->asInt('a');
+    }
+
+    #[Test]
+    public function asStringReadsAMissingKeyAsNull(): void
+    {
+        static::assertSame('', (new DataReader([]))->asString('a'));
+        static::assertSame('', (new DataReader(['a' => ['b' => 1]]))->asString('a.c'));
+    }
+
+    #[Test]
+    public function asTrimmedStringTrimsTheConvertedValue(): void
+    {
+        $reader = new DataReader(['a' => "  x y \n", 'b' => 12, 'c' => true]);
+
+        static::assertSame('x y', $reader->asTrimmedString('a'));
+        static::assertSame('12', $reader->asTrimmedString('b'));
+        static::assertSame('true', $reader->asTrimmedString('c'));
+    }
+
+    #[Test]
+    public function asTrimmedStringReturnsTheDefaultWhenTheResultIsEmpty(): void
+    {
+        $reader = new DataReader(['a' => "  \t", 'b' => null, 'c' => '']);
+
+        static::assertSame('', $reader->asTrimmedString('a'));
+        static::assertSame('d', $reader->asTrimmedString('a', 'd'));
+        static::assertSame('d', $reader->asTrimmedString('b', 'd'));
+        static::assertSame('d', $reader->asTrimmedString('c', 'd'));
+        static::assertSame('d', $reader->asTrimmedString('missing', 'd'));
+    }
+
+    #[Test]
+    public function asTrimmedStringThrowsWhenTheValueIsNotConvertible(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        (new DataReader(['a' => []]))->asTrimmedString('a', 'd');
+    }
+
+    #[Test]
+    public function asVariantsThrowInvalidArgumentWhenTheKeyIsMissingAndNullIsNotConvertible(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Value of key "a" is expected to be convertible to an integer, null given.');
+
+        (new DataReader([]))->asInt('a');
     }
 
     #[Test]
