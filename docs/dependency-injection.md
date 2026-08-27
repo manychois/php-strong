@@ -51,6 +51,10 @@ To bind an interface to a class, `autowire(Impl::class)` then `alias(Interface::
 | `make(string $class): object` | Autowires a new instance of any instantiable class against the container, registered or not; never cached. Throws `ContainerException` if the class cannot be built. |
 | `has(string $id): bool` | Whether the identifier is registered here or in the parent (or, with `$autowire = true`, names an instantiable class); does not resolve anything. |
 
+`ContainerInterface::class` and `Container::class` always resolve to the container itself without being registered,
+so autowired constructors may type-hint `ContainerInterface`. A child container returns itself, not its parent. An
+explicit registration under either identifier takes precedence.
+
 `get()` throws:
 
 | Exception | When |

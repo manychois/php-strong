@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrongTests\DependencyInjection;
 
+use Manychois\PhpStrong\DependencyInjection\Container;
 use Manychois\PhpStrong\DependencyInjection\ContainerBuilder;
 use Manychois\PhpStrong\DependencyInjection\ContainerException;
 use Manychois\PhpStrong\DependencyInjection\NotFoundException;
@@ -294,5 +295,38 @@ final class ContainerTest extends TestCase
 
         self::assertTrue($container->has('a'));
         self::assertSame(0, $calls);
+    }
+    #[Test]
+    public function get_containerIdsResolveToItselfWithoutRegistration(): void
+    {
+        $container = (new ContainerBuilder())->build();
+
+        self::assertTrue($container->has(IContainer::class));
+        self::assertTrue($container->has(Container::class));
+        self::assertSame($container, $container->get(IContainer::class));
+        self::assertSame($container, $container->get(Container::class));
+        self::assertSame($container, $container->getInstance(IContainer::class));
+    }
+
+    #[Test]
+    public function get_childContainerResolvesContainerIdsToItselfNotParent(): void
+    {
+        $parent = (new ContainerBuilder())->build();
+        $child = (new ContainerBuilder($parent))->build();
+
+        self::assertSame($child, $child->get(IContainer::class));
+        self::assertSame($child, $child->get(Container::class));
+    }
+
+    #[Test]
+    public function get_explicitContainerRegistrationWinsOverSelf(): void
+    {
+        $other = (new ContainerBuilder())->build();
+        $container = (new ContainerBuilder())
+            ->singleton(IContainer::class, static fn (): IContainer => $other)
+            ->build();
+
+        self::assertSame($other, $container->get(IContainer::class));
+        self::assertSame($container, $container->get(Container::class));
     }
 }

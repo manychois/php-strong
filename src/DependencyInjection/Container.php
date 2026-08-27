@@ -16,6 +16,9 @@ use Throwable;
  * PSR-11 container that lazily resolves services from closures registered via `ContainerBuilder`.
  * Definitions cannot change after construction; shared services are cached on first resolution. Identifiers not
  * registered here are delegated to the parent container, if any.
+ *
+ * `Psr\Container\ContainerInterface` and `Container` always resolve to the container itself unless the builder
+ * registered them explicitly; in a parent chain each container returns itself, not its parent.
  */
 class Container implements IContainer
 {
@@ -145,6 +148,9 @@ class Container implements IContainer
         }
         $definition = $this->definitions[$id] ?? null;
         if ($definition === null) {
+            if ($this->isSelf($id)) {
+                return $this;
+            }
             if ($this->parent?->has($id) === true) {
                 return $this->parent->get($id);
             }
@@ -195,6 +201,7 @@ class Container implements IContainer
     public function has(string $id): bool
     {
         return array_key_exists($id, $this->definitions)
+            || $this->isSelf($id)
             || $this->parent?->has($id) === true
             || $this->autowiredDefinition($id) !== null;
     }
@@ -217,5 +224,10 @@ class Container implements IContainer
         }
 
         return $this->definitions[$id] = new Definition($id, false);
+    }
+
+    private function isSelf(string $id): bool
+    {
+        return $id === IContainer::class || $id === self::class;
     }
 }
