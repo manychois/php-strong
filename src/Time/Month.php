@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Time;
 
-use DateTimeInterface;
+use DateTimeInterface as IDateTime;
 
 /**
  * Months of the year, numbered as in the proleptic Gregorian calendar: January is 1 and December is 12.
@@ -29,11 +29,11 @@ enum Month: int
     /**
      * Resolves the month in which a date falls, in that date's own timezone.
      *
-     * @param DateTimeInterface $date The date to inspect.
+     * @param IDateTime $date The date to inspect.
      *
      * @return self The month.
      */
-    public static function fromDate(DateTimeInterface $date): self
+    public static function fromDate(IDateTime $date): self
     {
         return self::from((int) $date->format('n'));
     }

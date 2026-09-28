@@ -6,7 +6,7 @@ namespace Manychois\PhpStrong\Collections\Internal;
 
 use ArrayAccess;
 use DateTimeImmutable;
-use DateTimeInterface;
+use DateTimeInterface as IDateTime;
 use DateTimeZone;
 use Exception;
 use InvalidArgumentException;
@@ -103,7 +103,7 @@ abstract class AbstractDataReader implements IDataReader
         if ($value instanceof DateTimeImmutable) {
             return $value;
         }
-        if ($value instanceof DateTimeInterface) {
+        if ($value instanceof IDateTime) {
             return DateTimeImmutable::createFromInterface($value);
         }
 

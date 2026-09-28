@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Manychois\PhpStrongTests\Cache;
 
 use DateInterval;
-use DateTimeInterface;
+use DateTimeInterface as IDateTime;
 use Override;
 use Psr\Cache\CacheItemInterface as IForeignItem;
 
@@ -30,7 +30,7 @@ final class ForeignCacheItem implements IForeignItem
     }
 
     #[Override]
-    public function expiresAt(?DateTimeInterface $expiration): static
+    public function expiresAt(?IDateTime $expiration): static
     {
         return $this;
     }

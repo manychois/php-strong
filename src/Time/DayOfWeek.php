@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Time;
 
-use DateTimeInterface;
+use DateTimeInterface as IDateTime;
 
 /**
  * Days of the week, numbered as in ISO-8601: Monday is 1 and Sunday is 7.
@@ -24,11 +24,11 @@ enum DayOfWeek: int
     /**
      * Resolves the day of the week on which a date falls, in that date's own timezone.
      *
-     * @param DateTimeInterface $date The date to inspect.
+     * @param IDateTime $date The date to inspect.
      *
      * @return self The day of the week.
      */
-    public static function fromDate(DateTimeInterface $date): self
+    public static function fromDate(IDateTime $date): self
     {
         return self::from((int) $date->format('N'));
     }

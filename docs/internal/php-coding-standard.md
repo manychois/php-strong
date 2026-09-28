@@ -23,7 +23,7 @@ class Xxx implements IXxx { }
 |---------|-----------|---------|
 | Classes | PascalCase | `ReadonlyList` |
 | Interfaces | `XxxInterface` | `SequenceInterface` |
-| Interface alias | `IXxx` (only when the type is named `XxxInterface`) | `use SequenceInterface as ISequence;` |
+| Interface alias | `IXxx` (only when the type is named `XxxInterface`) | `use SequenceInterface as ISequence;`, `use DateTimeInterface as IDateTime;` |
 | Methods/Properties | camelCase | `firstOrNull`, `$source` |
 | Constants | UPPER_SNAKE_CASE | `MAX_SIZE` |
 | Regions | `#region implements IInterface` | |
@@ -31,7 +31,7 @@ class Xxx implements IXxx { }
 ## Import Rules
 
 - Remove unused imports (auto-fixed by phpcbf)
-- Use `as` aliases for interfaces with `Interface` suffix as a personal preference for shorter names
+- Use `as` aliases for interfaces with `Interface` suffix as a personal preference for shorter names; this includes PHP built-ins (e.g. `use DateTimeInterface as IDateTime;`)
 - For **global PHP constants** (e.g. `UPLOAD_ERR_*`, `PHP_*`), use a **leading backslash** (e.g. `\UPLOAD_ERR_OK`) instead of `use const`; this keeps them obviously in the global namespace and avoids extra import lines
 
 ## Class Code Structure Order
@@ -115,7 +115,7 @@ public function first(?callable $predicate = null): int { }
 - Use plain `int` in readable positions (params, returns, extends)
 - Use `@phpstan-` prefixed tags for PHPStan-specific precision types
 - Lowercase native types: `@return bool`
-- Prefer shorter `I*` alias for project interfaces named `XxxInterface`: `use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;`
+- Prefer shorter `I*` alias for any interface named `XxxInterface`, project or built-in: `use Manychois\PhpStrong\Collections\SequenceInterface as ISequence;`
 - Shorter nullable: `@param ?int $count`
 
 ## Intelephense Workarounds
