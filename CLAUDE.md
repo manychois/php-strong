@@ -1,14 +1,14 @@
 # php-strong
 
-PHP 8.5+ library providing solid, strongly-typed implementations of PHP-FIG PSR interfaces. Namespace `Manychois\PhpStrong`, PSR-4 autoload (`src/` → tests in `tests/`).
+PHP 8.5+ library providing solid, strongly-typed implementations of PHP-FIG PSR interfaces. Namespace `Manychois\PhpStrong`, PSR-4 autoload (`src/` → tests in `tests/`; end-to-end feature tests in `feature-tests/`, namespace `Manychois\PhpStrongFeatureTests`, run as the `feature` PHPUnit suite).
 
 ## Commands
 
 ```bash
 composer test                    # PHPUnit with coverage (XDEBUG_MODE=coverage)
-composer phpcs                   # Style check (phpcs.xml)
+composer phpcs                   # Style check (phpcs.xml; src/ only)
 composer phpcbf                  # Auto-fix style
-composer phpstan                 # Static analysis, max level
+composer phpstan                 # Static analysis, max level (src/ only)
 composer code                    # phpcbf + phpcs + phpstan
 
 ./vendor/bin/phpunit tests/Http/ResponseTest.php                # single file

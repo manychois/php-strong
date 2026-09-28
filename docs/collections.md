@@ -118,7 +118,7 @@ because converting it would be a conversion, and the strict variants do not conv
 | `bool` / `nullBool` | `bool` | |
 | `dateTime` / `nullDateTime` | `DateTimeImmutable` | |
 | `array` / `nullArray` | `array` | Any shape; the value must already be an array. |
-| `reader` / `nullReader` | `DataReaderInterface` | Wraps a nested array or object in another reader. |
+| `reader` / `nullReader` | `DataReaderInterface` | Wraps a nested array or object in another reader. A nested array with a non-string key is rejected like any other mismatch. |
 | `object(string $key, string $className)` / `nullObject` | `TObject` | Generic over `class-string<TObject>`. |
 | `enum(string $key, string $enumClass)` / `nullEnum` | `TEnum` | Generic over `class-string<TEnum of UnitEnum>`; the value must already be a case. |
 

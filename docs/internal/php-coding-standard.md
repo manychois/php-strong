@@ -1,11 +1,12 @@
 # PHP Coding Style Guide
 
-PHP 8.4+ coding conventions.
+PHP 8.5+ coding conventions.
 
 ## File Structure
 
 ```php
 <?php
+
 declare(strict_types=1);
 
 namespace Vendor\Project\Xxx;
@@ -241,7 +242,7 @@ protected function createReadonlyList(iterable $source): IReadonlyList
 
 ## Internal Namespace
 
-- Place internal/helper classes in `src/Internal/`
+- Place internal/helper classes in an `Internal/` subdirectory of their module (e.g. `src/Http/Internal/`)
 - Mark classes with `/** @internal */` docblock comment
 - Use `Internal` namespace only for code not meant for public API
 - Traits in Internal namespace are implementation details (not public API)
@@ -253,7 +254,7 @@ This project uses Composer scripts to enforce coding standards:
 | Command | Purpose |
 |---------|---------|
 | `composer test` | Run PHPUnit with code coverage |
-| `composer phpcs` | Check PSR-12 style compliance |
+| `composer phpcs` | Check PSR-12 plus the project sniffs in `phpcs.xml` (`src/` only) |
 | `composer phpcbf` | Auto-fix code style violations |
 | `composer phpstan` | Run static analysis at max level with phpstan-strict-rules |
 | `composer code` | Run full quality check (phpcbf + phpcs + phpstan) |
@@ -262,6 +263,6 @@ This project uses Composer scripts to enforce coding standards:
 
 Before completing any task, run:
 1. `composer phpcbf` - auto-fix style
-2. `composer phpcs` - verify PSR-12
+2. `composer phpcs` - verify PSR-12 plus project sniffs
 3. `composer phpstan` - type safety
 4. `composer test` - all tests pass

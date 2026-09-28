@@ -39,7 +39,11 @@ on. Read the value you are caching from your own variable, not back out of a fre
 | `save(CacheItemInterface $item): bool` | Writes the item immediately. An item that has already expired is not written: any existing file is deleted instead, and the result of that deletion is returned. Returns `false` when the value cannot be serialised or the file could not be written. |
 | `saveDeferred(CacheItemInterface $item): bool` | Queues the item for `commit()`. Always returns `true`. |
 
-Every method that takes a key throws `InvalidArgumentException` before doing any work when the key is invalid.
+Every method that takes a key throws `InvalidArgumentException` before doing any work when the key is invalid;
+`save()` and `saveDeferred()` check the key of the item they are given.
+
+`save()` and `saveDeferred()` also accept a `CacheItemInterface` that is not a `CacheItem`. PSR-6 gives no way to read
+such an item's expiry, so it is stored with no expiry, and its value is read through `get()`.
 
 ## `MemoryCachePool`
 
@@ -79,7 +83,7 @@ Nothing is shared between pool objects and nothing survives the request.
 | `isHit(): bool` | Whether the value came from the cache. `set()` does **not** make this `true`. |
 | `set(mixed $value): static` | Replaces the value. Returns `$this`. |
 | `expiresAt(?DateTimeInterface $expiration): static` | Sets the expiry moment; `null` means the item never expires. |
-| `expiresAfter(DateInterval\|int\|null $time): static` | Sets the expiry relative to the pool's clock; `null` means the item never expires. A zero or negative number of seconds produces an already-expired item. |
+| `expiresAfter(DateInterval\|int\|null $time): static` | Sets the expiry relative to the pool's clock; `null` means the item never expires. A zero or negative number of seconds produces an already-expired item. A number of seconds too large for `DateInterval` is clamped to 9999-12-31 23:59:59 rather than throwing. |
 
 `set()` never makes `isHit()` true: an item is a hit only when its value came out of the cache. The pools read the
 value of their own items through an internal accessor rather than `get()`, which is what lets `get()` keep to the
@@ -157,8 +161,8 @@ never sees a half-written file. A file that has expired, or that cannot be parse
 touches it; `prune()` deletes the same files without waiting for a read.
 
 A value the pool cannot store faithfully is refused rather than mangled: `save()` returns `false` for a resource and
-for anything `serialize()` rejects, such as a closure. On the way back, an entry whose class no longer exists
-deserialises to `__PHP_Incomplete_Class`, and PSR-6 requires a miss rather than corrupted data, so that entry is
+for anything `serialize()` rejects, such as a closure. On the way back, an entry whose value is an object of a class that no
+longer exists deserialises to `__PHP_Incomplete_Class`, and PSR-6 requires a miss rather than corrupted data, so that entry is
 reported as a miss and deleted.
 
 ## Deferred items
