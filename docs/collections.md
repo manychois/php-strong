@@ -171,7 +171,7 @@ Same name, same meaning, differing only in that `Iter` returns an `iterable` whe
 | `skipWhile($source, $predicate)` | `iterable<T>` | `list<T>` | Stops testing after the first non-match; everything from there on is kept. |
 | `take($source, int $count)` | `iterable<T>` | `list<T>` | `InvalidArgumentException` if `$count` is negative. |
 | `takeWhile($source, $predicate)` | `iterable<T>` | `list<T>` | Stops at the first non-match. |
-| `unique($source, ?$keySelector = null)` | `iterable<T>` | `list<T>` | Keeps the first occurrence of each key. Without a selector, elements are compared by PHP array-key coercion, so `1`, `'1'` and `true` collapse together and a non-array-key element raises `TypeError`. |
+| `unique($source, ?$keySelector = null)` | `iterable<T>` | `list<T>` | Keeps the first occurrence of each key. Without a selector, elements are compared by PHP array-key coercion, so `1`, `'1'` and `true` collapse together and a non-array-key element (including `null`) raises `TypeError`. |
 
 The second argument a callback receives differs between the two, following each class's treatment of keys.
 `Iter` passes the **source key** — `callable(T $value, TKey $key)`, and `callable(TAcc $carry, T $value, TKey $key)`

@@ -546,7 +546,7 @@ final class Iter
      * When $keySelector is null, elements are compared by PHP array-key coercion (the same rules that apply when using
      * the element as an array index), not by `==`. For example `1`, `'1'`, `1.0` and `true` all coerce to the same
      * array key and are treated as duplicates, while `'1.0'` does not. In that case, TValue must be `array-key`; a
-     * non-`array-key` element (e.g. an array or object) throws a native TypeError. Pass $keySelector to derive an
+     * non-`array-key` element (e.g. `null`, an array or an object) throws a TypeError. Pass $keySelector to derive an
      * `array-key` from any element type instead.
      *
      * @throws TypeError if an element is not a valid array key and no $keySelector is given.
@@ -563,6 +563,9 @@ final class Iter
     {
         $seen = [];
         foreach ($source as $key => $value) {
+            if ($keySelector === null && $value === null) {
+                throw new TypeError('Cannot use null as a unique key; pass a $keySelector to handle null elements.');
+            }
             /** @var int|string $uniqueKey */
             $uniqueKey = $keySelector === null ? $value : $keySelector($value);
             if (\array_key_exists($uniqueKey, $seen)) {

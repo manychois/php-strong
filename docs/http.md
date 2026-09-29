@@ -55,7 +55,7 @@ still round-trips through `getHeader('123')`; cast the key if you use it as a st
 
 | Class | Implements | Returns |
 | ----- | ---------- | ------- |
-| `RequestFactory` | `RequestFactoryInterface`, `ServerRequestFactoryInterface` | `Request`, `ServerRequest` |
+| `RequestFactory` | `RequestFactoryInterface`, `ServerRequestFactoryInterface` | `Request`, `ServerRequest` (`createServerRequest()` drops `$serverParams` entries whose key is not a string) |
 | `ResponseFactory` | `ResponseFactoryInterface` | `Response` |
 | `StreamFactory` | `StreamFactoryInterface` | `Stream` (`createStream()` uses `php://temp`; `createStreamFromFile()` throws `InvalidArgumentException` for an empty mode and `RuntimeException` when the file cannot be opened) |
 | `UploadedFileFactory` | `UploadedFileFactoryInterface` | `UploadedFile` (stream must be readable) |

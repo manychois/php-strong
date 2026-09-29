@@ -11,6 +11,8 @@ use Psr\Http\Message\StreamInterface as IStream;
 
 /**
  * Base immutable PSR-7 message implementation.
+ *
+ * @internal
  */
 abstract class AbstractMessage implements IMessage
 {
