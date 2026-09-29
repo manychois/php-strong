@@ -220,6 +220,20 @@ final class FileCachePoolTest extends TestCase
     }
 
     #[Test]
+    public function getItem_missesOnceARememberedItemHasExpiredOnTheSameInstance(): void
+    {
+        $pool = $this->pool();
+        $pool->save($pool->getItem('k')->set('v')->expiresAfter(60));
+        self::assertTrue($pool->getItem('k')->isHit());
+
+        $this->clock->advance('PT60S');
+
+        self::assertFalse($pool->hasItem('k'));
+        self::assertFalse($pool->getItem('k')->isHit());
+        self::assertSame([], $this->cacheFiles());
+    }
+
+    #[Test]
     public function save_withAnAlreadyExpiredItemStoresNothingAndRemovesTheOldFile(): void
     {
         $pool = $this->pool();

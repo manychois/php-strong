@@ -14,25 +14,6 @@ use Psr\Http\Message\UriInterface as IUri;
  */
 class RequestFactory implements IRequestFactory, IServerRequestFactory
 {
-    /**
-     * Asserts that the array has string keys.
-     *
-     * @param array<mixed> $serverParams
-     *
-     * @return bool
-     *
-     * @phpstan-assert array<string, mixed> $serverParams
-     */
-    private static function assertStringKeyArray(array $serverParams): bool
-    {
-        foreach ($serverParams as $name => $value) {
-            if (!is_string($name)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     #region implements IRequestFactory
 
     /**
@@ -57,7 +38,8 @@ class RequestFactory implements IRequestFactory, IServerRequestFactory
      * @inheritDoc
      *
      * Per PSR-17, the method and URI are not derived from `serverParams`; that array is stored as returned by
-     * {@see ServerRequest::getServerParams()}.
+     * {@see ServerRequest::getServerParams()}, minus any entry whose key is not a string (as
+     * {@see ServerRequest::fromGlobals()} does for `$_SERVER`).
      *
      * @param IUri|string $uri
      * @param array<mixed> $serverParams
@@ -65,7 +47,6 @@ class RequestFactory implements IRequestFactory, IServerRequestFactory
     #[Override]
     public function createServerRequest(string $method, $uri, array $serverParams = []): ServerRequest
     {
-        self::assertStringKeyArray($serverParams);
         return new ServerRequest(
             method: $method,
             uri: $uri,
@@ -73,7 +54,7 @@ class RequestFactory implements IRequestFactory, IServerRequestFactory
             body: (new StreamFactory())->createStream(),
             protocolVersion: '1.1',
             requestTarget: null,
-            serverParams: $serverParams,
+            serverParams: self::stringKeyed($serverParams),
             cookieParams: [],
             queryParams: [],
             uploadedFiles: [],
@@ -83,4 +64,21 @@ class RequestFactory implements IRequestFactory, IServerRequestFactory
     }
 
     #endregion implements IServerRequestFactory
+
+    /**
+     * @param array<mixed> $serverParams
+     *
+     * @return array<string,mixed> The entries whose key is a string.
+     */
+    private static function stringKeyed(array $serverParams): array
+    {
+        $result = [];
+        foreach ($serverParams as $name => $value) {
+            if (is_string($name)) {
+                $result[$name] = $value;
+            }
+        }
+
+        return $result;
+    }
 }

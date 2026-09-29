@@ -27,12 +27,12 @@ echo $response->getReasonPhrase(); // Created
 | ----- | ---------- | ----- |
 | `Request` | `RequestInterface` | `new Request($method = 'GET', $uri = null, $headers = [], $body = null, $protocolVersion = '1.1', $requestTarget = null)`. `$uri` accepts `UriInterface`, string, or `null` (`/`); `$body` accepts `StreamInterface`, string, or `null`. A `Host` header is derived from the URI when absent. |
 | `ServerRequest` | `ServerRequestInterface` | Extends `Request`; adds `$serverParams, $cookieParams, $queryParams, $uploadedFiles, $parsedBody, $attributes`. `ServerRequest::fromGlobals()` builds one from PHP superglobals (headers from `HTTP_*`, `CONTENT_*`, `REDIRECT_HTTP_AUTHORIZATION`; scheme from `HTTPS`/`REQUEST_SCHEME`; protocol from `SERVER_PROTOCOL`) — `$_FILES` is not read, so it always carries no uploaded files. Uploaded files given to the constructor or `withUploadedFiles()` must be `UploadedFileInterface` instances (nested arrays allowed) or `InvalidArgumentException` is thrown. |
-| `Response` | `ResponseInterface` | `new Response($statusCode = 200, $reasonPhrase = '', $headers = [], $body = null, $protocolVersion = '1.1')`. Codes outside 100–599 throw `InvalidArgumentException`; an empty reason phrase defaults to the IANA phrase via `StatusCode`. |
+| `Response` | `ResponseInterface` | `new Response($statusCode = 200, $reasonPhrase = '', $headers = [], $body = null, $protocolVersion = '1.1')`. Codes outside 100–599 throw `InvalidArgumentException`, in the constructor and in `withStatus()`; an empty reason phrase defaults to the IANA phrase via `StatusCode`, or stays `''` for an unregistered code. |
 | `Stream` | `StreamInterface` | Wraps a PHP stream resource; non-resources throw `RuntimeException`. |
-| `UploadedFile` | `UploadedFileInterface` | `moveTo()` copies the stream to the target path and marks the file moved; later `getStream()`/`moveTo()` throw `RuntimeException`. |
-| `Uri` | `UriInterface` | `Uri::fromString()` parses with `parse_url` (malformed input throws `RuntimeException`). Standard ports (80/443) are omitted from `getPort()`/authority; `withPort()` validates 1–65535. |
-| `Method` | enum (string) | `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, `CONNECT`, `OPTIONS`, `TRACE`, `QUERY`; `Method::fromString()` is case-insensitive. |
-| `StatusCode` | enum (int) | IANA-registered status codes; `fromCode()` throws on unknown codes, `reasonPhrase()` gives the default phrase. |
+| `UploadedFile` | `UploadedFileInterface` | `new UploadedFile($stream, $size, $error, $clientFilename, $clientMediaType)`, every argument required; a `null` size is taken from the stream. `moveTo()` copies the stream to the target path, closes the stream and marks the file moved; later `getStream()`/`moveTo()` throw `RuntimeException`. An empty target path throws `InvalidArgumentException`. |
+| `Uri` | `UriInterface` | `Uri::fromString()` parses with `parse_url` (malformed input throws `RuntimeException`). Standard ports (80 for `http`, 443 for `https`) are omitted from `getPort()`/authority; `withPort()` validates 1–65535. |
+| `Method` | enum (string) | Cases `Get`, `Head`, `Post`, `Put`, `Patch`, `Delete`, `Connect`, `Options`, `Trace`, `Query`, backed by the uppercase method name (`Method::Get->value === 'GET'`); `Method::fromString()` is case-insensitive and throws `InvalidArgumentException` on an unknown method. |
+| `StatusCode` | enum (int) | IANA-registered status codes; `fromCode()` throws `InvalidArgumentException` on unknown codes, `reasonPhrase()` gives the default phrase. |
 
 ### Header validation
 
@@ -55,13 +55,13 @@ still round-trips through `getHeader('123')`; cast the key if you use it as a st
 
 | Class | Implements | Returns |
 | ----- | ---------- | ------- |
-| `RequestFactory` | `RequestFactoryInterface`, `ServerRequestFactoryInterface` | `Request`, `ServerRequest` |
+| `RequestFactory` | `RequestFactoryInterface`, `ServerRequestFactoryInterface` | `Request`, `ServerRequest` (`createServerRequest()` drops `$serverParams` entries whose key is not a string) |
 | `ResponseFactory` | `ResponseFactoryInterface` | `Response` |
-| `StreamFactory` | `StreamFactoryInterface` | `Stream` (`createStream()` uses `php://temp`) |
+| `StreamFactory` | `StreamFactoryInterface` | `Stream` (`createStream()` uses `php://temp`; `createStreamFromFile()` throws `InvalidArgumentException` for an empty mode and `RuntimeException` when the file cannot be opened) |
 | `UploadedFileFactory` | `UploadedFileFactoryInterface` | `UploadedFile` (stream must be readable) |
 | `UriFactory` | `UriFactoryInterface` | `Uri` (parse failures are rethrown as `InvalidArgumentException`) |
 
-Header names are case-insensitive for lookup and preserve the casing of the last `withHeader()`/constructor entry.
+Header names are case-insensitive for lookup and preserve the casing of the last constructor, `withHeader()` or `withAddedHeader()` entry.
 
 ## HTTP Client (PSR-18)
 
@@ -80,10 +80,10 @@ $response = $client->sendRequest(new Request('GET', 'https://api.example.com/ite
 | ----- | ---------- | ----- |
 | `Client` | `ClientInterface` | `new Client($options = null, $transport = null)`; `$options` is a `RequestOptions` (defaults apply when `null`), `$transport` an internal seam that replaces cURL for `sendRequest()` (see the note below the async example). `sendRequest()` returns the concrete `Response`. Responses are returned whatever their status code. Protocol versions `1.0`, `1.1` (default), `2` and `2.0` are supported; any other value falls back to `1.1`. `sendAsync(RequestInterface $request): PendingRequest` dispatches immediately and returns a handle; transfers of one client run concurrently over `curl_multi`, with the same validation and exception rules as `sendRequest()`. Not part of PSR-18. |
 | `RequestOptions` | — | Immutable transport options applied to every request: `timeout` (30.0 s total), `connectTimeout` (10.0 s), `followRedirects` (`false`) + `maxRedirects` (10), `verifyTls` (`true`), `proxy`, `userAgent` (sent only when the request has no `User-Agent` header), `caFile`, `caPath`. Non-positive timeouts, a negative `maxRedirects`, or empty strings throw `InvalidArgumentException`. |
-| `ClientException` | `ClientExceptionInterface` | Base class of the two exceptions below; extends `RuntimeException`. |
+| `ClientException` | `ClientExceptionInterface` | Base class of the two exceptions below; extends `RuntimeException`. Also thrown on its own when a response carries no parsable status line. |
 | `RequestException` | `RequestExceptionInterface` | Thrown before sending when the request method is empty, the URI has a scheme other than `http`/`https` or lacks a host, or the request body cannot be read; `getRequest()` returns the offending request. |
-| `NetworkException` | `NetworkExceptionInterface` | Thrown when the request cannot complete: DNS failure, connection refused, or timeout. The message carries the underlying cURL error. |
-| `PendingRequest` | — | Handle returned by `sendAsync()`. `response(): Response` waits for and returns this transfer's response (all transfers of the same client progress while waiting; repeated calls return the same result or rethrow the same exception). `static waitAny(iterable $requests): PendingRequest` returns the first handle to complete — failed transfers count as completed and throw from the winner's `response()`. Discarding a handle (`unset`) aborts its transfer. |
+| `NetworkException` | `NetworkExceptionInterface` | Thrown when the request cannot complete: DNS failure, connection refused, or timeout. The message carries the underlying cURL error; `getRequest()` returns the failed request. |
+| `PendingRequest` | — | Handle returned by `sendAsync()`. `response(): Response` waits for and returns this transfer's response (all transfers of the same client progress while waiting; repeated calls return the same result or rethrow the same exception). `static waitAny(iterable $requests): PendingRequest` returns the first handle to complete — failed transfers count as completed and throw from the winner's `response()`. Discarding a handle (`unset`) aborts its transfer. `onResponse(callable $callback): void` registers a `callable(Response):void` run once the transfer produces a response — immediately if it already has; it never runs for a failed transfer, and it must not throw. |
 
 `sendAsync()` places no cap on concurrency. To throttle, keep a sliding window:
 start N transfers, then each time `PendingRequest::waitAny($window)` yields a
@@ -149,6 +149,7 @@ $response = $pipeline->handle(ServerRequest::fromGlobals());
 | ------ | ----- |
 | `__construct(iterable $middlewares, RequestHandlerInterface $fallback, ?ContainerInterface $container = null)` | Each element is a `MiddlewareInterface` instance or a container service id. Anything else, an id without a container, or an id the container's `has()` denies throws `InvalidArgumentException`. An empty list is valid. |
 | `handle(ServerRequestInterface $request): ResponseInterface` | Runs the middleware in registration order; each receives a handler representing the rest of the pipeline, and the fallback produces the response when the list is exhausted. A middleware that returns without calling its handler short-circuits the rest. |
+| `$fallback` | Public `readonly` property holding the fallback handler passed to the constructor. |
 
 - A service id is resolved on the first dispatch that reaches it — never at construction — and at most once per
   pipeline; a middleware that always short-circuits keeps everything behind it unresolved. A service that is not a
@@ -182,7 +183,7 @@ $response = $pipeline->handle($request);
 | Member | Notes |
 | ------ | ----- |
 | `__construct(int $chunkSize = 8_388_608)` | The number of bytes read from the body stream per write. A value below 1 throws `InvalidArgumentException`. The 8 MiB default sends an ordinary HTML or JSON response in a single read, while a multi-gigabyte download costs constant memory — provided no active output buffer is unchunked; `echo` writes into any buffer the caller has open, so a plain `ob_start()` still buffers the whole body. |
-| `emit(ResponseInterface $response, ?RequestInterface $request = null): void` | Sends the response. `$request` is read for one purpose only — detecting a `HEAD` request, which must receive no body. Pass `null` when the request is known not to be `HEAD`. Throws `RuntimeException` if output has already started. |
+| `emit(ResponseInterface $response, ?RequestInterface $request = null): void` | Sends the response. `$request` is read for one purpose only — detecting a `HEAD` request, which must receive no body. Pass `null` when the request is known not to be `HEAD`. Throws `RuntimeException` if output has already started, or if the body stream fails while being read, after part of the response has been written. A body stream that is not readable is skipped, so only the status line and headers are sent. |
 
 - **Headers are merged, not replaced.** Every `Set-Cookie` value is sent with PHP's `replace` flag false, the first
   value included, so a cookie PHP itself has queued survives — most importantly the session cookie
@@ -224,16 +225,18 @@ on `Cookie`, the immutable value object for one `Set-Cookie` entry.
 | `value` | `string` | required | The decoded value. Any string is allowed. |
 | `expires` | `?DateTimeImmutable` | `null` | The `Expires` attribute; `null` omits it. |
 | `maxAge` | `?int` | `null` | The `Max-Age` attribute in seconds; `0` or less expires the cookie immediately. `null` omits it. |
-| `domain` | `?string` | `null` | The `Domain` attribute; `null` omits it, making the cookie host-only. |
-| `path` | `?string` | `null` | The `Path` attribute; `null` omits it. |
+| `domain` | `?string` | `null` | The `Domain` attribute; `null` omits it, making the cookie host-only. A control character or `;` throws `InvalidArgumentException`. |
+| `path` | `?string` | `null` | The `Path` attribute; `null` omits it. A control character or `;` throws `InvalidArgumentException`. |
 | `secure` | `bool` | `false` | The `Secure` flag. |
 | `httpOnly` | `bool` | `false` | The `HttpOnly` flag. |
-| `sameSite` | `?SameSite` | `null` | The `SameSite` attribute; `null` omits it. `SameSite::None` requires `secure: true`. |
+| `sameSite` | `?SameSite` | `null` | The `SameSite` attribute (`SameSite::Lax`, `Strict` or `None`); `null` omits it. `SameSite::None` requires `secure: true`. |
 | `partitioned` | `bool` | `false` | The `Partitioned` flag (CHIPS); requires `secure: true`. |
 
 `Cookie::expired(string $name, ?string $domain = null, ?string $path = null): self` builds a cookie that clears an
 existing one of the same name, setting both `Max-Age` and `Expires`. `Cookie::parseSetCookie(string $header): self`
-parses one `Set-Cookie` header value, ignoring unknown or malformed attributes rather than failing on them.
+parses one `Set-Cookie` header value, ignoring unknown attributes and an unparsable `Expires`, non-numeric `Max-Age`
+or unrecognised `SameSite` rather than failing on them; it throws `InvalidArgumentException` when the header does not
+begin with a `name=value` pair or the result breaks a constructor rule. Double quotes wrapping the value are stripped.
 `toSetCookieHeader(): string` formats the cookie back into a header value.
 
 `$value` is always held decoded; `toSetCookieHeader()` writes it with `rawurlencode`, and `parseSetCookie()` reads it
@@ -256,9 +259,12 @@ return $cookies->applyTo($response);
 ```
 
 `get()` returns `?string` — `null` when the request carried no such cookie — because incoming cookies carry no
-attributes; only the name and value survive the `Cookie` header. A cookie queued with `set()` that shares its name, domain and path with one already queued replaces
-it, which is how a browser identifies a cookie. Values read from `getCookieParams()` are not decoded again, because
-PHP has already decoded `$_COOKIE`.
+attributes; only the name and value survive the `Cookie` header. A cookie queued with `set()` that shares its name,
+domain and path with one already queued replaces it, which is how a browser identifies a cookie. Values read from
+`getCookieParams()` are not decoded again, because PHP has already decoded `$_COOKIE`; entries of `getCookieParams()`
+that are not a string key with a string value are skipped. `has(string $name): bool` and `all(): array<string,string>`
+read the incoming cookies; `queued(): list<Cookie>` lists the cookies waiting to be applied. `applyTo()` appends one
+`Set-Cookie` header per queued cookie and returns `ResponseInterface`.
 
 ### Client role: `CookieAwareClient`
 
@@ -274,17 +280,21 @@ $client->sendRequest(new Request('POST', 'https://api.example.com/login', body: 
 $profile = $client->sendRequest(new Request('GET', 'https://api.example.com/profile'));
 ```
 
-`CookieStore` keeps cookies in memory for as long as the instance lives. A cookie a response sets that breaks RFC
-6265 is skipped silently rather than throwing. The `__Secure-` and `__Host-` name prefixes of RFC 6265bis are
-enforced. A response to a request that was not made over `https` can neither set a cookie carrying `Secure` or
-either name prefix, nor overwrite an entry already stored as secure. Outgoing `Cookie` headers carry each value
-exactly as the `Set-Cookie` header delivered it, undecoded and with any surrounding quotes kept, as RFC 6265
-requires. Without a public suffix list, the store accepts `Domain=co.uk` from a response served by `foo.co.uk`,
-where a browser would refuse it.
+`CookieStore` keeps cookies in memory for as long as the instance lives. Its members are `__construct(ClockInterface
+$clock = new UtcClock())` (the PSR-20 clock that decides expiry), `absorb(ResponseInterface $response, UriInterface
+$requestUri): void`, `attachTo(RequestInterface $request): RequestInterface`, `all(): list<Cookie>` and `clear():
+void`. `attachTo()` leaves alone any cookie already named in the request's own `Cookie` header and orders the rest
+longest path first, then oldest first. A cookie a response sets that breaks RFC 6265 is skipped silently rather than
+throwing. The `__Secure-` and `__Host-` name prefixes of RFC 6265bis are enforced. A response to a request that was
+not made over `https` can neither set a cookie carrying `Secure` or either name prefix, nor overwrite an entry already
+stored as secure. Outgoing `Cookie` headers carry each value exactly as the `Set-Cookie` header delivered it,
+undecoded and with any surrounding quotes kept, as RFC 6265 requires. Without a public suffix list, the store accepts
+`Domain=co.uk` from a response served by `foo.co.uk`, where a browser would refuse it.
 
-`CookieAwareClient` is incompatible with `RequestOptions(followRedirects: true)`: the underlying `RawResponse` keeps
-only the final header block, so `Set-Cookie` headers sent on a 3xx are dropped, and a redirect chain crossing hosts
-would attribute the final host's cookies to the original one. Follow redirects manually when cookies matter.
+`CookieAwareClient` wraps any PSR-18 client; its `sendRequest()` returns whatever the wrapped client returns, typed
+`ResponseInterface`. It is incompatible with `RequestOptions(followRedirects: true)`: the underlying `RawResponse`
+keeps only the final header block, so `Set-Cookie` headers sent on a 3xx are dropped, and a redirect chain crossing
+hosts would attribute the final host's cookies to the original one. Follow redirects manually when cookies matter.
 
 `sendAsync()` requires the wrapped client to be the concrete `Client`; it throws `BadMethodCallException` otherwise.
 With several transfers in flight, cookies are absorbed in completion order — should two concurrent responses set the
@@ -333,14 +343,14 @@ $session = new NativeSession(new SessionOptions(
 ));
 ```
 
-Every option below defaults to `null`. The *Sets* column names the PHP setting it maps to.
+Every option below except `ini` defaults to `null`. The *Sets* column names the PHP setting it maps to.
 
 | Option | Sets | Notes |
 | ------ | ---- | ----- |
 | `name` | `session.name` | The session, and cookie, name. Letters, digits, dashes and underscores; digits only is rejected, as PHP forbids it. |
-| `savePath` | `session.save_path` | Where session files are written. |
-| `cookieLifetime` | `session.cookie_lifetime` | Seconds; `0` means until the browser closes. |
-| `cookiePath` | `session.cookie_path` | |
+| `savePath` | `session.save_path` | Where session files are written. An empty string is rejected. |
+| `cookieLifetime` | `session.cookie_lifetime` | Seconds; `0` means until the browser closes. A negative value is rejected. |
+| `cookiePath` | `session.cookie_path` | An empty string is rejected. |
 | `cookieDomain` | `session.cookie_domain` | An empty string means the current host only. |
 | `cookieSecure` | `session.cookie_secure` | HTTPS only. |
 | `cookieHttpOnly` | `session.cookie_httponly` | Hidden from JavaScript. |
@@ -348,19 +358,20 @@ Every option below defaults to `null`. The *Sets* column names the PHP setting i
 | `cookiePartitioned` | `session.cookie_partitioned` | CHIPS; likewise rejected together with `cookieSecure: false`. |
 | `useStrictMode` | `session.use_strict_mode` | PHP refuses a session id it did not generate — the fixation defence. |
 | `useOnlyCookies` | `session.use_only_cookies` | The id never comes from the URL. |
-| `gcMaxLifetime` | `session.gc_maxlifetime` | Seconds an idle session survives. |
-| `serializeHandler` | `session.serialize_handler` | See *Serialization* below. |
+| `gcMaxLifetime` | `session.gc_maxlifetime` | Seconds an idle session survives. Must be greater than 0. |
+| `serializeHandler` | `session.serialize_handler` | A `SessionSerializer` case: `Php` (`php`), `PhpBinary` (`php_binary`) or `PhpSerialize` (`php_serialize`). See *Serialization* below. |
 | `readAndClose` | `read_and_close` | Read the session once and close it immediately, releasing its lock. See below. |
+| `ini` | other `session.*` settings | Defaults to `[]`, not `null`. Further session settings, passed to `session_start()` verbatim. Keys are setting names without the `session.` prefix, e.g. `gc_probability`; a prefixed key, or a key a dedicated option already controls, throws `InvalidArgumentException` rather than silently losing to it. |
 
 Because the defaults defer to `php.ini`, the security-relevant settings — `cookie_secure`, `cookie_httponly`,
 `cookie_samesite`, `use_strict_mode` — are whatever the server is configured with. Set them here when the application
 must not depend on that.
-| `ini` | `[]` | Further session settings, passed to `session_start()` verbatim. Keys are setting names without the `session.` prefix, e.g. `gc_probability`, and a key a dedicated option already controls is rejected rather than silently losing to it. |
 
-Every value is validated in the constructor, so a bad setting fails where it is written rather than at
-`session_start()`. The options are handed to `session_start()` as one array — the only way to reach `read_and_close`,
-and the form in which PHP reports an unrecognised setting instead of ignoring it. That is also why `ini` keys carry no
-`session.` prefix: it is the form `session_start()` itself takes, and PHP rejects a prefixed key.
+Every value is validated in the constructor, which throws `InvalidArgumentException`, so a bad setting fails where it
+is written rather than at `session_start()`. The options are handed to `session_start()` as one array — the only way
+to reach `read_and_close`, and the form in which PHP reports an unrecognised setting instead of ignoring it. That is
+also why `ini` keys carry no `session.` prefix: it is the form `session_start()` itself takes, and PHP rejects a
+prefixed key, so the constructor rejects it first.
 
 ### Read-only requests
 

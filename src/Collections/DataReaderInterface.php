@@ -45,70 +45,86 @@ interface DataReaderInterface extends Countable
      *
      * Which representations are recognised is up to the implementation.
      *
-     * @param string $key The key to read, in dot notation for a nested value.
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
+     * @param bool $default The value to return when the value is `null`.
      *
-     * @return bool The converted value.
+     * @return bool The converted value, or the default.
      *
-     * @throws OutOfBoundsException if the key is absent.
      * @throws InvalidArgumentException if the value is not a recognised boolean representation.
      */
-    public function asBool(string $key): bool;
+    public function asBool(string $key, bool $default = false): bool;
 
     /**
      * Converts the value stored under a key to a date and time.
      *
      * Which representations are recognised is up to the implementation.
      *
-     * @param string $key The key to read, in dot notation for a nested value.
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
+     * @param ?DateTimeImmutable $default The value to return when the value is `null`. When none is given, a `null`
+     * value is rejected.
      *
-     * @return DateTimeImmutable The converted value.
+     * @return DateTimeImmutable The converted value, or the default.
      *
-     * @throws OutOfBoundsException if the key is absent.
      * @throws InvalidArgumentException if the value is not convertible to a date and time.
      */
-    public function asDateTime(string $key): DateTimeImmutable;
+    public function asDateTime(string $key, ?DateTimeImmutable $default = null): DateTimeImmutable;
 
     /**
      * Converts the value stored under a key to a float.
      *
      * Which representations are recognised is up to the implementation.
      *
-     * @param string $key The key to read, in dot notation for a nested value.
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
+     * @param float $default The value to return when the value is `null`.
      *
-     * @return float The converted value.
+     * @return float The converted value, or the default.
      *
-     * @throws OutOfBoundsException if the key is absent.
      * @throws InvalidArgumentException if the value is not convertible to a float.
      */
-    public function asFloat(string $key): float;
+    public function asFloat(string $key, float $default = 0.0): float;
 
     /**
      * Converts the value stored under a key to an integer.
      *
      * Which representations are recognised is up to the implementation.
      *
-     * @param string $key The key to read, in dot notation for a nested value.
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
+     * @param int $default The value to return when the value is `null`.
      *
-     * @return int The converted value.
+     * @return int The converted value, or the default.
      *
-     * @throws OutOfBoundsException if the key is absent.
      * @throws InvalidArgumentException if the value is not convertible to an integer.
      */
-    public function asInt(string $key): int;
+    public function asInt(string $key, int $default = 0): int;
 
     /**
      * Converts the value stored under a key to a string.
      *
      * Which representations are recognised is up to the implementation.
      *
-     * @param string $key The key to read, in dot notation for a nested value.
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
+     * @param string $default The value to return when the value is `null`.
      *
-     * @return string The converted value.
+     * @return string The converted value, or the default.
      *
-     * @throws OutOfBoundsException if the key is absent.
      * @throws InvalidArgumentException if the value has no sensible string representation.
      */
-    public function asString(string $key): string;
+    public function asString(string $key, string $default = ''): string;
+
+    /**
+     * Converts the value stored under a key to a string and trims it, falling back to a default when the result is
+     * empty.
+     *
+     * Which representations are recognised is up to the implementation.
+     *
+     * @param string $key The key to read, in dot notation for a nested value. An absent key is read as `null`.
+     * @param string $default The value to return when the trimmed string is empty.
+     *
+     * @return string The trimmed value, or the default.
+     *
+     * @throws InvalidArgumentException if the value has no sensible string representation.
+     */
+    public function asTrimmedString(string $key, string $default = ''): string;
 
     /**
      * Returns the boolean value stored under a key.
@@ -218,6 +234,15 @@ interface DataReaderInterface extends Countable
      * @throws InvalidArgumentException if the value is not an integer.
      */
     public function int(string $key): int;
+
+    /**
+     * Returns the value stored under a key, or `null` when the key is absent.
+     *
+     * @param string $key The key to read, in dot notation for a nested value.
+     *
+     * @return mixed The value, or `null` if the key is absent.
+     */
+    public function nullGet(string $key): mixed;
 
     /**
      * Returns all keys, in the order they appear in the source, i.e. the array keys or the public property names.
