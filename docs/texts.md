@@ -42,8 +42,8 @@ Immutable. The pattern is supplied once, including its delimiters and modifiers,
 
 Every method except `escape()` throws `RuntimeException` when the underlying `preg_*` call signals failure — a
 malformed pattern, a backtrack limit hit, a subject that is not valid UTF-8 under the `u` modifier. The message is
-PHP's own warning text where one was emitted, otherwise `preg_last_error_msg()`, and the exception code is the
-corresponding `preg_last_error()` constant.
+PHP's own warning text with the warning's error level (`E_WARNING`) as the exception code where one was emitted, and
+otherwise `preg_last_error_msg()` with the corresponding `preg_last_error()` constant as the code.
 
 `replaceCallback()` runs its callback under `PREG_OFFSET_CAPTURE`, so the `MatchResult` it hands over carries byte
 offsets like the one from `match()`.
@@ -62,13 +62,17 @@ than from a group.
 | `namedCaptures` | `array<string,Capture>` | The `(?<name>…)` groups, keyed by name. A named group also appears in `captures`, as PHP numbers it too. |
 
 A group that did not participate in the match still occupies its position, as a `Capture` with an empty `value` and
-a `null` `index`. That keeps `$captures` positional: group 3 is always `$captures[2]`, matched or not.
+a `null` `index`, as long as a later group did participate. PHP omits non-participating groups at the end of the
+pattern, so from `match()` and `replaceCallback()` they are absent from `captures` (and `namedCaptures`) rather than
+empty; `matchAll()` always includes every group.
 
 ```php
 $match = (new Regex('/(a)|(b)/'))->match('b');
 $match->captures[0]->value;  // ''    — group 1 did not participate
 $match->captures[0]->index;  // null
 $match->captures[1]->value;  // 'b'
+
+count((new Regex('/(a)|(b)/'))->match('a')->captures);  // 1 — trailing group 2 is omitted
 ```
 
 The constructor takes the raw `$matches` array from `preg_match()`, with or without `PREG_OFFSET_CAPTURE`. Without

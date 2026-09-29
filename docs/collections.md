@@ -29,11 +29,12 @@ Every value accessor exists in up to three variants, which differ only in how st
 | Variant | Example | Behaviour |
 | ------- | ------- | --------- |
 | bare | `string('a')` | Strict. The value must already be a string, or `InvalidArgumentException` is thrown. |
-| `as` | `asString('a')` | Converts, when a sensible conversion exists. Throws when none does. |
+| `as` | `asString('a')` | Converts, when a sensible conversion exists. An absent key is read as `null`, and a `null` value yields the optional default. Throws when no conversion exists. |
 | `null` | `nullString('a')` | Strict, but returns `null` instead of throwing when the key is absent, the value is `null`, or the value has another type. |
 
-Only the bare and `as` variants throw `OutOfBoundsException` for an absent key. The `null` variants never throw for a
-missing key, which is what makes them convenient for optional fields.
+Only the bare variants throw `OutOfBoundsException` for an absent key. The `as` variants read a missing key as `null`
+and convert that, and the `null` variants never throw for a missing key, which is what makes them convenient for
+optional fields.
 
 ### Dot notation
 
@@ -51,8 +52,8 @@ An entry whose key matches the whole string wins over dot notation, so a literal
 (new DataReader(['a.b' => 'x', 'a' => ['b' => 'y']]))->string('a.b'); // 'x'
 ```
 
-A missing segment, or a segment that is neither an array nor an object, counts as absent: the strict variants throw
-`OutOfBoundsException`, the `null` variants return `null`, and `has()` returns `false`.
+A missing segment, or a segment that is neither an array nor an object, counts as absent: the bare variants throw
+`OutOfBoundsException`, the `as` and `null` variants read `null`, and `has()` returns `false`.
 
 `count()`, `keys()` and `entries()` always describe the top level only.
 
@@ -81,7 +82,8 @@ differently; the interface leaves the rules open.
 | `asBool` | Whatever `filter_var()` with `FILTER_VALIDATE_BOOL` accepts: `1`, `true`, `on`, `yes` and their negatives, in any letter case, ignoring surrounding whitespace. The empty string is `false`. |
 | `asInt` | Booleans, floats and numeric strings. A fractional part is discarded, so `3.7` becomes `3` and `-3.7` becomes `-3`. A float outside the integer range, or a non-finite one, is rejected. |
 | `asFloat` | Integers, booleans and numeric strings. |
-| `asString` | Output resembling JSON: a boolean becomes `'true'` or `'false'`, and `null` becomes the empty string. Integers, floats and stringable objects are converted as PHP renders them. |
+| `asString` | Output resembling JSON: a boolean becomes `'true'` or `'false'`, and `null` (or an absent key) becomes the default, `''` unless given. Integers, floats and stringable objects are converted as PHP renders them. |
+| `asTrimmedString` | Converts as `asString` does, trims the result, and returns the given default (`''` by default) when nothing is left. Handy for form input. |
 | `asDateTime` | A string parsed with the standard date and time formats, or an integer read as a Unix timestamp. |
 
 `asDateTime()` applies UTC only to those scalars: a string carrying no time zone is read as UTC, rather than in PHP's
@@ -98,18 +100,25 @@ because converting it would be a conversion, and the strict variants do not conv
 | ------ | ------- | ----- |
 | `__construct(array\|object $source)` | | Throws `InvalidArgumentException` if an array key is not a string. |
 | `get(string $key)` | `mixed` | The value, whatever its type. |
+| `nullGet(string $key)` | `mixed` | The value, or `null` when the key is absent. Never throws. |
 | `has(string $key)` | `bool` | True even when the value is `null`. |
 | `falsy(string $key)` | `bool` | True for `null`, `false`, `0`, `0.0`, `''`, `'0'`, `[]`, and for an absent key. Never throws. |
 | `entries()` | `array<string,mixed>` | The array itself, or the public properties of the object. |
 | `keys()` | `list<string>` | Top-level keys, in source order. |
 | `count()` | `int` | `DataReaderInterface` extends `Countable`. |
-| `string` / `asString` / `nullString` | `string` | |
-| `int` / `asInt` / `nullInt` | `int` | |
-| `float` / `asFloat` / `nullFloat` | `float` | The strict variants accept an integer and widen it. |
-| `bool` / `asBool` / `nullBool` | `bool` | |
-| `dateTime` / `asDateTime` / `nullDateTime` | `DateTimeImmutable` | |
+| `string` / `nullString` | `string` | |
+| `asString(string $key, string $default = '')` | `string` | Converted, defaulted when `null`. |
+| `asBool(string $key, bool $default = false)` | `bool` | Converted, defaulted when `null`. |
+| `asInt(string $key, int $default = 0)` | `int` | Converted, defaulted when `null`. |
+| `asFloat(string $key, float $default = 0.0)` | `float` | Converted, defaulted when `null`. |
+| `asDateTime(string $key, ?DateTimeImmutable $default = null)` | `DateTimeImmutable` | Converted, defaulted when `null`; without a default a `null` value throws. |
+| `asTrimmedString(string $key, string $default = '')` | `string` | Converted, trimmed, defaulted when empty. |
+| `int` / `nullInt` | `int` | |
+| `float` / `nullFloat` | `float` | The strict variants accept an integer and widen it. |
+| `bool` / `nullBool` | `bool` | |
+| `dateTime` / `nullDateTime` | `DateTimeImmutable` | |
 | `array` / `nullArray` | `array` | Any shape; the value must already be an array. |
-| `reader` / `nullReader` | `DataReaderInterface` | Wraps a nested array or object in another reader. |
+| `reader` / `nullReader` | `DataReaderInterface` | Wraps a nested array or object in another reader. A nested array with a non-string key is rejected like any other mismatch. |
 | `object(string $key, string $className)` / `nullObject` | `TObject` | Generic over `class-string<TObject>`. |
 | `enum(string $key, string $enumClass)` / `nullEnum` | `TEnum` | Generic over `class-string<TEnum of UnitEnum>`; the value must already be a case. |
 
@@ -162,7 +171,7 @@ Same name, same meaning, differing only in that `Iter` returns an `iterable` whe
 | `skipWhile($source, $predicate)` | `iterable<T>` | `list<T>` | Stops testing after the first non-match; everything from there on is kept. |
 | `take($source, int $count)` | `iterable<T>` | `list<T>` | `InvalidArgumentException` if `$count` is negative. |
 | `takeWhile($source, $predicate)` | `iterable<T>` | `list<T>` | Stops at the first non-match. |
-| `unique($source, ?$keySelector = null)` | `iterable<T>` | `list<T>` | Keeps the first occurrence of each key. Without a selector, elements are compared by PHP array-key coercion, so `1`, `'1'` and `true` collapse together and a non-array-key element raises `TypeError`. |
+| `unique($source, ?$keySelector = null)` | `iterable<T>` | `list<T>` | Keeps the first occurrence of each key. Without a selector, elements are compared by PHP array-key coercion, so `1`, `'1'` and `true` collapse together and a non-array-key element (including `null`) raises `TypeError`. |
 
 The second argument a callback receives differs between the two, following each class's treatment of keys.
 `Iter` passes the **source key** — `callable(T $value, TKey $key)`, and `callable(TAcc $carry, T $value, TKey $key)`

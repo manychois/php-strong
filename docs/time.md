@@ -18,7 +18,7 @@ $clock->now(); // DateTimeImmutable in UTC, independent of date_default_timezone
 (`date.timezone` / `date_default_timezone_set()`). Inject it wherever "the current time" is needed instead of calling
 `new DateTimeImmutable()` directly — that keeps the code testable with `TestClock`.
 
-## `TestClock extends UtcClock`
+### `TestClock extends UtcClock`
 
 A clock frozen at a caller-controlled instant, for deterministic tests.
 

@@ -61,13 +61,13 @@ final class RequestFactoryTest extends TestCase
     }
 
     #[Test]
-    public function createServerRequest_accepts_server_params_with_string_keys_only_per_psr17(): void
+    public function createServerRequest_keeps_only_server_params_with_string_keys(): void
     {
         $factory = new RequestFactory();
         $server = ['REQUEST_TIME_FLOAT' => 1.0, 99 => 'ignored-non-string-key'];
 
         $request = $factory->createServerRequest('HEAD', '/', $server);
 
-        self::assertSame($server, $request->getServerParams());
+        self::assertSame(['REQUEST_TIME_FLOAT' => 1.0], $request->getServerParams());
     }
 }

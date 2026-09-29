@@ -17,7 +17,8 @@ $logger = new Logger('app', [
 ]);
 
 $logger->info('User {name} logged in', ['name' => 'Bob', 'ip' => '10.0.0.1']);
-// [2026-08-19T18:55:00.123+00:00] app.INFO: User Bob logged in {"ip":"10.0.0.1"}
+// stdout: 18:55:00 INFO      User Bob logged in {"ip":"10.0.0.1"}
+// (below Warning, so the StreamHandler ignores it)
 
 $db = $logger->withChannel('db'); // same handlers, different channel
 ```
@@ -34,7 +35,7 @@ new Logger(string $channel = 'app', iterable $handlers = [], ?ClockInterface $cl
 | `$handlers` | `HandlerInterface` instances; each receives every log. |
 | `$clock` | PSR-20 clock for timestamps; defaults to [`UtcClock`](time.md). Use `TestClock` in tests. |
 | `pushHandler(HandlerInterface)` | Appends a handler. |
-| `withChannel(string): self` | New logger sharing handlers and clock, different channel. |
+| `withChannel(string): self` | New logger sharing handlers and clock, different channel. The handler list is copied: a later `pushHandler()` on either logger does not affect the other. |
 | `log($level, $message, $context)` + the eight PSR-3 level methods | Invalid levels throw `Psr\Log\InvalidArgumentException`. |
 
 ## `LogLevel`
@@ -49,7 +50,8 @@ String-backed enum of the eight PSR-3 levels (`LogLevel::Debug` … `LogLevel::E
 ## `Log`
 
 Immutable value object with public readonly properties: `channel`, `level` (`LogLevel`), `message` (raw, not
-interpolated), `context` (`array<string, mixed>`), `time` (`DateTimeImmutable`).
+interpolated), `context` (`array<string, mixed>`), `time` (`DateTimeImmutable`). The constructor takes them in that
+order: `new Log(string $channel, LogLevel $level, string $message, array $context, DateTimeImmutable $time)`.
 
 ## Handlers
 
@@ -58,8 +60,8 @@ All handlers implement `HandlerInterface::handle(Log $log): void` and take a `Lo
 
 | Handler | Behaviour |
 | ------- | --------- |
-| `StreamHandler($stream, $minLevel, ?$formatter)` | `$stream` is an open resource, a file path, or a stream URL (`php://stderr`). Paths are opened lazily in append mode; parent directories are created for plain file paths (not for `scheme://` URLs). Default formatter: `LineFormatter`. |
-| `ConsoleHandler($minLevel, ?bool $colors, ?$formatter, $stdout, $stderr)` | `debug`..`notice` → stdout, `warning`+ → stderr; `$stdout`/`$stderr` accept an open resource or a stream URL (default `php://stdout`/`php://stderr`). `$colors = null` auto-detects: on when stderr is a TTY and `NO_COLOR` is unset. `$colors` configures the default `ConsoleFormatter` only; it is ignored when `$formatter` is given. |
+| `StreamHandler($stream, $minLevel, ?$formatter)` | `$stream` is an open resource, a file path, or a stream URL (`php://stderr`). Paths are opened lazily in append mode; parent directories are created for plain file paths (not for `scheme://` URLs). Default formatter: `LineFormatter`. The constructor throws `InvalidArgumentException` when `$stream` is neither a resource nor a string; `handle()` throws `RuntimeException` when the directory cannot be created or the path cannot be opened. |
+| `ConsoleHandler($minLevel, ?bool $colors, ?$formatter, $stdout, $stderr)` | `debug`..`notice` → stdout, `warning`+ → stderr; `$stdout`/`$stderr` accept an open resource or a stream URL (default `php://stdout`/`php://stderr`). `$colors = null` auto-detects: on when stderr is a TTY and `NO_COLOR` is unset. `$colors` configures the default `ConsoleFormatter` only; it is ignored when `$formatter` is given. Stream URLs are opened in the constructor (mode `w`); it throws `InvalidArgumentException` when `$stdout`/`$stderr` is neither a resource nor a string, and `RuntimeException` when a URL cannot be opened. |
 | `ArrayHandler($minLevel)` | Keeps logs in `$logs` (`list<Log>`); `clear()` empties it. Handy in tests. |
 
 ## Formatters

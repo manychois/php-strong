@@ -23,13 +23,16 @@ $container->has('uuid');      // true; never invokes the factory
 | ------ | ----- |
 | `singleton(string $id, Closure $factory): static` | Factory runs at most once; the result (including `null`) is cached. |
 | `factory(string $id, Closure $factory): static` | Factory runs on every `get()`. |
-| `aware(string $type, Closure $configure): static` | Runs `$configure($object, $container)` on every object produced here that is `instanceof $type`. See [Aware configurers](#aware-configurers). |
+| `aware(string $type, Closure $configure): static` | Runs `$configure($object, $container)` on every object produced here that is `instanceof $type`. `$type` must be an existing class or interface (`InvalidArgumentException` otherwise). See [Aware configurers](#aware-configurers). |
 | `alias(string $id, string $target): static` | `get($id)` forwards to `get($target)`; follows the target's lifetime. Target must be registered (here or in the parent) by `build()`. |
 | `autowire(string $id, bool $shared = true): static` | Instantiates the class named `$id` by reflection under that id; cached like `singleton()` unless `$shared` is `false`. See [Autowiring](#autowiring). |
 | `build(): Container` | Snapshots the definitions; later registrations do not affect the built container. |
 
-`new ContainerBuilder(?ContainerInterface $parent = null)` — identifiers not registered on the builder are delegated
-to `$parent` (any PSR-11 container). See [Long-running processes](#long-running-processes).
+`new ContainerBuilder(?ContainerInterface $parent = null, bool $autowire = false)` — identifiers not registered on
+the builder are delegated to `$parent` (any PSR-11 container); see [Long-running processes](#long-running-processes).
+With `$autowire` set to `true`, an identifier that is neither registered nor known to the parent but names an
+instantiable class is built by reflection on every `get()` (never cached, `aware()` configurers applied) and `has()`
+reports it as available; see [Autowiring](#autowiring).
 
 To register an already-built value, wrap it: `->singleton('config', static fn (): array => $config)`.
 
@@ -43,15 +46,21 @@ To bind an interface to a class, `autowire(Impl::class)` then `alias(Interface::
 
 | Method | Notes |
 | ------ | ----- |
-| `get(string $id): mixed` | Resolves the service from this container's definitions, else from the parent. |
+| `get(string $id): mixed` | Resolves the service from this container's definitions, else the container itself for `ContainerInterface::class`/`Container::class`, else from the parent, else — when the builder was created with `$autowire = true` — by autowiring an instantiable class. |
 | `getInstance(string $class): object` | `get($class)` with an `instanceof $class` check; returns the precise type for static analysis (`@return T` for `class-string<T>`). Throws `ContainerException` on mismatch. |
-| `has(string $id): bool` | Whether the identifier is registered here or in the parent; does not resolve anything. |
+| `make(string $class): object` | Autowires a new instance of any instantiable class against the container, registered or not; never cached, and `aware()` configurers are not applied to it. Throws `ContainerException` if the class does not exist, is not instantiable, or cannot be built. |
+| `has(string $id): bool` | Whether the identifier is registered here or in the parent, is `ContainerInterface::class`/`Container::class`, or (with `$autowire = true`) names an instantiable class; does not resolve anything. |
+
+`ContainerInterface::class` and `Container::class` always resolve to the container itself without being registered,
+so autowired constructors may type-hint `ContainerInterface`. A child container returns itself, not its parent. An
+explicit registration under either identifier takes precedence. `alias()` does not see this: an alias targeting
+either identifier fails at `build()` unless the target is registered on the builder or known to the parent.
 
 `get()` throws:
 
 | Exception | When |
 | --------- | ---- |
-| `NotFoundException` (`NotFoundExceptionInterface`) | The identifier is not registered — also when thrown by a nested `get()` inside a factory. |
+| `NotFoundException` (`NotFoundExceptionInterface`) | The identifier is not registered and cannot be autowired — also when thrown by a nested `get()` inside a factory. |
 | `ContainerException` (`ContainerExceptionInterface`) | A circular dependency is detected (`Circular dependency detected: a -> b -> a.`), or a factory throws; the original exception is available via `getPrevious()`. |
 
 `NotFoundException extends ContainerException`, so a single `catch (ContainerException)` covers both. A failed
@@ -74,6 +83,11 @@ then instantiates it lazily on first `get()`. Each constructor parameter is reso
 Scalars, union/intersection types and untyped parameters therefore need a default value or must be wired through a
 closure instead. Variadic parameters receive no arguments. Cycles among unregistered classes are reported as
 `Circular dependency detected: A -> B -> A.`; cycles through registered identifiers are caught by `get()`.
+
+`new ContainerBuilder(autowire: true)` extends rule 3 to `get()` itself: any unregistered instantiable class can be
+requested directly, and is built afresh on each call. Register it with `autowire()` if it should be shared. Because
+`has()` then reports every instantiable class as available, rule 1 matches any parameter typed with one: it is built
+through `get()` (with `aware()` configurers applied) even when it has a default value or is nullable.
 
 ## Aware configurers
 
@@ -105,12 +119,14 @@ $app = (new ContainerBuilder())
     ->singleton(PDO::class, static fn (): PDO => new PDO('sqlite::memory:'))
     ->build();
 
-while (frankenphp_handle_request(static function () use ($app, $handler): void {
-    $request = (new ContainerBuilder($app))
+while (frankenphp_handle_request(static function () use ($app): void {
+    $scope = (new ContainerBuilder($app))
         ->singleton(ServerRequestInterface::class, static fn (): ServerRequest => ServerRequest::fromGlobals())
         ->singleton(Session::class, static fn (ContainerInterface $c): Session => new Session($c->get(PDO::class)))
         ->build();
-    $handler->handle($request)->send();
+    $request = $scope->getInstance(ServerRequestInterface::class);
+    $pipeline = new MiddlewarePipeline([AuthMiddleware::class], new NotFoundHandler(), $scope);
+    (new SapiEmitter())->emit($pipeline->handle($request), $request);
 })) {
 }
 ```

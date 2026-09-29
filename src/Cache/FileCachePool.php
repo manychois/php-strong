@@ -311,7 +311,16 @@ final class FileCachePool implements ICacheItemPool
     private function read(string $key): array
     {
         if (array_key_exists($key, $this->memo)) {
-            return $this->memo[$key];
+            $state = $this->memo[$key];
+            if (!$state['hit'] || $state['expiry'] === null || $state['expiry'] > $this->clock->now()) {
+                return $state;
+            }
+
+            @unlink($this->pathOf($key));
+            $state = ['hit' => false, 'value' => null, 'expiry' => null];
+            $this->memo[$key] = $state;
+
+            return $state;
         }
 
         $state = $this->readFile($this->pathOf($key));

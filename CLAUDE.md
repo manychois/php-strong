@@ -1,14 +1,14 @@
 # php-strong
 
-PHP 8.5+ library providing solid, strongly-typed implementations of PHP-FIG PSR interfaces. Namespace `Manychois\PhpStrong`, PSR-4 autoload (`src/` → tests in `tests/`).
+PHP 8.5+ library providing solid, strongly-typed implementations of PHP-FIG PSR interfaces. Namespace `Manychois\PhpStrong`, PSR-4 autoload (`src/` → tests in `tests/`; end-to-end feature tests in `feature-tests/`, namespace `Manychois\PhpStrongFeatureTests`, run as the `feature` PHPUnit suite).
 
 ## Commands
 
 ```bash
 composer test                    # PHPUnit with coverage (XDEBUG_MODE=coverage)
-composer phpcs                   # Style check (phpcs.xml)
+composer phpcs                   # Style check (phpcs.xml; src/ only)
 composer phpcbf                  # Auto-fix style
-composer phpstan                 # Static analysis, max level
+composer phpstan                 # Static analysis, max level (src/ only)
 composer code                    # phpcbf + phpcs + phpstan
 
 ./vendor/bin/phpunit tests/Http/ResponseTest.php                # single file
@@ -27,7 +27,7 @@ Before finishing any task, run in order and fix anything they report:
 Full standard: @docs/internal/php-coding-standard.md
 
 Non-negotiable:
-- Alias interfaces on import: `use SequenceInterface as ISequence`
+- Alias interfaces on import, PHP built-ins included: `use SequenceInterface as ISequence`, `use DateTimeInterface as IDateTime`
 - `#[Override]` on every interface implementation
 - Group methods in `#region implements IInterface` … `#endregion` blocks
 - Sort methods alphabetically within each region (same visibility/static/final group)
@@ -54,6 +54,6 @@ Principles:
 - One directory per problem area under `src/` (e.g. `Http/`, `DependencyInjection/`, `Time/`), named after the domain rather than the PSR number so non-PSR utilities can live beside the PSR classes; tests mirror it under `tests/`.
 - Where a PSR governs the concern, implement its interface (or a small extension of one); utilities that no PSR covers still belong to that module. No framework coupling beyond `psr/*`.
 - Immutable value objects where the PSR mandates it (PSR-7 `with*` methods return clones); `readonly` elsewhere.
-- Composition over inheritance; no abstract base classes in the public API.
+- Composition over inheritance.
 - Enums for closed sets (HTTP methods, status codes) with conversion to the string/int the PSR interface expects.
 - Fail at the boundary: validate inputs in constructors/factories and throw `InvalidArgumentException` per the PSR contract rather than accepting loose data.

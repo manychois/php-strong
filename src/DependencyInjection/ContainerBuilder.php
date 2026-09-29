@@ -40,9 +40,12 @@ class ContainerBuilder
     /**
      * @param ?IContainer $parent Container consulted for identifiers not registered on this builder; lets a
      * short-lived (e.g. per-request) container delegate to a long-lived application container.
+     * @param bool $autowire Whether `get()` builds unregistered, instantiable classes by reflection instead of
+     * throwing `NotFoundException`; such instances are never cached.
      */
     public function __construct(
         private readonly ?IContainer $parent = null,
+        private readonly bool $autowire = false,
     ) {
     }
 
@@ -132,7 +135,7 @@ class ContainerBuilder
             }
         }
 
-        return new Container($this->definitions, $this->parent, $this->awares);
+        return new Container($this->definitions, $this->parent, $this->awares, $this->autowire);
     }
 
     /**

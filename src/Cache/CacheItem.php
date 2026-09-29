@@ -6,7 +6,7 @@ namespace Manychois\PhpStrong\Cache;
 
 use DateInterval;
 use DateTimeImmutable;
-use DateTimeInterface;
+use DateTimeInterface as IDateTime;
 use Override;
 use Psr\Cache\CacheItemInterface as ICacheItem;
 use Psr\Clock\ClockInterface as IClock;
@@ -107,7 +107,7 @@ final class CacheItem implements ICacheItem
      * @inheritDoc
      */
     #[Override]
-    public function expiresAt(?DateTimeInterface $expiration): static
+    public function expiresAt(?IDateTime $expiration): static
     {
         $this->expiry = $expiration === null ? null : DateTimeImmutable::createFromInterface($expiration);
 

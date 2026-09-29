@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrongTests\DependencyInjection;
 
+use Manychois\PhpStrong\DependencyInjection\Container;
 use Manychois\PhpStrong\DependencyInjection\ContainerBuilder;
 use Manychois\PhpStrong\DependencyInjection\ContainerException;
 use Manychois\PhpStrong\DependencyInjection\NotFoundException;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\AbstractThing;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\Leaf;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NeedsScalar;
+use Manychois\PhpStrongTests\DependencyInjection\Fixtures\NoConstructor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerExceptionInterface as IContainerException;
@@ -14,6 +19,8 @@ use Psr\Container\ContainerInterface as IContainer;
 use Psr\Container\NotFoundExceptionInterface as INotFoundException;
 use RuntimeException;
 use stdClass;
+
+require_once __DIR__ . '/Fixtures/Autowire.php';
 
 final class ContainerTest extends TestCase
 {
@@ -246,6 +253,37 @@ final class ContainerTest extends TestCase
     }
 
     #[Test]
+    public function make_buildsUnregisteredClassUsingRegisteredServices(): void
+    {
+        $container = (new ContainerBuilder())->autowire(NoConstructor::class)->build();
+
+        $leaf = $container->make(Leaf::class);
+
+        self::assertSame($container->get(NoConstructor::class), $leaf->dep);
+        self::assertNotSame($leaf, $container->make(Leaf::class));
+        self::assertFalse($container->has(Leaf::class));
+    }
+
+    #[Test]
+    public function make_throwsForNonInstantiableClass(): void
+    {
+        $container = (new ContainerBuilder())->build();
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage('Failed to make "' . AbstractThing::class . '": Class "');
+        $container->make(AbstractThing::class);
+    }
+
+    #[Test]
+    public function make_throwsForUnresolvableDependency(): void
+    {
+        $container = (new ContainerBuilder())->build();
+
+        $this->expectException(ContainerException::class);
+        $container->make(NeedsScalar::class);
+    }
+
+    #[Test]
     public function has_doesNotInvokeFactory(): void
     {
         $calls = 0;
@@ -257,5 +295,38 @@ final class ContainerTest extends TestCase
 
         self::assertTrue($container->has('a'));
         self::assertSame(0, $calls);
+    }
+    #[Test]
+    public function get_containerIdsResolveToItselfWithoutRegistration(): void
+    {
+        $container = (new ContainerBuilder())->build();
+
+        self::assertTrue($container->has(IContainer::class));
+        self::assertTrue($container->has(Container::class));
+        self::assertSame($container, $container->get(IContainer::class));
+        self::assertSame($container, $container->get(Container::class));
+        self::assertSame($container, $container->getInstance(IContainer::class));
+    }
+
+    #[Test]
+    public function get_childContainerResolvesContainerIdsToItselfNotParent(): void
+    {
+        $parent = (new ContainerBuilder())->build();
+        $child = (new ContainerBuilder($parent))->build();
+
+        self::assertSame($child, $child->get(IContainer::class));
+        self::assertSame($child, $child->get(Container::class));
+    }
+
+    #[Test]
+    public function get_explicitContainerRegistrationWinsOverSelf(): void
+    {
+        $other = (new ContainerBuilder())->build();
+        $container = (new ContainerBuilder())
+            ->singleton(IContainer::class, static fn (): IContainer => $other)
+            ->build();
+
+        self::assertSame($other, $container->get(IContainer::class));
+        self::assertSame($container, $container->get(Container::class));
     }
 }

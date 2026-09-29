@@ -33,7 +33,7 @@ $event = (new EventDispatcher($provider))->dispatch(new UserRegistered('a@exampl
 | Method | Notes |
 | ------ | ----- |
 | `__construct(ListenerProviderInterface $provider)` | The provider consulted for every dispatched event. |
-| `dispatch(object $event): object` | Returns the same instance passed in. Checks `isPropagationStopped()` before each listener; a listener's return value is discarded; an exception thrown by a listener is not caught, so it propagates to the caller and no later listener runs. |
+| `dispatch(object $event): object` | Returns the same instance passed in. When the event implements `StoppableEventInterface`, checks `isPropagationStopped()` before each listener (an event without that interface reaches every listener, even if it has an `isPropagationStopped()` method); a listener's return value is discarded; an exception thrown by a listener is not caught, so it propagates to the caller and no later listener runs. |
 
 ## `ListenerProvider`
 
@@ -47,7 +47,8 @@ $event = (new EventDispatcher($provider))->dispatch(new UserRegistered('a@exampl
 
 Implements the members of `Psr\EventDispatcher\StoppableEventInterface`. The using class must still declare
 `implements StoppableEventInterface` itself; the trait carries no `#[Override]` attributes so it stays usable by a
-class that only wants the two methods.
+class that only wants the two methods. `EventDispatcher` honours `stopPropagation()` only on events that declare the
+interface.
 
 | Method | Notes |
 | ------ | ----- |

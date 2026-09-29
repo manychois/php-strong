@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Manychois\PhpStrong\Logging;
 
-use DateTimeInterface;
+use DateTimeInterface as IDateTime;
 use Stringable;
 
 /**
@@ -49,8 +49,8 @@ final class MessageInterpolator
         if (is_string($value) || $value instanceof Stringable) {
             return (string) $value;
         }
-        if ($value instanceof DateTimeInterface) {
-            return $value->format(DateTimeInterface::RFC3339);
+        if ($value instanceof IDateTime) {
+            return $value->format(IDateTime::RFC3339);
         }
         $json = json_encode($value, \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
 

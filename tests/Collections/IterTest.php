@@ -268,6 +268,14 @@ final class IterTest extends TestCase
     }
 
     #[Test]
+    public function uniqueThrowsTypeErrorForNullElementWithoutKeySelector(): void
+    {
+        $this->expectException(TypeError::class);
+
+        iterator_to_array(Iter::unique(['', null]));
+    }
+
+    #[Test]
     public function toArrayPreservesKeysWithLastWriteWinningOnCollision(): void
     {
         $source = (static function (): Generator {

@@ -49,6 +49,8 @@ final class Autowirer
      * under the parameter's type, the parameter's default value, a recursively built instance of an unregistered
      * instantiable class, `null` for nullable types.
      *
+     * @template T of object
+     *
      * @param string $class Fully qualified, instantiable class name.
      * @param IContainer $container Source of registered dependencies.
      * @param list<string> $building Classes currently being built by recursion; used to detect cycles.
@@ -57,7 +59,9 @@ final class Autowirer
      *
      * @throws ContainerException if a parameter cannot be resolved or a cycle is detected.
      *
-     * @phpstan-param class-string $class
+     * @phpstan-param class-string<T> $class
+     *
+     * @phpstan-return T
      */
     public function instantiate(string $class, IContainer $container, array $building = []): object
     {
@@ -73,8 +77,10 @@ final class Autowirer
         foreach ($resolvers as $resolver) {
             $args[] = $resolver instanceof Closure ? $resolver($container, $building) : $resolver;
         }
+        /** @var T $instance */
+        $instance = $ref->newInstanceArgs($args);
 
-        return $ref->newInstanceArgs($args);
+        return $instance;
     }
 
     /**

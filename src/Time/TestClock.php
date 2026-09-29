@@ -6,7 +6,7 @@ namespace Manychois\PhpStrong\Time;
 
 use DateInterval;
 use DateTimeImmutable;
-use DateTimeInterface;
+use DateTimeInterface as IDateTime;
 use DateTimeZone;
 use Override;
 
@@ -20,10 +20,10 @@ class TestClock extends UtcClock
     /**
      * Creates a clock frozen at the given time.
      *
-     * @param DateTimeInterface|string|null $now Initial time, as a `DateTimeInterface` or a `strtotime()`-style string;
+     * @param IDateTime|string|null $now Initial time, as a `DateTimeInterface` or a `strtotime()`-style string;
      * `null` freezes at the current UTC time. Non-UTC values are converted to UTC.
      */
-    public function __construct(DateTimeInterface|string|null $now = null)
+    public function __construct(IDateTime|string|null $now = null)
     {
         parent::__construct();
         $this->setNow($now ?? parent::now());
@@ -42,10 +42,10 @@ class TestClock extends UtcClock
     /**
      * Sets the time the clock reports.
      *
-     * @param DateTimeInterface|string $now New time, as a `DateTimeInterface` or a `strtotime()`-style string
+     * @param IDateTime|string $now New time, as a `DateTimeInterface` or a `strtotime()`-style string
      * (interpreted in UTC when it carries no offset). Non-UTC values are converted to UTC.
      */
-    public function setNow(DateTimeInterface|string $now): void
+    public function setNow(IDateTime|string $now): void
     {
         $utc = new DateTimeZone('UTC');
         $this->now = is_string($now)

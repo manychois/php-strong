@@ -2,9 +2,9 @@
 
 Two classes satisfy all four `Psr\Link` interfaces: `Link` implements `EvolvableLinkInterface` (and therefore
 `LinkInterface`), and `LinkProvider` implements `EvolvableLinkProviderInterface` (and therefore
-`LinkProviderInterface`). Both are immutable — every `with*` method returns a new instance and
-leaves the receiver untouched — and neither serializes anything. Turning links into an HTTP `Link:` header, HTML
-`<link>` elements, or a HAL document is left to the consumer.
+`LinkProviderInterface`). Both are immutable — every `with*` method leaves the receiver untouched, returning a new
+instance or, when the call would change nothing, the receiver itself — and neither serializes anything. Turning
+links into an HTTP `Link:` header, HTML `<link>` elements, or a HAL document is left to the consumer.
 
 ```php
 use Manychois\PhpStrong\Links\Link;
@@ -44,7 +44,8 @@ $provider->getLinksByRel('search'); // [$search]
   registry is not consulted; PSR-13 §1.3 states only a `SHOULD`. A non-string entry in the `$rels` array passed to
   the constructor raises `TypeError`, not `InvalidArgumentException`: the native `array` parameter type does not
   enforce `list<string>`.
-- **Attribute name** — any non-blank string with no control character (`\x00`–`\x1F`, `\x7F`).
+- **Attribute name** — any non-blank string with no control character (`\x00`–`\x1F`, `\x7F`). An integer key in
+  the `$attributes` array passed to the constructor raises `TypeError`, not `InvalidArgumentException`.
 - **Attribute value** — `string`, `int`, `float`, `bool`, a `Stringable` (cast to `string` on the way in), or a
   list of strings. A keyed array, a nested array, or a list containing a non-string throws
   `InvalidArgumentException`. A value outside the declared union (e.g. `stdClass`, `null`) raises `TypeError` from
